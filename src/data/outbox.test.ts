@@ -17,6 +17,13 @@ describe('outbox', () => {
     expect(entry?.kind === 'draft' && entry.input.lastBrew).toEqual(result)
   })
 
+  it('adds up waiting changes to one bag, and never moves a locked bag back to dialing in', () => {
+    enqueue({ key: 'bag:x', kind: 'bag', bagId: 'x', patch: { gramsRemaining: 230, status: 'locked' } })
+    enqueue({ key: 'bag:x', kind: 'bag', bagId: 'x', patch: { gramsRemaining: 210, status: 'dialing_in' } })
+    expect(readOutbox()).toHaveLength(1)
+    expect(readOutbox()[0]).toMatchObject({ kind: 'bag', patch: { gramsRemaining: 210, status: 'locked' } })
+  })
+
   it('recognises a dropped connection', () => {
     expect(isNetworkError(new TypeError('Failed to fetch'))).toBe(true)
     expect(isNetworkError(new Error('bag_not_found'))).toBe(false)

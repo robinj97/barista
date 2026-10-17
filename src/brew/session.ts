@@ -48,7 +48,7 @@ export const startSession = (bagId: string, search: string, asOf: string, nowMs:
   finishedS: null,
 })
 
-export const elapsedS = (session: BrewSession, nowMs: number): number => Math.max(0, Math.round((nowMs - session.startedAt) / 1000))
+export const elapsedS = (session: BrewSession, nowMs: number): number => Math.max(0, Math.floor((nowMs - session.startedAt) / 1000))
 
 /** Ends the drawdown: the one thing the schedule cannot know, so it is the one tap. */
 export function finishSession(session: BrewSession, nowMs: number): BrewSession {

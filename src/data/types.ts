@@ -95,6 +95,8 @@ export interface Api {
    */
   addBag(input: AddBagInput): Promise<void>
   removeBag(bagId: string): Promise<void>
+  /** Changes what is yours about a bag: how much is left, or where you are with it. */
+  updateBag(bagId: string, patch: BagPatch): Promise<void>
 
   /** Your working recipes: one per bean and method, overwritten as you brew. */
   listMyDrafts(): Promise<Draft[]>
@@ -212,6 +214,11 @@ export interface Bag {
   gramsRemaining: number | null
   status: BagStatus
   createdAt: string
+}
+
+export interface BagPatch {
+  gramsRemaining?: number
+  status?: BagStatus
 }
 
 export interface NewBean {

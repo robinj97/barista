@@ -246,6 +246,15 @@ export const supabaseApi: Api = {
     fail(error)
   },
 
+  async updateBag(bagId, patch) {
+    const row = {
+      ...(patch.gramsRemaining !== undefined ? { grams_remaining: patch.gramsRemaining } : {}),
+      ...(patch.status !== undefined ? { status: patch.status } : {}),
+    }
+    const { error } = await supabase.from('user_beans').update(row).eq('id', bagId)
+    fail(error)
+  },
+
   async removeBag(bagId) {
     const { error } = await supabase.from('user_beans').delete().eq('id', bagId)
     fail(error)

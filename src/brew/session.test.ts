@@ -6,6 +6,7 @@ const start = () => startSession('bag', 'bag=bag&cups=2', '2026-10-17', 1_000_00
 describe('brew session', () => {
   it('measures time from the wall clock', () => {
     expect(elapsedS(start(), 1_000_000 + 41_400)).toBe(41)
+    expect(elapsedS(start(), 1_000_000 + 44_999)).toBe(44) // the clock reaches 0:45 exactly at 45 s, not half a second early
     expect(elapsedS(start(), 900_000)).toBe(0)
   })
 

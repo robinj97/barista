@@ -46,6 +46,16 @@ describe('Brewing', () => {
     expect(within(screen.getByRole('list', { name: 'Pour progress' })).getAllByRole('listitem')[0]).toHaveTextContent('✓')
   })
 
+  it('keeps the current pour highlighted until the next one begins, and ticks it then', async () => {
+    // 30 s in: pour 1 has gone in (15 s), pour 2 starts at 0:45. Pour 1 is still the current row.
+    localStorage.setItem('barista.brew-session', session(30))
+    renderApp(at, { mock })
+    const rows = within(await screen.findByRole('list', { name: 'Pour progress' })).getAllByRole('listitem')
+    expect(rows[0]).toHaveAttribute('aria-current', 'step')
+    expect(rows[0]).not.toHaveTextContent('✓')
+    expect(rows.filter((row) => row.getAttribute('aria-current') === 'step')).toHaveLength(1)
+  })
+
   it('counts down to the next pour between pours', async () => {
     localStorage.setItem('barista.brew-session', session(30))
     renderApp(at, { mock })
@@ -101,6 +111,31 @@ describe('Logging', () => {
     expect(localStorage.getItem('barista.brew-session')).toBeNull()
   })
 
+  it('uses the coffee up when the drawdown ends and marks the bag as dialing in', async () => {
+    const user = userEvent.setup()
+    drawdown()
+    renderApp(at, { mock })
+    await user.click(await screen.findByRole('button', { name: 'Drawdown finished' }))
+    await screen.findByRole('heading', { name: 'How did it go?' })
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await screen.findByRole('heading', { name: 'Tanzania Geisha' })
+    const bag = await screen.findByRole('region', { name: 'Your bag' })
+    expect(within(bag).getByText('230 g')).toBeInTheDocument()
+    expect(within(bag).getByText('Dialing in')).toBeInTheDocument()
+  })
+
+  it('does not touch the bag when a brew is cancelled', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem('barista.brew-session', session(20))
+    const { api } = renderApp(at, { mock })
+    await user.click(await screen.findByRole('button', { name: 'Cancel brew' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, cancel this brew' }))
+    expect(await screen.findByRole('button', { name: 'Start brewing' })).toBeInTheDocument()
+    const [bag] = await api.listMyBags()
+    expect(bag?.gramsRemaining).toBe(250)
+    expect(bag?.status).toBe('new')
+  })
+
   it('asks how it compares only when there was a previous brew', async () => {
     drawdown()
     const user = userEvent.setup()
@@ -144,6 +179,7 @@ describe('Logging', () => {
     await user.click(screen.getByRole('button', { name: 'Lock in and save' }))
     const recipes = await screen.findByRole('region', { name: 'Recipes' })
     expect(await within(recipes).findByRole('link', { name: /Locked · ★★★★/ })).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Your bag' })).getByText('Locked')).toBeInTheDocument()
   })
 
   it('refuses a yield that is not a number', async () => {

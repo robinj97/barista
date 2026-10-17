@@ -8,6 +8,7 @@ import type { Confidence } from '../../engine/grinder.ts'
 import { beanCover } from '../beans/cover'
 import { toISODate } from '../beans/dates'
 import { buildSuggestInput, clock } from '../brew/buildInput'
+import { afterBrew, isEmpty } from '../brew/bagUsage'
 import { BrewingPanel } from '../brew/BrewingPanel'
 import { primeSound } from '../brew/cues'
 import { EditSheet } from '../brew/EditSheet'
@@ -18,7 +19,7 @@ import { currentIndex, phaseAt } from '../brew/progress'
 import { finishSession, readSession, clearSession, elapsedS, startSession, writeSession, type BrewSession } from '../brew/session'
 import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
-import { useSaveDraft } from '../data/hooks'
+import { useSaveDraft, useUpdateBag } from '../data/hooks'
 import { WhySheet } from '../brew/WhySheet'
 import { PourRing } from '../components/PourRing'
 import { SegmentedControl } from '../components/SegmentedControl'
@@ -73,6 +74,7 @@ export function RecipePage() {
   const [ratioKeeps, setRatioKeeps] = useState<'coffee' | 'water'>('coffee')
   const navigate = useNavigate()
   const saveDraft = useSaveDraft()
+  const updateBag = useUpdateBag()
   // A brew in progress survives closing the app: it is kept on the phone.
   const [session, setSession] = useState<BrewSession | null>(readSession)
   const brewing = session !== null && session.finishedS === null && session.bagId === (choices.bagId ?? selection.bag?.id)
@@ -146,6 +148,9 @@ export function RecipePage() {
   const finish = () => {
     if (!session) return
     writeSession(finishSession(session, clockNow()))
+    // The coffee is spent once the drawdown is over: take it out of the bag.
+    const patch = afterBrew(bag, recipe.doseG)
+    if (!isEmpty(patch)) updateBag.mutate({ bagId: bag.id, patch })
     void navigate('/brew/log')
   }
   const cancel = () => {

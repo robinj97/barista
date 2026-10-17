@@ -48,8 +48,9 @@ export function BrewingPanel({ pours, session, now, onFinish, onCancel }: Brewin
 
       <ol className="mt-4 space-y-1" aria-label="Pour progress">
         {pours.map((pour, index) => {
-          const done = index < current || (phase.kind === 'drawdown' && index === current) || (phase.kind === 'waiting' && index === current)
-          const active = phase.kind === 'pouring' && index === current
+          // A pour stays highlighted until the next one begins, and is ticked then.
+          const done = index < current || (phase.kind === 'drawdown' && index === current)
+          const active = phase.kind !== 'drawdown' && index === current
           return (
             <li key={pour.atS} aria-current={active ? 'step' : undefined} className={`flex items-center gap-3 rounded-full py-2 pr-5 pl-2 ${active ? 'bg-accent-soft' : ''}`}>
               <span className={`grid size-8 place-items-center rounded-full text-xs ${done ? 'bg-ink text-bg' : 'bg-soft'}`}>{done ? '✓' : index + 1}</span>
