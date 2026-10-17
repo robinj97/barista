@@ -1,0 +1,387 @@
+[
+  {
+    "source": "youtube",
+    "source_url": "https://www.youtube.com/shorts/rYG45GFLwEM",
+    "title": "Two Pours Decide If Your Coffee Is Sweet or Bright | Tetsu Kasuya 4:6 Method",
+    "published_at": "2026-10-14T17:00:00Z",
+    "brew_method": "V60",
+    "recipe_template": "4:6 (Tetsu Kasuya)",
+    "coffee": {
+      "name": "Ethiopia Elto Arbegona Washed, Sidama",
+      "origin": "Ethiopia",
+      "region": "Sidama",
+      "process": "Washed",
+      "variety": null,
+      "roaster": "Coffea Circulor"
+    },
+    "tasting_notes": [
+      "bergamot",
+      "tangerine"
+    ],
+    "dose_g": 20,
+    "water_g": 300,
+    "ratio_1_to": 15,
+    "temp_c": 96,
+    "water_ppm": 68,
+    "pours": [
+      {
+        "at": "0:00",
+        "to_g": 70
+      },
+      {
+        "at": "0:40",
+        "to_g": 120
+      },
+      {
+        "at": "1:15",
+        "to_g": 180
+      },
+      {
+        "at": "1:40",
+        "to_g": 240
+      },
+      {
+        "at": "2:10",
+        "to_g": 300
+      }
+    ],
+    "pour_count": 5,
+    "total_time": "2:50",
+    "actual_readings_g": null,
+    "final_weight_g": null,
+    "grinder": "Lopder MAXA",
+    "grind_setting": 20,
+    "grind_unit": "clicks",
+    "dripper": "Hario V60 NEO",
+    "filter": "CAFEC T-90",
+    "duplicate_of": null
+  },
+  {
+    "source": "youtube",
+    "source_url": "https://www.youtube.com/shorts/SNXiOZItUjA",
+    "title": "Ignore the Coffee, Watch the Scale: A 4:6 Pour-Over in Numbers",
+    "published_at": "2026-10-13T18:00:03Z",
+    "brew_method": "V60",
+    "recipe_template": "4:6 (Tetsu Kasuya)",
+    "coffee": {
+      "name": "Ethiopia Elto Arbegona Washed",
+      "origin": "Ethiopia",
+      "region": null,
+      "process": "Washed",
+      "variety": null,
+      "roaster": "Coffea Circulor"
+    },
+    "tasting_notes": [],
+    "dose_g": 20,
+    "water_g": 300,
+    "ratio_1_to": 15,
+    "temp_c": 96,
+    "water_ppm": 68,
+    "pours": [
+      {
+        "at": "0:00",
+        "to_g": 70
+      },
+      {
+        "at": "0:40",
+        "to_g": 120
+      },
+      {
+        "at": "1:15",
+        "to_g": 180
+      },
+      {
+        "at": "1:40",
+        "to_g": 240
+      },
+      {
+        "at": "2:10",
+        "to_g": 300
+      }
+    ],
+    "pour_count": 5,
+    "total_time": "2:50",
+    "actual_readings_g": [
+      70.5,
+      125,
+      181.4,
+      240.7,
+      301.5
+    ],
+    "final_weight_g": 302.6,
+    "grinder": "Lopder MAXA",
+    "grind_setting": 20,
+    "grind_unit": "clicks",
+    "dripper": "Hario V60 NEO",
+    "filter": "CAFEC T-90",
+    "duplicate_of": "https://www.youtube.com/shorts/rYG45GFLwEM"
+  },
+  {
+    "source": "youtube",
+    "source_url": "https://www.youtube.com/shorts/cBOa3uPPxl4",
+    "title": "4:6 Method: How One Pour Turns Coffee Into Tea #shorts",
+    "published_at": "2026-09-19T17:45:35Z",
+    "brew_method": null,
+    "recipe_template": "4:6 (Tetsu Kasuya)",
+    "coffee": {},
+    "tasting_notes": [],
+    "dose_g": 20,
+    "water_g": 300,
+    "ratio_1_to": 15,
+    "temp_c": 93,
+    "water_ppm": null,
+    "pours": [
+      {
+        "at": "0:00",
+        "to_g": 80
+      },
+      {
+        "at": "0:45",
+        "to_g": 120
+      },
+      {
+        "at": "1:20",
+        "to_g": 300
+      }
+    ],
+    "pour_count": 3,
+    "total_time": null,
+    "actual_readings_g": null,
+    "final_weight_g": null,
+    "grinder": null,
+    "grind_setting": null,
+    "grind_unit": null,
+    "dripper": null,
+    "filter": null,
+    "duplicate_of": null
+  },
+  {
+    "source": "youtube",
+    "source_url": "https://www.youtube.com/shorts/oV57crdyeZI",
+    "title": "Papayo on the Tetsu Kasuya 4:6 Method #shorts",
+    "published_at": "2026-09-11T17:30:19Z",
+    "brew_method": "V60",
+    "recipe_template": "4:6 (Tetsu Kasuya)",
+    "coffee": {},
+    "tasting_notes": [
+      "tea-like"
+    ],
+    "dose_g": 20,
+    "water_g": 300,
+    "ratio_1_to": 15,
+    "temp_c": 93,
+    "water_ppm": null,
+    "pours": [
+      {
+        "at": "0:00",
+        "to_g": 80
+      },
+      {
+        "at": "0:45",
+        "to_g": 120
+      },
+      {
+        "at": "1:20",
+        "to_g": 300
+      }
+    ],
+    "pour_count": 3,
+    "total_time": null,
+    "actual_readings_g": null,
+    "final_weight_g": null,
+    "grinder": null,
+    "grind_setting": null,
+    "grind_unit": null,
+    "dripper": null,
+    "filter": null,
+    "duplicate_of": "https://www.youtube.com/shorts/cBOa3uPPxl4"
+  },
+  {
+    "source": "youtube",
+    "source_url": "https://www.youtube.com/shorts/fC5_r15x4Cw",
+    "title": "4:6 Method Tuned for Sweetness | Tanzanian Geisha V60",
+    "published_at": "2026-08-26T16:45:33Z",
+    "brew_method": "V60",
+    "recipe_template": "4:6 (Tetsu Kasuya)",
+    "coffee": {},
+    "tasting_notes": [
+      "lemon",
+      "vanilla",
+      "black tea"
+    ],
+    "dose_g": 20,
+    "water_g": 300,
+    "ratio_1_to": 15,
+    "temp_c": 94,
+    "water_ppm": null,
+    "pours": [
+      {
+        "at": "0:00",
+        "to_g": 40
+      },
+      {
+        "at": "0:40",
+        "to_g": 120
+      },
+      {
+        "at": "1:20",
+        "to_g": 180
+      },
+      {
+        "at": "1:50",
+        "to_g": 240
+      },
+      {
+        "at": "2:30",
+        "to_g": 300
+      }
+    ],
+    "pour_count": 5,
+    "total_time": null,
+    "actual_readings_g": null,
+    "final_weight_g": null,
+    "grinder": null,
+    "grind_setting": null,
+    "grind_unit": null,
+    "dripper": "Hario V60 using Tetsu Kasuya's 4:6 method, weighted toward sweetness. Geisha, washed, Arusha region, 88 points. Roaster notes are black tea, candied lemon, dried fruit and vanilla.",
+    "filter": null,
+    "duplicate_of": null
+  },
+  {
+    "source": "youtube",
+    "source_url": "https://www.youtube.com/shorts/lc8iLOiFaIY",
+    "title": "Iced pour over that keeps every bit of the fruit #shorts",
+    "published_at": "2026-07-23T16:00:29Z",
+    "brew_method": null,
+    "recipe_template": "4:6 (Tetsu Kasuya)",
+    "coffee": {},
+    "tasting_notes": [
+      "hibiscus"
+    ],
+    "dose_g": 20,
+    "water_g": 180,
+    "ratio_1_to": 15,
+    "temp_c": 96,
+    "water_ppm": null,
+    "pours": [
+      {
+        "at": "0:00",
+        "to_g": 40
+      },
+      {
+        "at": "0:45",
+        "to_g": 70
+      },
+      {
+        "at": "1:10",
+        "to_g": 180
+      }
+    ],
+    "pour_count": 3,
+    "total_time": null,
+    "actual_readings_g": null,
+    "final_weight_g": null,
+    "grinder": null,
+    "grind_setting": null,
+    "grind_unit": null,
+    "dripper": null,
+    "filter": "CAFEC T90",
+    "duplicate_of": null
+  },
+  {
+    "source": "youtube",
+    "source_url": "https://www.youtube.com/shorts/ciu3fv_71P8",
+    "title": "Tetsu Kasuya 4:6 Method Tuned for Brightness | DAK Poppy Soda V60 Recipe #shorts",
+    "published_at": "2026-07-21T18:00:24Z",
+    "brew_method": "V60",
+    "recipe_template": "4:6 (Tetsu Kasuya)",
+    "coffee": {},
+    "tasting_notes": [
+      "peach"
+    ],
+    "dose_g": 20,
+    "water_g": 300,
+    "ratio_1_to": 15,
+    "temp_c": null,
+    "water_ppm": null,
+    "pours": [
+      {
+        "at": "0:00",
+        "to_g": 70
+      },
+      {
+        "at": "0:45",
+        "to_g": 120
+      },
+      {
+        "at": "1:30",
+        "to_g": 210
+      },
+      {
+        "at": "2:15",
+        "to_g": 300
+      }
+    ],
+    "pour_count": 4,
+    "total_time": null,
+    "actual_readings_g": null,
+    "final_weight_g": null,
+    "grinder": null,
+    "grind_setting": null,
+    "grind_unit": null,
+    "dripper": null,
+    "filter": null,
+    "duplicate_of": null
+  },
+  {
+    "source": "youtube",
+    "source_url": "https://www.youtube.com/shorts/4eM5OOHArKg",
+    "title": "Tetsu Kasuya 4:6 on a Colombia Pink Bourbon from Father's  #shorts",
+    "published_at": "2026-07-17T17:00:06Z",
+    "brew_method": "V60",
+    "recipe_template": "4:6 (Tetsu Kasuya)",
+    "coffee": {},
+    "tasting_notes": [
+      "citrus",
+      "floral",
+      "hibiscus"
+    ],
+    "dose_g": 18,
+    "water_g": 300,
+    "ratio_1_to": 16.7,
+    "temp_c": 96,
+    "water_ppm": null,
+    "pours": [
+      {
+        "at": "0:00",
+        "to_g": 70
+      },
+      {
+        "at": "0:44",
+        "to_g": 120
+      },
+      {
+        "at": "1:20",
+        "to_g": 180
+      },
+      {
+        "at": "2:00",
+        "to_g": 240
+      },
+      {
+        "at": "2:53",
+        "to_g": 300
+      }
+    ],
+    "pour_count": 5,
+    "total_time": null,
+    "actual_readings_g": null,
+    "final_weight_g": null,
+    "grinder": null,
+    "grind_setting": null,
+    "grind_unit": null,
+    "dripper": null,
+    "filter": "CAFEC T90",
+    "duplicate_of": null
+  }
+]
