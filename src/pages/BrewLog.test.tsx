@@ -124,6 +124,21 @@ describe('Logging', () => {
     expect(within(bag).getByText('Dialing in')).toBeInTheDocument()
   })
 
+  it('can be finished without the timer: same bag changes, and no total time is logged', async () => {
+    const user = userEvent.setup()
+    const { api } = renderApp(at, { mock })
+    await user.click(await screen.findByRole('button', { name: 'Start brewing' }))
+    await user.click(await screen.findByRole('button', { name: 'Finished brewing' }))
+    expect(await screen.findByRole('heading', { name: 'How did it go?' })).toBeInTheDocument()
+    expect(screen.queryByText(/total/)).not.toBeInTheDocument()
+    const [bag] = await api.listMyBags()
+    expect(bag?.gramsRemaining).toBe(230)
+    expect(bag?.status).toBe('dialing_in')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('heading', { name: 'Tanzania Geisha' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Where you left off/ })).toBeInTheDocument()
+  })
+
   it('does not touch the bag when a brew is cancelled', async () => {
     const user = userEvent.setup()
     localStorage.setItem('barista.brew-session', session(20))

@@ -16,7 +16,7 @@ import { clearEdits, doseFor, hasEdits, resetEdit, setCups, setDose, setGrind, s
 import { GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices, type RecipeEdits } from '../brew/params'
 import { PoursSheet } from '../brew/PoursSheet'
 import { currentIndex, phaseAt } from '../brew/progress'
-import { finishSession, readSession, clearSession, elapsedS, startSession, writeSession, type BrewSession } from '../brew/session'
+import { finishSession, readSession, clearSession, elapsedS, startSession, untimedSession, writeSession, type BrewSession } from '../brew/session'
 import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { useSaveDraft, useUpdateBag } from '../data/hooks'
@@ -145,14 +145,20 @@ export function RecipePage() {
     writeSession(next)
     setSession(next)
   }
-  const finish = () => {
-    if (!session) return
-    writeSession(finishSession(session, clockNow()))
-    // The coffee is spent once the drawdown is over: take it out of the bag.
+  /** A brew is over: the coffee is spent, so it comes out of the bag, then on to the log. */
+  const completeBrew = (done: BrewSession) => {
+    writeSession(done)
+    setSession(done)
     const patch = afterBrew(bag, recipe.doseG)
     if (!isEmpty(patch)) updateBag.mutate({ bagId: bag.id, patch })
     void navigate('/brew/log')
   }
+  const finish = () => {
+    if (session) completeBrew(finishSession(session, clockNow()))
+  }
+  // For people who brew without the timer.
+  const finishUntimed = () =>
+    completeBrew(untimedSession(bag.id, toSearchParams({ ...choices, bagId: bag.id }).toString(), today, clockNow()))
   const cancel = () => {
     clearSession()
     setSession(null)
@@ -307,6 +313,10 @@ export function RecipePage() {
           Start timer
         </button>
         <p className="mt-2 text-center text-xs text-muted">Tap as the first pour begins. The rest follows the schedule.</p>
+        <button type="button" onClick={finishUntimed} className="mt-3 h-12 w-full rounded-full bg-soft active:scale-[0.98]">
+          Finished brewing
+        </button>
+        <p className="mt-2 text-center text-xs text-muted">Not using the timer? Tap when you're done.</p>
       </section>
       )}
 

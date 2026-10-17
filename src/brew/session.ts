@@ -11,6 +11,8 @@ export interface BrewSession {
   startedAt: number
   /** Seconds from the start to the end of the drawdown; set when the brew is finished. */
   finishedS: number | null
+  /** The brew was finished without running the timer, so there is no total time. */
+  untimed?: boolean
 }
 
 const STORAGE_KEY = 'barista.brew-session'
@@ -55,3 +57,10 @@ export function finishSession(session: BrewSession, nowMs: number): BrewSession 
   if (session.finishedS !== null) return session
   return { ...session, finishedS: elapsedS(session, nowMs) }
 }
+
+/** For people who brew without the timer: a finished brew with no time to record. */
+export const untimedSession = (bagId: string, search: string, asOf: string, nowMs: number): BrewSession => ({
+  ...startSession(bagId, search, asOf, nowMs),
+  finishedS: 0,
+  untimed: true,
+})
