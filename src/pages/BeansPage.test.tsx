@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { daysAgo, formatDMY } from '../beans/dates'
+import { SEED_BEANS } from '../dev/mockApi'
 import { makeBag, renderApp } from '../test/renderApp'
 
 /** Searching something that matches no known roaster asks what it is; pick "Bean name". */
@@ -45,6 +46,88 @@ describe('Beans: your list', () => {
     await user.click(screen.getByRole('button', { name: 'Locked' }))
     expect(screen.getByText('Elto Arbegona')).toBeInTheDocument()
     expect(screen.queryByText('Pink Bourbon')).not.toBeInTheDocument()
+  })
+})
+
+describe('Bean cards', () => {
+  const geisha = makeBag('b-geisha')
+  const elto = makeBag('b-elto')
+  const many = makeBag('b-pink', {
+    bean: { ...SEED_BEANS[1]!, roasterNotes: ['citrus', 'floral', 'hibiscus', 'honey', 'peach'] },
+  })
+
+  it('show variety, process and tasting notes at a glance', async () => {
+    renderApp('/beans', { mock: { bags: [geisha] } })
+    const card = await screen.findByRole('link', { name: /Tanzania Geisha/ })
+    expect(within(card).getByText('Geisha · Washed')).toBeInTheDocument()
+    expect(within(card).getByText('Placeholder Roasters · New')).toBeInTheDocument()
+    for (const note of ['black tea', 'candied lemon', 'vanilla']) {
+      expect(within(card).getByText(note)).toBeInTheDocument()
+    }
+  })
+
+  it('lead with the origin when there is no variety', async () => {
+    renderApp('/beans', { mock: { bags: [elto] } })
+    const card = await screen.findByRole('link', { name: /Elto Arbegona/ })
+    expect(within(card).getByText('Ethiopia · Washed')).toBeInTheDocument()
+  })
+
+  it('show three notes and count the rest', async () => {
+    renderApp('/beans', { mock: { bags: [many] } })
+    const card = await screen.findByRole('link', { name: /Pink Bourbon/ })
+    expect(within(card).getByText('hibiscus')).toBeInTheDocument()
+    expect(within(card).queryByText('honey')).not.toBeInTheDocument()
+    expect(within(card).getByText('+2')).toBeInTheDocument()
+  })
+})
+
+describe('Beans search', () => {
+  const bags = [makeBag('b-elto'), makeBag('b-pink'), makeBag('b-geisha')]
+
+  it('finds a variety', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans', { mock: { bags } })
+    await user.type(await screen.findByLabelText('Search your beans'), 'geisha')
+    expect(screen.getByText('Tanzania Geisha')).toBeInTheDocument()
+    expect(screen.queryByText('Pink Bourbon')).not.toBeInTheDocument()
+    expect(screen.queryByText('Elto Arbegona')).not.toBeInTheDocument()
+  })
+
+  it('finds a tasting note, even one past the three shown', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans', { mock: { bags } })
+    await user.type(await screen.findByLabelText('Search your beans'), 'bergamot')
+    expect(screen.getByText('Elto Arbegona')).toBeInTheDocument()
+    expect(screen.queryByText('Tanzania Geisha')).not.toBeInTheDocument()
+  })
+
+  it('combines with the status filter', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans', {
+      mock: { bags: [makeBag('b-elto', { status: 'locked' }), makeBag('b-pink', { status: 'dialing_in' })] },
+    })
+    await user.type(await screen.findByLabelText('Search your beans'), 'washed')
+    expect(screen.getByText('Elto Arbegona')).toBeInTheDocument()
+    expect(screen.getByText('Pink Bourbon')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Locked' }))
+    expect(screen.getByText('Elto Arbegona')).toBeInTheDocument()
+    expect(screen.queryByText('Pink Bourbon')).not.toBeInTheDocument()
+  })
+
+  it('says when nothing matches and lets you clear the search', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans', { mock: { bags } })
+    await user.type(await screen.findByLabelText('Search your beans'), 'jasmine')
+    expect(await screen.findByText(/No beans match/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(await screen.findByText('Pink Bourbon')).toBeInTheDocument()
+    expect(screen.getByLabelText('Search your beans')).toHaveValue('')
+  })
+
+  it('is not shown before you have any beans', async () => {
+    renderApp('/beans')
+    await screen.findByRole('heading', { name: 'Add your first bag' })
+    expect(screen.queryByLabelText('Search your beans')).not.toBeInTheDocument()
   })
 })
 
@@ -253,6 +336,20 @@ describe('Adding a new bean from what you searched', () => {
       expect(now).toEqual(["Coffea Circulor", "Father's", 'Placeholder Roasters'])
     })
     expect(options.length).toBeGreaterThanOrEqual(0)
+  })
+
+  it('asks for the variety up front and shows it on the bean', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    await user.type(await openSheet(user), 'Sibarist Test')
+    await addAsBeanName(user)
+    await user.type(screen.getByLabelText('Roaster'), 'Sibarist')
+    await user.type(screen.getByLabelText('Variety'), 'Geisha')
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: 'Add to my beans' }))
+    const about = await screen.findByRole('region', { name: 'About this coffee' })
+    expect(within(about).getByText('Variety')).toBeInTheDocument()
+    expect(within(about).getByText('Geisha')).toBeInTheDocument()
   })
 
   it('keeps what you typed when you go back from the bag step', async () => {

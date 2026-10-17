@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { ChipGroup } from '../components/ChipGroup'
 import { useBeanSearch } from '../data/hooks'
 import type { BeanMatch, NewBean, RoastLevel } from '../data/types'
-import { FLAVOURS, ORIGINS, PROCESSES } from './lists'
+import { FLAVOURS, ORIGINS, PROCESSES, VARIETIES } from './lists'
 import { TagInput } from './TagInput'
 import { useDebouncedValue } from './useDebouncedValue'
 
@@ -122,6 +122,16 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, onBa
         </label>
       </div>
 
+      <label className="block">
+        <span className={label}>Variety</span>
+        <input value={variety} onChange={(e) => setVariety(e.target.value)} list="varieties" placeholder="e.g. Geisha, Bourbon" className={`${field} mt-1`} />
+        <datalist id="varieties">
+          {VARIETIES.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+      </label>
+
       <div>
         <p className={label}>Process</p>
         <div className="mt-1">
@@ -146,10 +156,6 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, onBa
       <details className="rounded-3xl bg-soft px-4 py-2">
         <summary className="flex min-h-10 cursor-pointer items-center text-sm text-muted">More details</summary>
         <div className="space-y-3 pt-2 pb-2">
-          <label className="block">
-            <span className={label}>Variety</span>
-            <input value={variety} onChange={(e) => setVariety(e.target.value)} className={`${field} mt-1 bg-bg`} />
-          </label>
           <label className="block">
             <span className={label}>Altitude (m)</span>
             <input value={altitude} onChange={(e) => { setAltitude(e.target.value); setErrors((p) => ({ ...p, altitude: undefined })) }} inputMode="numeric" className={`${field} mt-1 bg-bg`} />
