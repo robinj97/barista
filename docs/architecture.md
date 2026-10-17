@@ -37,11 +37,10 @@ Supabase
   - Edge Functions (TypeScript)
         suggest-recipe   -> engine.suggest()
         adjust-recipe    -> engine.adjust()
-        accept-invite    -> creates friendship from a token
 ```
 
 - The browser talks to Postgres directly (through the Supabase client) for ordinary reads and writes. RLS is the security boundary, not the client.
-- Edge Functions exist for work that needs data the caller cannot read directly (engine aggregates, invite tokens). They run with the caller's JWT unless noted.
+- Invites are two database functions (`create_invite`, `accept_invite`) called over RPC, so creating the friendship and consuming the token happen in one transaction. Edge Functions exist for work that needs data the caller cannot read directly (engine aggregates). They run with the caller's JWT unless noted.
 - Scaling cups, rendering the step list and converting grind units run on the client from the same pure modules, so they work offline.
 
 ## 3. Schema sketch
@@ -189,6 +188,19 @@ create table brews (                 -- append-only log; the future training dat
 );
 ```
 
+### What is actually built
+
+The schema above is implemented in `supabase/migrations/` and applied to the Supabase project. Differences from the sketch, all deliberate:
+
+- `private.are_friends` lives in a non-exposed `private` schema so signed-in users cannot call it over the API. Policies reference it by OID.
+- Recipes are **archived, never hard-deleted** (`recipes.archived_at`). Versions and brews reference each other with `on delete restrict`, so history cannot disappear. Archived recipes are hidden from friends.
+- A composite foreign key `(locked_version_id, id) -> recipe_versions(id, recipe_id)` guarantees a locked version belongs to its own recipe.
+- `recipe_versions` has no client `update` or `delete` privilege and a trigger that rejects updates, so snapshots are immutable (the trigger applies to every role).
+- `brews` is insert-only for the parameters that were brewed. After insert, clients may update only `actual_time_s`, `yield_ml`, `feedback`, `tuning`, `change_applied` and `outcome_improved`. A brew can only reference the user's own bag and their own recipe versions (fork a friend's recipe first).
+- Catalogue rows (`beans`, `filters`) record `created_by` and cannot be edited or deleted by clients. `match_key` is a generated column; beans have a trigram index for "did you mean" matching, filters have a unique `(match_key, size)`.
+- Grinders and calibration data are curated by migrations; seed data arrives with the grinder converter (build step 4).
+- `supabase/tests/rls.test.sql` checks the policies with three simulated users inside one rolled-back transaction.
+
 ### Invariants
 
 - `recipe_versions` rows are never updated or deleted (enforced by a trigger). The only mutable pointer is `recipes.locked_version_id`.
@@ -205,7 +217,7 @@ create table brews (                 -- append-only log; the future training dat
 Helper:
 
 ```sql
-create function are_friends(a uuid, b uuid) returns boolean
+create function private.are_friends(a uuid, b uuid) returns boolean
 language sql stable security definer as $$
   select exists (
     select 1 from friendships
@@ -217,8 +229,8 @@ $$;
 | Table | select | insert / update / delete |
 |---|---|---|
 | `profiles` | self and friends | self only |
-| `friendships` | participants | none from clients (created by `accept-invite`); participants may delete |
-| `invites` | inviter | inviter inserts; acceptance only through `accept-invite` |
+| `friendships` | participants | none from clients (created by `accept_invite`); participants may delete |
+| `invites` | inviter | none from clients; created by `create_invite()` and consumed by `accept_invite(token)` |
 | `grinders`, `grinder_calibration` | any signed-in user | none (curated by migrations) |
 | `user_grinders` | owner | owner |
 | `filters` | any signed-in user | insert by any signed-in user (deduped on `match_key`); no update/delete |
@@ -234,7 +246,7 @@ Notes:
 - Friends can read a recipe only while it is locked. Un-locking hides it again. Experiments and history are never visible to anyone else.
 - **Friend signal** ("Sam has this dialed in") is a plain query: recipes for this `bean_id` that RLS already lets me see. No new policy needed.
 - Aggregates across users (engine similar-bean matching) run in Edge Functions using the service role and must return only derived numbers. **v1 rule: the engine uses my own history, my friends' locked recipes, and the seed data. It does not mine non-friends' brews.** That keeps the privacy story simple while the user base is small.
-- Invite tokens: 128-bit random, shown once, stored hashed, single-use, expire after 7 days. `accept-invite` verifies the hash, creates the friendship and marks the invite used in one transaction.
+- Invite tokens: 128-bit random, shown once, stored hashed, single-use, expire after 7 days. `accept_invite` verifies the hash, creates the friendship and marks the invite used in one transaction, and returns one generic error for every failure so tokens cannot be probed.
 
 ## 5. Beans: catalogue plus personal library
 
