@@ -29,7 +29,7 @@ Applied by `supabase/migrations/*_grinder_seed.sql` and mirrored in `engine/grin
 | Timemore Bricks 01S | none | Only a step size (about 10 µm/step); no anchor setting. |
 | Lopder MAXA | none | 60-click dial; no microns data. |
 | Kingrinder K2 | none | Not convertible; see the Kingrinder section. |
-| Kingrinder K7 | 2 (30, 80), **estimated** | Provisional; low confidence. See the Kingrinder section. |
+| Kingrinder K7 | 2 (38, 100), **estimated** | Provisional; low confidence. See the Kingrinder section. |
 
 Why this matters:
 
@@ -43,27 +43,27 @@ Why this matters:
 
 The K7 manual says: zero the grinder by turning the adjustment nut counterclockwise to its stop and aligning the zero nut with 0; settings are clicks counted clockwise from there; one round is 100 clicks; never grind below 15 clicks. It lists recommended click bands per method (Turkish 20 to 30, espresso 30 to 40, moka and AeroPress 40 to 50, pour-over 60 to 80, French press 80 to 100) but gives **no microns**.
 
-We combined that with the roughly 15 µm per click figure you gave us, and put the zero of the size scale at 15 clicks (the manual's floor, where the burrs effectively meet):
+**First estimate (wrong):** we took the stated ~15 µm per click with the size scale starting at 15 clicks, which put pour-over at the manual's 60 to 80 clicks. On the real grinder that was far too fine (a V60 recipe came out at 68 to 70 clicks).
 
-`size ≈ 15 µm × (clicks − 15)`, stored as two points, 30 clicks = 225 µm and 80 clicks = 975 µm, source `estimated`.
+**Revised estimate:** reviews and real use put filter brewing at **95 to 120 clicks** (Coffee Chronicler: most filter between 95 and 120, travel 105 to 120, coarsest about 120; Hario Switch 95 to 105), while espresso is 30 to 40 as the manual says (35 to 39 in the 9barbenchmark and Coffee Chronicler reviews). Both are true only if a click changes the grind by about **9 µm**, not 15. That fits a note on other Kingrinders that the advertised per-click figure is burr travel, not grind size, and beeancoffee.com quotes about 10 µm per click. So two anchors, source `estimated`:
 
-| Method | Manual clicks | Estimated size |
+- espresso, about 38 clicks = about 250 µm
+- filter, about 100 clicks = about 800 µm
+
+| Method | Clicks (reviews) | Estimated size |
 |---|---|---|
-| Turkish | 20 to 30 | 75 to 225 µm |
-| Espresso | 30 to 40 | 225 to 375 µm |
-| Moka, AeroPress | 40 to 50 | 375 to 525 µm |
-| Pour-over | 60 to 80 | 675 to 975 µm |
-| French press | 80 to 100 | 975 to 1275 µm |
+| Espresso | 30 to 40 | 200 to 270 µm |
+| Pour-over / filter | 95 to 120 | 750 to 970 µm |
 
-Example: a DF54 85 (850 µm) recipe converts to **72 clicks (0.72 turns)**, mid pour-over band.
+A V60 recipe at the app's usual 820 µm now lands at about **102 clicks**.
 
 How much to trust it:
 
-- The zero at 15 clicks is an inference from the safety floor, not a measurement.
-- The "normal size per method" ranges used to sanity-check the bands are general coffee knowledge, not from the manual. The fit is good to roughly ±100 µm.
-- One reviewer reports daily brewing at 105 to 120 clicks, which this model contradicts. Unresolved; low weight.
-- The converter marks every K7 result as **low confidence**, and the K7 has a `min_setting` of 15, so it never suggests a setting that could damage the burrs.
-- The coarsest stop is not in the manual, so there is no maximum yet.
+- Nobody has published measured microns per click for the K7. The 9barbenchmark review notes 90 and 100 clicks measured nearly the same, so the curve may not be a straight line.
+- The manual's pour-over band (60 to 80) disagrees with every review and with real use; we follow real use.
+- Zero conventions differ (a movable calibration ring; a rubber sleeve can shift it by 3 or more clicks), so expect a personal offset. The converter supports one per grinder.
+- Every K7 result is **low confidence**, and the K7 has a `min_setting` of 15 so it never suggests a setting that could damage the burrs.
+- The coarsest stop is about 120 clicks per reviews, not in the manual, so there is no maximum yet.
 
 To replace it: one real pair ("K7 at N clicks gives the same cup as C40 at 28") fixes the slope; two also fix the zero. Use source `learned` or `chart` for measured data.
 
