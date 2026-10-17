@@ -34,7 +34,8 @@ export function BrewingPanel({ pours, session, now, onFinish, onCancel }: Brewin
       <p role="timer" className="num text-center text-5xl font-medium">
         {clock(elapsed)}
       </p>
-      <p className={`mt-2 text-center text-sm ${phase.kind === 'pouring' ? 'text-accent' : 'text-muted'}`} aria-live="polite">
+      {/* Not shown: the ring, list and timer say it. Kept for screen readers. */}
+      <p className="sr-only" aria-live="polite">
         {phase.kind === 'pouring' && `Pour ${phase.index + 1}: up to ${pours[phase.index]!.toG} g`}
         {phase.kind === 'waiting' && `Pour ${phase.index + 2} in ${clock(phase.nextAtS - elapsed)}, up to ${pours[phase.index + 1]!.toG} g`}
         {phase.kind === 'drawdown' && 'Drawdown: let it drain, tap below when the bed is dry.'}
