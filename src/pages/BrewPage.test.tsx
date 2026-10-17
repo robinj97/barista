@@ -54,15 +54,6 @@ describe('Brew: set up', () => {
     expect(within(goal).queryByRole('radio', { checked: true })).not.toBeInTheDocument()
   })
 
-  it('explains the goal in plain taste words, and says acidity is not sour', async () => {
-    const user = userEvent.setup()
-    renderApp('/brew', { mock: { bags: [geisha] } })
-    await user.click(await screen.findByRole('button', { name: "What's the difference?" }))
-    expect(await screen.findByText('Acidity is not sour')).toBeInTheDocument()
-    expect(screen.getByText(/like orange juice/)).toBeInTheDocument()
-    expect(screen.getByText(/squeezed lime/)).toBeInTheDocument()
-  })
-
   it('never calls the goal "brighter" on screen', async () => {
     renderApp('/brew', { mock: { bags: [geisha] } })
     await screen.findByRole('radiogroup', { name: 'Sweeter or more acidity' })

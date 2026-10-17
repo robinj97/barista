@@ -4,7 +4,6 @@ import { eyebrow } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
 import { BagPickerSheet } from '../brew/BagPickerSheet'
 import { GearCard } from '../brew/GearCard'
-import { GoalHelpSheet } from '../brew/GoalHelpSheet'
 import { GOAL_BALANCE, GOAL_LABELS, STRENGTHS, goalOf, parseChoices, toSearchParams, type BrewChoices, type Goal } from '../brew/params'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
@@ -26,7 +25,6 @@ export function BrewPage() {
   const choices = parseChoices(params)
   const selection = useBrewSelection(choices)
   const [picking, setPicking] = useState(false)
-  const [goalHelp, setGoalHelp] = useState(false)
   const { bag, bags } = selection
 
   const update = (patch: Partial<BrewChoices>) =>
@@ -139,9 +137,6 @@ export function BrewPage() {
             onChange={(next) => next && update({ strength: next })}
           />
         </div>
-        <button type="button" onClick={() => setGoalHelp(true)} className="mt-2 px-2 text-sm text-accent underline">
-          What's the difference?
-        </button>
         <details className="squircle mt-3 rounded-4xl bg-soft px-5 py-2">
           <summary className="flex min-h-10 cursor-pointer items-center justify-between text-sm text-muted">
             <span>Fine-tune</span>
@@ -181,8 +176,6 @@ export function BrewPage() {
       >
         Suggest a recipe
       </Link>
-
-      <GoalHelpSheet open={goalHelp} onOpenChange={setGoalHelp} />
 
       <BagPickerSheet
         open={picking}

@@ -34,7 +34,6 @@ Status: **set-up and recipe built** (this doc). Brewing mode, logging and saving
 The third goal is called **More acidity**, which is the 4:6 method's own wording. In coffee, *acidity* (roasters also say *bright*) means the pleasant, lively, juicy tang, like orange juice. **Sour** is the unpleasant end: sharp and puckering, like a squeezed lime, and usually a sign of under-extraction.
 
 - The goal means "more of the pleasant tang, less sugar-like sweetness". It never means "more sour".
-- "Bright" is roaster vocabulary that a newer brewer may not know, and "acidic" can sound harsh, so the screen explains the words behind a "What's the difference?" link (plain taste examples, and a clear "acidity is not sour").
 - Assisted tuning (`tuning.md`) keeps using **sour** for the defect, which is fixed with grind, temperature or technique, never with this goal. The internal name for +1 balance in the code is still `brighter`.
 - "Sweetness against acidity" is a simplification: in a cup they are not strict opposites. The method's claim is only that the first pour trades one for the other.
 
