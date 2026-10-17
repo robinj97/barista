@@ -14,7 +14,8 @@ import { EditSheet } from '../brew/EditSheet'
 import { clearEdits, doseFor, hasEdits, resetEdit, setCups, setDose, setGrind, setPours, setRatio, setTemp, setTime, setWater } from '../brew/edits'
 import { GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices, type RecipeEdits } from '../brew/params'
 import { PoursSheet } from '../brew/PoursSheet'
-import { finishSession, readSession, clearSession, startSession, tickPour, writeSession, type BrewSession } from '../brew/session'
+import { currentIndex, phaseAt } from '../brew/progress'
+import { finishSession, readSession, clearSession, elapsedS, startSession, writeSession, type BrewSession } from '../brew/session'
 import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { useSaveDraft } from '../data/hooks'
@@ -142,15 +143,9 @@ export function RecipePage() {
     writeSession(next)
     setSession(next)
   }
-  const tick = () => {
-    if (!session) return
-    const next = tickPour(session, clockNow(), recipe.pours.length)
-    writeSession(next)
-    setSession(next)
-  }
   const finish = () => {
     if (!session) return
-    writeSession(finishSession(session, clockNow(), recipe.pours.length))
+    writeSession(finishSession(session, clockNow()))
     void navigate('/brew/log')
   }
   const cancel = () => {
@@ -182,7 +177,7 @@ export function RecipePage() {
 
       <div className="mt-4">
         {brewing && session ? (
-          <PourRing pours={recipe.pours} current={Math.min(session.ticksS.length, recipe.pours.length - 1)} />
+          <PourRing pours={recipe.pours} current={currentIndex(phaseAt(recipe.pours, elapsedS(session, now)), recipe.pours)} />
         ) : (
           <PourRing pours={recipe.pours} caption={`${recipe.pours.length} pours`} />
         )}
@@ -209,7 +204,7 @@ export function RecipePage() {
       )}
 
       {brewing && session ? (
-        <BrewingPanel pours={recipe.pours} session={session} now={now} onTick={tick} onFinish={finish} onCancel={cancel} />
+        <BrewingPanel pours={recipe.pours} session={session} now={now} onFinish={finish} onCancel={cancel} />
       ) : view === 'recipe' ? (
         <>
       <dl className="mt-4 grid grid-cols-3 gap-2" aria-label="Recipe">
@@ -306,7 +301,7 @@ export function RecipePage() {
         <button type="button" onClick={startTimer} className="mt-4 h-14 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
           Start timer
         </button>
-        <p className="mt-2 text-center text-xs text-muted">Tap as the first pour begins.</p>
+        <p className="mt-2 text-center text-xs text-muted">Tap as the first pour begins. The rest follows the schedule.</p>
       </section>
       )}
 

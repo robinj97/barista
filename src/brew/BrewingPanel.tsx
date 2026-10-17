@@ -2,67 +2,58 @@ import { useEffect, useRef, useState } from 'react'
 import type { Pour } from '../../engine/types.ts'
 import { clock } from './buildInput'
 import { beep } from './cues'
-import { currentPour, elapsedS, type BrewSession } from './session'
+import { currentIndex, phaseAt } from './progress'
+import { elapsedS, type BrewSession } from './session'
 
 interface BrewingPanelProps {
   pours: Pour[]
   session: BrewSession
   now: number
-  onTick: () => void
   onFinish: () => void
   onCancel: () => void
 }
 
-/** The running brew: the timer, what to pour next, and one big button to tick it off. */
-export function BrewingPanel({ pours, session, now, onTick, onFinish, onCancel }: BrewingPanelProps) {
+/** The running brew. It follows the schedule by itself; the only tap is when the drawdown is over. */
+export function BrewingPanel({ pours, session, now, onFinish, onCancel }: BrewingPanelProps) {
   const [confirming, setConfirming] = useState(false)
   const elapsed = elapsedS(session, now)
-  const current = currentPour(session, pours.length)
-  const next = current === null ? null : pours[current]!
-  const due = next !== null && (current === 0 || elapsed >= next.atS)
+  const phase = phaseAt(pours, elapsed)
+  const current = currentIndex(phase, pours)
 
-  // One sound when the next pour comes due.
-  const cued = useRef(-1)
+  // One sound as each pour begins (not for the first: you just tapped start).
+  const cued = useRef(0)
   useEffect(() => {
-    if (current !== null && current > 0 && elapsed >= pours[current]!.atS && cued.current < current) {
+    if (current > cued.current) {
       cued.current = current
       beep()
     }
-  }, [current, elapsed, pours])
+  }, [current])
 
   return (
     <section aria-label="Brewing" className="mt-4">
       <p role="timer" className="num text-center text-5xl font-medium">
         {clock(elapsed)}
       </p>
-      <p className={`mt-2 text-center text-sm ${due ? 'text-accent' : 'text-muted'}`} aria-live="polite">
-        {next === null
-          ? 'All poured. Let it drain, then tap when the bed is dry.'
-          : due
-            ? `Pour ${current! + 1}: up to ${next.toG} g`
-            : `Next: pour ${current! + 1} at ${clock(next.atS)}, up to ${next.toG} g`}
+      <p className={`mt-2 text-center text-sm ${phase.kind === 'pouring' ? 'text-accent' : 'text-muted'}`} aria-live="polite">
+        {phase.kind === 'pouring' && `Pour ${phase.index + 1}: up to ${pours[phase.index]!.toG} g`}
+        {phase.kind === 'waiting' && `Pour ${phase.index + 2} in ${clock(phase.nextAtS - elapsed)}, up to ${pours[phase.index + 1]!.toG} g`}
+        {phase.kind === 'drawdown' && 'Drawdown: let it drain, tap below when the bed is dry.'}
       </p>
 
-      <button
-        type="button"
-        onClick={next === null ? onFinish : onTick}
-        className="mt-4 h-16 w-full rounded-full bg-ink text-lg font-medium text-bg transition-transform active:scale-[0.98]"
-      >
-        {next === null ? 'Drawdown finished' : `Pour ${current! + 1} done`}
-      </button>
+      {phase.kind === 'drawdown' && (
+        <button type="button" onClick={onFinish} className="mt-4 h-16 w-full rounded-full bg-ink text-lg font-medium text-bg transition-transform active:scale-[0.98]">
+          Drawdown finished
+        </button>
+      )}
 
       <ol className="mt-4 space-y-1" aria-label="Pour progress">
         {pours.map((pour, index) => {
-          const done = index < session.ticksS.length
+          const done = index < current || (phase.kind === 'drawdown' && index === current) || (phase.kind === 'waiting' && index === current)
+          const active = phase.kind === 'pouring' && index === current
           return (
-            <li
-              key={pour.atS}
-              aria-current={index === current ? 'step' : undefined}
-              className={`flex items-center gap-3 rounded-full py-2 pr-5 pl-2 ${index === current ? 'bg-accent-soft' : ''}`}
-            >
+            <li key={pour.atS} aria-current={active ? 'step' : undefined} className={`flex items-center gap-3 rounded-full py-2 pr-5 pl-2 ${active ? 'bg-accent-soft' : ''}`}>
               <span className={`grid size-8 place-items-center rounded-full text-xs ${done ? 'bg-ink text-bg' : 'bg-soft'}`}>{done ? '✓' : index + 1}</span>
               <span className="num flex-1 text-sm">{clock(pour.atS)}</span>
-              <span className="num text-sm text-muted">{done ? `done ${clock(session.ticksS[index]!)}` : ''}</span>
               <span className="num w-16 text-right text-sm">{pour.toG} g</span>
             </li>
           )

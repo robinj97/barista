@@ -113,8 +113,6 @@ export type Compared = 'sweeter' | 'more_acidity' | 'same'
 /** What happened in a brew, as logged. */
 export interface BrewResult {
   brewedAt: string
-  /** Seconds from the start of the timer to each pour being ticked off. */
-  pourTicksS: number[]
   /** Seconds from the start of the timer to the end of the drawdown. */
   totalTimeS: number
   taste: Taste | null

@@ -87,7 +87,6 @@ export function LogPage() {
     setSaving(true)
     const result: BrewResult = {
       brewedAt: new Date(session.startedAt).toISOString(),
-      pourTicksS: session.ticksS,
       totalTimeS: session.finishedS!,
       taste,
       compared: previous ? compared : null,

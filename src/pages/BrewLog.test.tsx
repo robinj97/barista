@@ -8,12 +8,15 @@ const geisha = makeBag('b-geisha', { createdAt: '2026-10-14T10:00:00Z' })
 const at = '/brew/recipe?bag=bag-b-geisha&balance=0&strength=medium&cups=2'
 const mock = { bags: [geisha], grinderIds: ['turin-df54'], filterIds: ['f-cafec-t90'] }
 
-/** Start the timer and tick every pour off, which lands on the log screen. */
+const session = (secondsAgo: number, extra: object = {}) =>
+  JSON.stringify({ bagId: 'bag-b-geisha', search: at.split('?')[1], asOf: '2026-10-17', startedAt: Date.now() - secondsAgo * 1000, finishedS: null, ...extra })
+
+/** A brew whose schedule has run out, so the drawdown button is showing when the screen opens. */
+const drawdown = () => localStorage.setItem('barista.brew-session', session(200))
+
+/** Taps the one button of a finished schedule, which lands on the log screen. */
 async function brew(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: 'Start brewing' }))
-  await user.click(await screen.findByRole('button', { name: 'Start timer' }))
-  for (let n = 1; n <= 5; n++) await user.click(await screen.findByRole('button', { name: `Pour ${n} done` }))
-  await user.click(screen.getByRole('button', { name: 'Drawdown finished' }))
+  await user.click(await screen.findByRole('button', { name: 'Drawdown finished' }))
   await screen.findByRole('heading', { name: 'How did it go?' })
 }
 
@@ -27,21 +30,32 @@ describe('Brewing', () => {
     await user.click(screen.getByRole('button', { name: 'Start timer' }))
     expect(screen.getByRole('timer')).toHaveTextContent('0:0')
     expect(screen.getByText(/Pour 1: up to 60 g/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Pour \d done/ })).not.toBeInTheDocument()
     // The recipe can no longer be edited while brewing.
     expect(screen.queryByRole('radio', { name: 'Recipe' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit pours' })).not.toBeInTheDocument()
   })
 
-  it('ticks pours off in order, then asks for the drawdown', async () => {
-    const user = userEvent.setup()
+  it('has no buttons between pours: it follows the schedule', async () => {
+    localStorage.setItem('barista.brew-session', session(50))
     renderApp(at, { mock })
-    await user.click(await screen.findByRole('button', { name: 'Start brewing' }))
-    await user.click(await screen.findByRole('button', { name: 'Start timer' }))
-    await user.click(screen.getByRole('button', { name: 'Pour 1 done' }))
+    // 50 s in: pour 1 is over, pour 2 (from 0:45) is under way.
+    expect(await screen.findByText(/Pour 2: up to 120 g/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Pour \d done/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Drawdown finished' })).not.toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Pour progress' })).getAllByRole('listitem')[0]).toHaveTextContent('✓')
-    expect(screen.getByRole('button', { name: 'Pour 2 done' })).toBeInTheDocument()
-    for (let n = 2; n <= 5; n++) await user.click(screen.getByRole('button', { name: `Pour ${n} done` }))
-    expect(screen.getByText(/Let it drain/)).toBeInTheDocument()
+  })
+
+  it('counts down to the next pour between pours', async () => {
+    localStorage.setItem('barista.brew-session', session(30))
+    renderApp(at, { mock })
+    expect(await screen.findByText(/Pour 2 in 0:1\d, up to 120 g/)).toBeInTheDocument()
+  })
+
+  it('switches to the drawdown once the last pour is over', async () => {
+    localStorage.setItem('barista.brew-session', session(200))
+    renderApp(at, { mock })
+    expect(await screen.findByText(/Drawdown: let it drain/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Drawdown finished' })).toBeInTheDocument()
   })
 
@@ -57,20 +71,14 @@ describe('Brewing', () => {
   })
 
   it('picks the timer back up after the app is reopened', async () => {
-    localStorage.setItem(
-      'barista.brew-session',
-      JSON.stringify({ bagId: 'bag-b-geisha', search: at.split('?')[1], asOf: '2026-10-17', startedAt: Date.now() - 41_000, ticksS: [30], finishedS: null }),
-    )
+    localStorage.setItem('barista.brew-session', session(41))
     renderApp(at, { mock })
     expect(await screen.findByRole('timer')).toHaveTextContent('0:4')
-    expect(screen.getByRole('button', { name: 'Pour 2 done' })).toBeInTheDocument()
+    expect(screen.getByText(/Pour 2 in/)).toBeInTheDocument()
   })
 
   it('offers to finish logging a brew that was never saved', async () => {
-    localStorage.setItem(
-      'barista.brew-session',
-      JSON.stringify({ bagId: 'bag-b-geisha', search: at.split('?')[1], asOf: '2026-10-17', startedAt: Date.now() - 200_000, ticksS: [30, 70, 100, 130, 160], finishedS: 190 }),
-    )
+    localStorage.setItem('barista.brew-session', session(200, { finishedS: 190 }))
     renderApp(at, { mock })
     expect(await screen.findByRole('link', { name: /Finish logging your last brew/ })).toHaveAttribute('href', '/brew/log')
   })
@@ -78,6 +86,7 @@ describe('Brewing', () => {
 
 describe('Logging', () => {
   it('saves your working recipe and shows it on the bean as where you left off', async () => {
+    drawdown()
     const user = userEvent.setup()
     renderApp(at, { mock })
     await brew(user)
@@ -93,6 +102,7 @@ describe('Logging', () => {
   })
 
   it('asks how it compares only when there was a previous brew', async () => {
+    drawdown()
     const user = userEvent.setup()
     renderApp(at, { mock })
     await brew(user)
@@ -100,6 +110,7 @@ describe('Logging', () => {
   })
 
   it('asks how it compares with last time when there was one', async () => {
+    drawdown()
     const user = userEvent.setup()
     renderApp(at, {
       mock: {
@@ -109,7 +120,7 @@ describe('Logging', () => {
             beanId: 'b-geisha',
             method: 'v60',
             choices: { bagId: 'bag-b-geisha', balance: 0, strength: 'medium', grinderId: null, filterId: null, cups: 2, edits: {} },
-            lastBrew: { brewedAt: '2026-10-16T08:00:00Z', pourTicksS: [], totalTimeS: 170, taste: 'sour', compared: null, yieldG: null, notes: '', firstPourG: 60 },
+            lastBrew: { brewedAt: '2026-10-16T08:00:00Z', totalTimeS: 170, taste: 'sour', compared: null, yieldG: null, notes: '', firstPourG: 60 },
             updatedAt: '2026-10-16T08:00:00Z',
           },
         ],
@@ -122,6 +133,7 @@ describe('Logging', () => {
   })
 
   it('needs a rating to lock a recipe in, and shows it locked on the bean', async () => {
+    drawdown()
     const user = userEvent.setup()
     renderApp(at, { mock })
     await brew(user)
@@ -135,6 +147,7 @@ describe('Logging', () => {
   })
 
   it('refuses a yield that is not a number', async () => {
+    drawdown()
     const user = userEvent.setup()
     renderApp(at, { mock })
     await brew(user)
@@ -148,6 +161,7 @@ describe('Logging', () => {
   })
 
   it('saves on the phone when offline, and sends it when the connection returns', async () => {
+    drawdown()
     const user = userEvent.setup()
     let offline = true
     renderApp(at, { mock: { ...mock, isOffline: () => offline } })

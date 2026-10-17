@@ -9,8 +9,6 @@ export interface BrewSession {
   /** The day the recipe was worked out for (it depends on how old the roast is). */
   asOf: string
   startedAt: number
-  /** Seconds from the start to each pour being ticked off. */
-  ticksS: number[]
   /** Seconds from the start to the end of the drawdown; set when the brew is finished. */
   finishedS: number | null
 }
@@ -20,7 +18,7 @@ const STORAGE_KEY = 'barista.brew-session'
 export function readSession(): BrewSession | null {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as BrewSession | null
-    return parsed && typeof parsed.startedAt === 'number' && Array.isArray(parsed.ticksS) ? parsed : null
+    return parsed && typeof parsed.startedAt === 'number' && typeof parsed.bagId === 'string' ? parsed : null
   } catch {
     return null
   }
@@ -47,24 +45,13 @@ export const startSession = (bagId: string, search: string, asOf: string, nowMs:
   search,
   asOf,
   startedAt: nowMs,
-  ticksS: [],
   finishedS: null,
 })
 
 export const elapsedS = (session: BrewSession, nowMs: number): number => Math.max(0, Math.round((nowMs - session.startedAt) / 1000))
 
-/** Ticks off the next pour. Ignored once every pour is ticked or the brew is finished. */
-export function tickPour(session: BrewSession, nowMs: number, pourCount: number): BrewSession {
-  if (session.finishedS !== null || session.ticksS.length >= pourCount) return session
-  return { ...session, ticksS: [...session.ticksS, elapsedS(session, nowMs)] }
+/** Ends the drawdown: the one thing the schedule cannot know, so it is the one tap. */
+export function finishSession(session: BrewSession, nowMs: number): BrewSession {
+  if (session.finishedS !== null) return session
+  return { ...session, finishedS: elapsedS(session, nowMs) }
 }
-
-/** Ends the drawdown. Only possible after the last pour is ticked off. */
-export function finishSession(session: BrewSession, nowMs: number, pourCount: number): BrewSession {
-  if (session.finishedS !== null || session.ticksS.length < pourCount) return session
-  return { ...session, finishedS: Math.max(elapsedS(session, nowMs), session.ticksS.at(-1) ?? 0) }
-}
-
-/** Index of the pour waiting to be ticked off, or null when all are done. */
-export const currentPour = (session: BrewSession, pourCount: number): number | null =>
-  session.ticksS.length < pourCount ? session.ticksS.length : null
