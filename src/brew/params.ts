@@ -11,8 +11,6 @@ export interface BrewChoices {
   /** -1 sweeter ... +1 brighter. The goal chips are presets of this. */
   balance: number
   strength: Strength
-  /** Tasting notes to bring out. */
-  notes: string[]
   grinderId: string | null
   /** A filter id, 'none' for no filter, or null for the default. */
   filterId: string | null
@@ -23,13 +21,10 @@ export const DEFAULT_CHOICES: BrewChoices = {
   bagId: null,
   balance: 0,
   strength: 'medium',
-  notes: [],
   grinderId: null,
   filterId: null,
   cups: 2,
 }
-
-export const MAX_NOTES = 6
 
 /** Which goal chip matches this balance exactly, or null for a custom value. */
 export function goalOf(balance: number): Goal | null {
@@ -40,16 +35,11 @@ export function parseChoices(params: URLSearchParams): BrewChoices {
   const balance = Number(params.get('balance'))
   const strength = params.get('strength') as Strength
   const cups = Number(params.get('cups'))
-  const notes = (params.get('notes') ?? '')
-    .split(',')
-    .map((note) => note.trim().toLowerCase())
-    .filter(Boolean)
 
   return {
     bagId: params.get('bag') || null,
     balance: params.has('balance') && Number.isFinite(balance) ? Math.round(Math.min(1, Math.max(-1, balance)) * 10) / 10 : DEFAULT_CHOICES.balance,
     strength: STRENGTHS.includes(strength) ? strength : DEFAULT_CHOICES.strength,
-    notes: [...new Set(notes)].slice(0, MAX_NOTES),
     grinderId: params.get('grinder') || null,
     filterId: params.get('filter') || null,
     cups: Number.isInteger(cups) && cups >= 1 && cups <= 4 ? cups : DEFAULT_CHOICES.cups,
@@ -61,7 +51,6 @@ export function toSearchParams(choices: BrewChoices): URLSearchParams {
   if (choices.bagId) params.set('bag', choices.bagId)
   params.set('balance', String(choices.balance))
   params.set('strength', choices.strength)
-  if (choices.notes.length) params.set('notes', choices.notes.join(','))
   if (choices.grinderId) params.set('grinder', choices.grinderId)
   if (choices.filterId) params.set('filter', choices.filterId)
   params.set('cups', String(choices.cups))

@@ -4,7 +4,7 @@ import { eyebrow } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
 import { BagPickerSheet } from '../brew/BagPickerSheet'
 import { GearCard } from '../brew/GearCard'
-import { GOAL_BALANCE, MAX_NOTES, STRENGTHS, goalOf, parseChoices, toSearchParams, type BrewChoices, type Goal } from '../brew/params'
+import { GOAL_BALANCE, STRENGTHS, goalOf, parseChoices, toSearchParams, type BrewChoices, type Goal } from '../brew/params'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
 import { METHOD_LABELS } from '../data/types'
@@ -78,15 +78,8 @@ export function BrewPage() {
 
   const cover = beanCover(bag.bean.id)
   const line = eyebrow(bag.bean)
-  const notes = bag.bean.roasterNotes
   const defaultMethod = selection.profile.data?.default_method
   const goal = goalOf(choices.balance)
-
-  const toggleNote = (note: string) => {
-    const has = choices.notes.includes(note)
-    if (!has && choices.notes.length >= MAX_NOTES) return
-    update({ notes: has ? choices.notes.filter((n) => n !== note) : [...choices.notes, note] })
-  }
 
   const recipeSearch = toSearchParams({ ...choices, bagId: bag.id }).toString()
 
@@ -172,31 +165,6 @@ export function BrewPage() {
         </details>
       </section>
 
-      {notes.length > 0 && (
-        <section aria-label="Bring out" className="mt-6">
-          <h2 className={label}>Bring out</h2>
-          <ul className="mt-2 flex flex-wrap gap-1.5">
-            {notes.map((note) => {
-              const on = choices.notes.includes(note.toLowerCase())
-              return (
-                <li key={note}>
-                  <button
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => toggleNote(note.toLowerCase())}
-                    className={`h-10 rounded-full px-4 text-sm transition-colors duration-200 ${
-                      on ? 'bg-accent-soft text-accent' : 'bg-soft text-ink'
-                    }`}
-                  >
-                    {note}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
-
       <GearCard
         grinders={selection.myGrinders}
         grinder={selection.grinder}
@@ -218,7 +186,7 @@ export function BrewPage() {
         onOpenChange={setPicking}
         bags={bags.data ?? []}
         selectedId={bag.id}
-        onPick={(next) => update({ bagId: next.id, notes: [] })}
+        onPick={(next) => update({ bagId: next.id })}
       />
     </>
   )

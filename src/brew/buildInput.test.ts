@@ -10,14 +10,18 @@ const cafec = { id: 'f', brand: 'CAFEC', model: 'T-90', size: '02', material: 'p
 
 describe('buildSuggestInput', () => {
   it('carries the bean, the goal and the filter into the engine input', () => {
-    const input = buildSuggestInput(bag, { ...DEFAULT_CHOICES, balance: 0.6, strength: 'strong', notes: ['vanilla'], cups: 3 }, cafec, '2026-10-17')
+    const input = buildSuggestInput(bag, { ...DEFAULT_CHOICES, balance: 0.6, strength: 'strong', cups: 3 }, cafec, '2026-10-17')
     expect(input.method).toBe('v60')
     expect(input.bean).toMatchObject({ id: 'b-geisha', process: 'Washed', variety: 'Geisha', roastLevel: 'light', roastDate: '2026-10-12' })
     expect(input.bean.notes).toEqual(['black tea', 'candied lemon', 'vanilla'])
-    expect(input.target).toEqual({ balance: 0.6, strength: 'strong', emphasise: ['vanilla'] })
+    expect(input.target).toEqual({ balance: 0.6, strength: 'strong', emphasise: [] })
     expect(input.cups).toBe(3)
     expect(input.filter).toEqual({ id: 'f', brand: 'CAFEC', model: 'T-90', flowClass: 'fast' })
     expect(input.asOf).toBe('2026-10-17')
+  })
+
+  it('does not send tasting notes: their effect on the cup is unproven', () => {
+    expect(buildSuggestInput(bag, DEFAULT_CHOICES, null, '2026-10-17').target.emphasise).toEqual([])
   })
 
   it('works with no filter', () => {

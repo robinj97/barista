@@ -84,7 +84,7 @@ Everything below is **encoded guidance, not validated science**. Each carries a 
 | Agitation | None by default | Method reference |
 | Filter paper | Fast papers start 30 µm finer, slow papers 30 µm coarser. Medium papers and an unknown flow class mean no adjustment, and the reasons say which. Metal and cloth are not treated separately yet. Small and **unverified**. | One source notes some third-party V60 papers are thinner and faster than Hario's |
 
-Tasting notes you want to bring out nudge the balance by at most 0.35 (bright notes such as bergamot, citrus and florals lean brighter; chocolate, caramel and nuts lean sweeter; mixed notes cancel). Compound and plural forms count ("blueberry", "nutty"). The mapping is a hand-written lookup in `engine/notes.ts`, and your own balance setting still leads. Ratio follows strength: 1:16 light, 1:15 medium, 1:14 strong.
+(Not used by the UI at the moment: the effect of notes on the cup is unproven, see `brew.md`.) Tasting notes you want to bring out nudge the balance by at most 0.35 (bright notes such as bergamot, citrus and florals lean brighter; chocolate, caramel and nuts lean sweeter; mixed notes cancel). Compound and plural forms count ("blueberry", "nutty"). The mapping is a hand-written lookup in `engine/notes.ts`, and your own balance setting still leads. Ratio follows strength: 1:16 light, 1:15 medium, 1:14 strong.
 
 ## 5. Using data
 

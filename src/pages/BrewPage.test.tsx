@@ -63,20 +63,11 @@ describe('Brew: set up', () => {
     expect(within(strength).getByRole('radio', { name: 'Strong' })).toBeChecked()
   })
 
-  it('offers the bean\'s tasting notes to bring out, and forgets them when you switch beans', async () => {
-    const user = userEvent.setup()
-    renderApp('/brew', { mock: { bags: [elto, geisha] } })
-    const notes = await screen.findByRole('region', { name: 'Bring out' })
-    const vanilla = within(notes).getByRole('button', { name: 'vanilla' })
-    expect(vanilla).toHaveAttribute('aria-pressed', 'false')
-    await user.click(vanilla)
-    expect(within(notes).getByRole('button', { name: 'vanilla' })).toHaveAttribute('aria-pressed', 'true')
-
-    await user.click(within(screen.getByRole('region', { name: 'Bean' })).getByRole('button'))
-    await user.click(await screen.findByRole('button', { name: /Elto Arbegona/ }))
-    const next = await screen.findByRole('region', { name: 'Bring out' })
-    expect(within(next).getByRole('button', { name: 'bergamot' })).toHaveAttribute('aria-pressed', 'false')
-    expect(within(next).queryByRole('button', { name: 'vanilla' })).not.toBeInTheDocument()
+  it('does not offer tasting notes to bring out: they do not change the cup', async () => {
+    renderApp('/brew', { mock: { bags: [geisha] } })
+    await screen.findByRole('region', { name: 'Bean' })
+    expect(screen.queryByRole('region', { name: 'Bring out' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'vanilla' })).not.toBeInTheDocument()
   })
 
   it('asks for a grinder inline and adds it', async () => {
@@ -176,10 +167,16 @@ describe('Brew: the recipe', () => {
     expect(await within(specs).findByText('203°F')).toBeInTheDocument()
   })
 
-  it('leans sweeter when you want to bring out a sweet note', async () => {
+  it('ignores tasting notes in older links, so the pours do not move', async () => {
     renderApp(at('&notes=vanilla'), { mock })
     const pours = await screen.findByRole('region', { name: 'Pours' })
-    expect(within(pours).getAllByRole('listitem')[0]).toHaveTextContent('+53 g')
+    expect(within(pours).getAllByRole('listitem')[0]).toHaveTextContent('+60 g')
+  })
+
+  it('leans the first pour with the goal: brighter is bigger, sweeter is smaller', async () => {
+    renderApp('/brew/recipe?bag=bag-b-geisha&balance=0.6&strength=medium&cups=2', { mock })
+    const brighter = await screen.findByRole('region', { name: 'Pours' })
+    expect(within(brighter).getAllByRole('listitem')[0]).toHaveTextContent('+72 g')
   })
 
   it('explains itself', async () => {
@@ -198,10 +195,11 @@ describe('Brew: the recipe', () => {
 
   it('goes back to set up with your choices intact', async () => {
     const user = userEvent.setup()
-    renderApp(at('&notes=vanilla'), { mock })
+    renderApp('/brew/recipe?bag=bag-b-geisha&balance=0.6&strength=strong&cups=2', { mock })
     await screen.findByRole('heading', { name: 'Tanzania Geisha' }) // the link also exists while loading
     await user.click(screen.getByRole('link', { name: 'Back to set up' }))
-    const notes = await screen.findByRole('region', { name: 'Bring out' })
-    expect(within(notes).getByRole('button', { name: 'vanilla' })).toHaveAttribute('aria-pressed', 'true')
+    const strength = await screen.findByRole('radiogroup', { name: 'Strength' })
+    expect(within(strength).getByRole('radio', { name: 'Strong' })).toBeChecked()
+    expect(within(await screen.findByRole('radiogroup', { name: 'Sweeter or brighter' })).getByRole('radio', { name: 'Brighter' })).toBeChecked()
   })
 })
