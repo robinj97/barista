@@ -87,6 +87,8 @@ export interface Api {
   /** Roasters that already exist in the shared catalogue, for matching and type-ahead. */
   listRoasters(): Promise<string[]>
   listMyBags(): Promise<Bag[]>
+  /** The catalogue in alphabetical order (roaster, then name), up to `BROWSE_LIMIT` beans. */
+  browseBeans(): Promise<BeanMatch[]>
   /** Catalogue search: every word matches roaster + name in any order, tolerant of small typos. */
   searchBeans(query: string): Promise<BeanMatch[]>
   /**
@@ -198,6 +200,9 @@ export interface Bean {
   roastLevel: RoastLevel | null
   roasterNotes: string[]
 }
+
+/** How many beans `browseBeans` returns at most; at the cap the app searches the server instead. */
+export const BROWSE_LIMIT = 1000
 
 export interface BeanMatch extends Bean {
   /** You already have a bag of it. */

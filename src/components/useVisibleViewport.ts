@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 
 interface VisibleViewport {
   /** Height of the part of the screen the person can actually see. */
@@ -7,13 +7,27 @@ interface VisibleViewport {
   bottomInset: number
 }
 
-function measure(): VisibleViewport {
+function subscribe(onChange: () => void): () => void {
   const viewport = window.visualViewport
-  if (!viewport) return { height: window.innerHeight, bottomInset: 0 }
-  return {
-    height: viewport.height,
-    bottomInset: Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop),
+  if (!viewport) return () => {}
+  viewport.addEventListener('resize', onChange)
+  viewport.addEventListener('scroll', onChange)
+  return () => {
+    viewport.removeEventListener('resize', onChange)
+    viewport.removeEventListener('scroll', onChange)
   }
+}
+
+const noSubscription = () => () => {}
+
+function visibleHeight(): number {
+  return window.visualViewport?.height ?? window.innerHeight
+}
+
+function bottomInset(): number {
+  const viewport = window.visualViewport
+  if (!viewport) return 0
+  return Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
 }
 
 /**
@@ -22,23 +36,8 @@ function measure(): VisibleViewport {
  * without shrinking `dvh`, so CSS alone cannot do this.
  */
 export function useVisibleViewport(enabled: boolean): VisibleViewport | null {
-  const [visible, setVisible] = useState<VisibleViewport | null>(null)
-
-  useEffect(() => {
-    const viewport = window.visualViewport
-    if (!enabled || !viewport) {
-      setVisible(null)
-      return
-    }
-    const update = () => setVisible(measure())
-    update()
-    viewport.addEventListener('resize', update)
-    viewport.addEventListener('scroll', update)
-    return () => {
-      viewport.removeEventListener('resize', update)
-      viewport.removeEventListener('scroll', update)
-    }
-  }, [enabled])
-
-  return visible
+  const listen = enabled ? subscribe : noSubscription
+  const height = useSyncExternalStore(listen, visibleHeight)
+  const inset = useSyncExternalStore(listen, bottomInset)
+  return enabled && window.visualViewport ? { height, bottomInset: inset } : null
 }

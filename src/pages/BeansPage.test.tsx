@@ -131,6 +131,43 @@ describe('Beans search', () => {
   })
 })
 
+describe('Browsing the catalogue when adding a bag', () => {
+  it('lists every bean alphabetically by roaster before you type', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    await openSheet(user)
+
+    const headings = await screen.findAllByRole('heading', { level: 3 })
+    const roasters = headings.map((heading) => heading.textContent)
+    expect(roasters).toEqual([...new Set(SEED_BEANS.map((bean) => bean.roaster))].sort((a, b) => a.localeCompare(b)))
+    for (const bean of SEED_BEANS) expect(screen.getByRole('button', { name: new RegExp(bean.name) })).toBeInTheDocument()
+  })
+
+  it('narrows the list with every letter, without waiting for the server', async () => {
+    const user = userEvent.setup()
+    const { api } = renderApp('/beans')
+    const search = vi.spyOn(api, 'searchBeans')
+    const input = await openSheet(user)
+    await screen.findByRole('button', { name: /Guji Natural/ })
+
+    await user.type(input, 'g')
+    expect(screen.getByRole('button', { name: /Guji Natural/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Pink Bourbon/ })).not.toBeInTheDocument()
+    expect(search).not.toHaveBeenCalled()
+  })
+
+  it('asks the server for close matches when nothing in the list fits a typo', async () => {
+    const user = userEvent.setup()
+    const { api } = renderApp('/beans')
+    const elto = { ...SEED_BEANS.find((bean) => bean.id === 'b-elto')!, owned: false, friendsWithRecipe: 0 }
+    vi.spyOn(api, 'searchBeans').mockResolvedValue([elto])
+    await user.type(await openSheet(user), 'eltoo')
+
+    expect(await screen.findByText('Did you mean')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Elto Arbegona/ })).toBeInTheDocument()
+  })
+})
+
 describe('Adding a bag', () => {
   it('finds an existing bean, adds the bag and opens its page', async () => {
     const user = userEvent.setup()
