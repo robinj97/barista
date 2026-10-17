@@ -21,6 +21,15 @@ export function buildSuggestInput(bag: Bag, choices: BrewChoices, filter: Filter
     // Tasting notes are not sent: whether they change the cup is unproven (docs/brew.md).
     target: { balance: choices.balance, strength: choices.strength, emphasise: [] },
     cups: choices.cups,
+    doseG: choices.edits.doseG,
+    overrides: {
+      waterG: choices.edits.waterG,
+      ratio: choices.edits.ratio,
+      tempC: choices.edits.tempC,
+      grindUm: choices.edits.grindUm,
+      pours: choices.edits.pours,
+      targetTimeS: choices.edits.targetTimeS,
+    },
     filter: filter
       ? { id: filter.id, brand: filter.brand, model: filter.model, flowClass: filter.flow_class as FlowClass | null }
       : null,

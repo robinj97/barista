@@ -6,6 +6,7 @@ const SOURCE_LABELS: Record<ReasonSource, string> = {
   guidance: 'General guidance',
   data: 'From your recipes',
   assumption: 'Assumed',
+  you: 'You set this',
 }
 
 interface WhySheetProps {

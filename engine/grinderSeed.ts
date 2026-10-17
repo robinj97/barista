@@ -84,9 +84,9 @@ export const GRINDER_SEED: GrinderModel[] = [
   { id: 'lopder-maxa', brand: 'Lopder', model: 'MAXA', unitLabel: 'clicks', step: 1, max: 60, points: [] },
   { id: 'kingrinder-k2', brand: 'Kingrinder', model: 'K2', unitLabel: 'clicks', step: 1, points: [] },
   // K7: 100 clicks per turn, counted from the finest stop; the manual says never grind below
-  // 15 clicks. Points are ESTIMATED from the ~15 um/click spec with the size scale starting at
-  // 15 clicks (size = 15 * (clicks - 15)), which matches the manual's per-method click bands.
-  // Replace with measured pairs when we have them. See docs/grinders.md.
+  // 15 clicks. Points are ESTIMATED from reviews and use: espresso ~38 clicks = ~250 um, filter
+  // ~100 clicks = ~800 um, about 9 um per click (not the advertised 15). Replace with measured
+  // pairs when we have them. See docs/grinders.md.
   {
     id: 'kingrinder-k7',
     brand: 'Kingrinder',
@@ -95,8 +95,8 @@ export const GRINDER_SEED: GrinderModel[] = [
     step: 1,
     min: 15,
     points: [
-      { setting: 30, microns: 225, source: 'estimated' },
-      { setting: 80, microns: 975, source: 'estimated' },
+      { setting: 38, microns: 250, source: 'estimated' },
+      { setting: 100, microns: 800, source: 'estimated' },
     ],
   },
 ]

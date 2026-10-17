@@ -172,26 +172,22 @@ describe('confidence', () => {
 describe('Kingrinder K7 (estimated)', () => {
   const k7 = byModel('K7')
 
-  it('follows size = 15 um * (clicks - 15)', () => {
-    expect(settingToMicrons(k7, 60).microns).toBe(675)
-    expect(settingToMicrons(k7, 80).microns).toBe(975)
-    expect(settingToMicrons(k7, 15).microns).toBe(0)
+  it('passes through the two anchors: espresso ~38 clicks and filter ~100 clicks', () => {
+    expect(settingToMicrons(k7, 38).microns).toBe(250)
+    expect(settingToMicrons(k7, 100).microns).toBe(800)
   })
 
-  it('puts a DF54 85 (850 um) recipe at about 72 clicks, mid pour-over band', () => {
+  it('puts a V60 grind of about 800 um near 100 clicks, not 70', () => {
     const result = convertSetting(df54, 85, k7)
-    expect(result.setting).toBe(72)
-    expect(result.setting).toBeGreaterThanOrEqual(60)
-    expect(result.setting).toBeLessThanOrEqual(80)
-    expect(result.extrapolated).toBe(false)
+    expect(result.setting).toBeGreaterThanOrEqual(95)
+    expect(result.setting).toBeLessThanOrEqual(120)
   })
 
-  it('maps the manual\'s method bands to sensible sizes', () => {
+  it('keeps the espresso band (30 to 40 clicks) fine and pour-over (95 to 120) medium-coarse', () => {
     const size = (clicks: number) => settingToMicrons(k7, clicks).microns
-    expect(size(30)).toBeGreaterThanOrEqual(200)   // espresso band starts
-    expect(size(40)).toBeLessThanOrEqual(400)      // espresso band ends
-    expect(size(60)).toBeGreaterThanOrEqual(600)   // pour-over band starts
-    expect(size(80)).toBeLessThanOrEqual(1000)     // pour-over band ends
+    expect(size(35)).toBeLessThanOrEqual(300)
+    expect(size(95)).toBeGreaterThanOrEqual(600)
+    expect(size(120)).toBeLessThanOrEqual(1100)
   })
 
   it('never suggests a setting below the 15-click safety floor', () => {
@@ -202,7 +198,7 @@ describe('Kingrinder K7 (estimated)', () => {
   })
 
   it('does not report negative particle sizes below the floor', () => {
-    expect(settingToMicrons(k7, 10).microns).toBe(0)
+    expect(settingToMicrons(k7, 5).microns).toBe(0)
   })
 })
 

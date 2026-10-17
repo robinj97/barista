@@ -4,20 +4,14 @@ import { eyebrow } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
 import { BagPickerSheet } from '../brew/BagPickerSheet'
 import { GearCard } from '../brew/GearCard'
-import { GOAL_BALANCE, GOAL_LABELS, STRENGTHS, goalOf, parseChoices, toSearchParams, type BrewChoices, type Goal } from '../brew/params'
+import { GoalSlider } from '../brew/GoalSlider'
+import { STRENGTHS, parseChoices, toSearchParams, type BrewChoices } from '../brew/params'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
 import { METHOD_LABELS } from '../data/types'
 import { PageHeader } from '../layout/PageHeader'
 
-const GOALS = (Object.keys(GOAL_LABELS) as Goal[]).map((value) => ({ value, label: GOAL_LABELS[value] }))
-
 const label = 'px-2 text-xs font-medium text-muted'
-
-function balanceLabel(balance: number): string {
-  if (balance === 0) return 'Balanced'
-  return `${Math.round(Math.abs(balance) * 100)}% ${balance < 0 ? 'sweeter' : 'more acidity'}`
-}
 
 /** Set up the cup: bean, goal and gear. The recipe is on the next screen. */
 export function BrewPage() {
@@ -28,7 +22,8 @@ export function BrewPage() {
   const { bag, bags } = selection
 
   const update = (patch: Partial<BrewChoices>) =>
-    setParams(toSearchParams({ ...choices, ...patch }), { replace: true })
+    // Edits belong to one bean's recipe, so a different bean starts from its own suggestion.
+    setParams(toSearchParams({ ...choices, ...patch, ...(patch.bagId ? { edits: {} } : {}) }), { replace: true })
 
   if (bags.isPending) {
     return (
@@ -75,7 +70,6 @@ export function BrewPage() {
   const cover = beanCover(bag.bean.id)
   const line = eyebrow(bag.bean)
   const defaultMethod = selection.profile.data?.default_method
-  const goal = goalOf(choices.balance)
 
   const recipeSearch = toSearchParams({ ...choices, bagId: bag.id }).toString()
 
@@ -122,13 +116,7 @@ export function BrewPage() {
       <section aria-label="Goal" className="mt-6">
         <h2 className={label}>What do you want from this cup?</h2>
         <div className="mt-2 space-y-2">
-          <ChipGroup<Goal>
-            label="Sweeter or more acidity"
-            options={GOALS}
-            value={goal}
-            clearable={false}
-            onChange={(next) => next && update({ balance: GOAL_BALANCE[next] })}
-          />
+          <GoalSlider balance={choices.balance} onChange={(balance) => update({ balance })} />
           <ChipGroup
             label="Strength"
             options={STRENGTHS.map((s) => ({ value: s, label: s[0]!.toUpperCase() + s.slice(1) }))}
@@ -137,28 +125,6 @@ export function BrewPage() {
             onChange={(next) => next && update({ strength: next })}
           />
         </div>
-        <details className="squircle mt-3 rounded-4xl bg-soft px-5 py-2">
-          <summary className="flex min-h-10 cursor-pointer items-center justify-between text-sm text-muted">
-            <span>Fine-tune</span>
-            <span className="text-xs">{balanceLabel(choices.balance)}</span>
-          </summary>
-          <div className="pt-2 pb-3">
-            <input
-              type="range"
-              aria-label="Fine-tune balance"
-              min={-1}
-              max={1}
-              step={0.1}
-              value={choices.balance}
-              onChange={(event) => update({ balance: Number(event.target.value) })}
-              className="w-full accent-[var(--accent)]"
-            />
-            <span className="flex justify-between text-xs text-muted">
-              <span>Sweeter</span>
-              <span>More acidity</span>
-            </span>
-          </div>
-        </details>
       </section>
 
       <GearCard

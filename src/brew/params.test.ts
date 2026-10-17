@@ -16,6 +16,7 @@ describe('parseChoices', () => {
       grinderId: 'g1',
       filterId: 'none',
       cups: 3,
+      edits: {},
     })
   })
 
@@ -42,7 +43,7 @@ describe('parseChoices', () => {
 describe('toSearchParams', () => {
   it('round-trips', () => {
     const choices: BrewChoices = {
-      bagId: 'b1', balance: 0.6, strength: 'light', grinderId: 'g1', filterId: 'f1', cups: 4,
+      bagId: 'b1', balance: 0.6, strength: 'light', grinderId: 'g1', filterId: 'f1', cups: 4, edits: {},
     }
     expect(parseChoices(toSearchParams(choices))).toEqual(choices)
   })
@@ -52,6 +53,27 @@ describe('toSearchParams', () => {
     expect(params.has('bag')).toBe(false)
     expect(params.has('grinder')).toBe(false)
     expect(params.has('filter')).toBe(false)
+  })
+})
+
+describe('recipe edits in the URL', () => {
+  const edits = { doseG: 15.5, waterG: 240, tempC: 91.5, grindUm: 780, targetTimeS: 170, pours: [{ atS: 0, toG: 50 }, { atS: 40, toG: 240 }] }
+
+  it('round-trips', () => {
+    const choices: BrewChoices = { ...DEFAULT_CHOICES, bagId: 'b1', edits }
+    expect(parseChoices(toSearchParams(choices))).toEqual(choices)
+  })
+
+  it('writes nothing when nothing is edited', () => {
+    const query = toSearchParams(DEFAULT_CHOICES)
+    for (const key of ['dose', 'water', 'ratio', 'temp', 'grind', 'pours', 'time']) expect(query.has(key)).toBe(false)
+  })
+
+  it('drops values outside the limits and pours the engine would refuse', () => {
+    expect(parse('dose=500&water=abc&ratio=2&temp=200&grind=5&time=0').edits).toEqual({})
+    expect(parse('pours=0:50,0:90').edits).toEqual({})
+    expect(parse('pours=10:50').edits).toEqual({})
+    expect(parse('dose=16&pours=0:50,40:40').edits).toEqual({ doseG: 16 })
   })
 })
 
