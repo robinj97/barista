@@ -1,8 +1,12 @@
 /** Shared engine types. Pure data: no UI, database or network code lives in `engine/`. */
 
+import type { Confidence } from './grinder.ts'
+
 export type Method = 'v60' | 'aeropress' | 'espresso'
-export type RoastLevel = 'light' | 'medium' | 'dark'
-export type Strength = 'light' | 'medium' | 'strong'
+export const ROAST_LEVELS = ['light', 'medium', 'dark'] as const
+export type RoastLevel = (typeof ROAST_LEVELS)[number]
+export const STRENGTHS = ['light', 'medium', 'strong'] as const
+export type Strength = (typeof STRENGTHS)[number]
 export type FlowClass = 'fast' | 'medium' | 'slow'
 
 export interface FilterRef {
@@ -32,16 +36,14 @@ export interface Pour {
   toG: number
 }
 
-/** A recipe someone already locked, used as data for the suggestion. */
+/** A recipe someone already locked, used as data for the suggestion. Whose it is follows from `SuggestInput.context`. */
 export interface PriorRecipe {
-  source: 'own' | 'friend'
   method: Method
   beanId: string
   bean: BeanTraits
   tempC: number
   /** Microns, already converted from the other person's grinder. */
   grindUm: number
-  ratio: number
 }
 
 export interface SuggestInput {
@@ -65,7 +67,7 @@ export interface SuggestInput {
   asOf?: string
 }
 
-export type ReasonParam = 'structure' | 'balance' | 'temp' | 'grind' | 'ratio' | 'time' | 'bloom' | 'filter' | 'dose'
+export type ReasonParam = 'structure' | 'balance' | 'roast' | 'temp' | 'grind' | 'ratio' | 'time' | 'bloom' | 'filter' | 'dose'
 export type ReasonSource = 'method' | 'guidance' | 'data' | 'assumption'
 
 export interface Reason {
@@ -74,8 +76,6 @@ export interface Reason {
   why: string
   source: ReasonSource
 }
-
-export type ConfidenceLevel = 'low' | 'medium' | 'high'
 
 export interface SuggestOutput {
   recipe: {
@@ -93,13 +93,15 @@ export interface SuggestOutput {
   structure: { balance: number; laterPours: number }
   ranges: Partial<Record<'tempC' | 'grindUm' | 'ratio' | 'targetTimeS', [number, number]>>
   reasons: Reason[]
-  confidence: { level: ConfidenceLevel; basis: string }
+  confidence: { level: Confidence; basis: string }
 }
 
-export class EngineError extends Error {
-  code: 'unsupported_method' | 'invalid_input'
+export type EngineErrorCode = 'unsupported_method' | 'invalid_input'
 
-  constructor(code: 'unsupported_method' | 'invalid_input', message: string) {
+export class EngineError extends Error {
+  readonly code: EngineErrorCode
+
+  constructor(code: EngineErrorCode, message: string) {
     super(message)
     this.name = 'EngineError'
     this.code = code

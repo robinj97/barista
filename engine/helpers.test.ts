@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { noteCharacter, noteNudge } from './notes.ts'
 import { bloomGap, daysBetween, grindPrior, ratioPrior, targetTime, tempPrior } from './priors.ts'
-import { nearestPriors, processGroup, similarity, varietyGroup } from './similarity.ts'
+import { nearestPriors, similarity } from './similarity.ts'
+import { processGroup, varietyGroup } from './traits.ts'
 import type { BeanTraits, PriorRecipe } from './types.ts'
 
 describe('notes', () => {
@@ -22,6 +23,16 @@ describe('notes', () => {
     expect(noteCharacter('toasted bread')).toBe('neutral')
   })
 
+  it('reads compound and plural forms of known notes', () => {
+    for (const note of ['blueberry', 'strawberries', 'blackcurrant', 'oranges', 'lemony', 'red fruit']) {
+      expect(noteCharacter(note), note).toBe('bright')
+    }
+    for (const note of ['hazelnut', 'nuts', 'nutty', 'chocolatey', 'caramelised', 'honeyed']) {
+      expect(noteCharacter(note), note).toBe('sweet')
+    }
+    expect(noteCharacter('lemongrass')).toBe('neutral')
+  })
+
   it('turns the notes you want to bring out into a small nudge', () => {
     expect(noteNudge([])).toEqual({ nudge: 0, bright: [], sweet: [] })
     expect(noteNudge(['bergamot']).nudge).toBe(0.35)
@@ -39,13 +50,18 @@ describe('similarity', () => {
     expect(processGroup('Natural')).toBe('natural')
     expect(processGroup('Anaerobic natural')).toBe('anaerobic')
     expect(processGroup('Honey')).toBe('honey')
-    expect(processGroup(null)).toBe('other')
+    expect(processGroup('Pulped natural')).toBe('honey')
+    expect(processGroup('Wet-hulled')).toBeNull()
+    expect(processGroup(null)).toBeNull()
     expect(varietyGroup('Geisha')).toBe('geisha')
     expect(varietyGroup('Gesha')).toBe('geisha')
     expect(varietyGroup('Pink Bourbon')).toBe('bourbon')
     expect(varietyGroup('SL28')).toBe('sl')
     expect(varietyGroup('Ethiopian Heirloom')).toBe('heirloom')
-    expect(varietyGroup('Wush Wush')).toBe('other')
+    expect(varietyGroup('Catuaí')).toBe('bourbon')
+    expect(varietyGroup('Caturra')).toBe('bourbon')
+    expect(varietyGroup('Typica')).toBe('typica')
+    expect(varietyGroup('Wush Wush')).toBeNull()
   })
 
   const washedEthiopian: BeanTraits = { origin: 'Ethiopia', process: 'Washed', roastLevel: 'light', notes: ['bergamot', 'tangerine'] }
@@ -61,6 +77,16 @@ describe('similarity', () => {
     expect(similarity({ origin: 'Kenya', notes: [] }, { origin: 'Kenya', notes: [] })).toBe(0)
   })
 
+  it('compares unlisted processes and varieties on their own text', () => {
+    const sumatra: BeanTraits = { origin: 'Indonesia', process: 'Wet-hulled', variety: 'Wush Wush', notes: [] }
+    expect(similarity(sumatra, { ...sumatra, process: ' wet-hulled ' })).toBeCloseTo(1, 5)
+    expect(similarity(sumatra, { ...sumatra, variety: 'Ateng' })).toBeLessThan(1)
+  })
+
+  it('compares notes however they are typed', () => {
+    expect(similarity({ ...washedEthiopian, notes: [' Bergamot', 'TANGERINE'] }, washedEthiopian)).toBeCloseTo(1, 5)
+  })
+
   it('compares only what both have', () => {
     const sparse: BeanTraits = { origin: 'Ethiopia', process: 'Washed', roastLevel: 'light', notes: [] }
     expect(similarity(sparse, washedEthiopian)).toBeCloseTo(1, 5)
@@ -73,11 +99,9 @@ describe('similarity', () => {
     expect(similarity(washedEthiopian, farAway)).toBe(0)
   })
 
-  it('finds neighbours for the same method only, never the bean itself', () => {
-    const prior = (beanId: string, method: PriorRecipe['method']): PriorRecipe => ({
-      source: 'friend', method, beanId, bean: washedEthiopian, tempC: 93, grindUm: 800, ratio: 15,
-    })
-    const found = nearestPriors({ ...washedEthiopian, id: 'me' }, 'v60', [prior('me', 'v60'), prior('a', 'v60'), prior('b', 'espresso')])
+  it('finds neighbours, never the bean itself', () => {
+    const prior = (beanId: string): PriorRecipe => ({ method: 'v60', beanId, bean: washedEthiopian, tempC: 93, grindUm: 800 })
+    const found = nearestPriors({ ...washedEthiopian, id: 'me' }, [prior('me'), prior('a')])
     expect(found.map((n) => n.prior.beanId)).toEqual(['a'])
   })
 })
@@ -103,6 +127,8 @@ describe('priors', () => {
     expect(daysBetween('2026-02-27', '2026-03-02')).toBe(3)
     expect(daysBetween('2026-10-17', '2026-10-10')).toBe(-7)
     expect(daysBetween('nope', '2026-10-10')).toBeNull()
+    expect(daysBetween('2026-02-31', '2026-03-03')).toBeNull()
+    expect(daysBetween('2026-10-17', '2026-13-01')).toBeNull()
   })
 
   it('only lengthens the bloom for coffee roasted in the last week', () => {

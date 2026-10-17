@@ -11,7 +11,7 @@ Status: **v1 implemented** in `engine/` (V60 only). Assisted tuning (`tuning.md`
 
 ## 2. Contract
 
-Stable so internals can be replaced later. The types live in `engine/types.ts`; the entry point is `suggest(input)` in `engine/suggest.ts`. It is pure and deterministic (no clock, network or database): the same input always gives the same output, and the input is never modified.
+Stable so internals can be replaced later. The types live in `engine/types.ts`; the entry point is `suggest(input)` in `engine/suggest.ts`, which validates the input and hands it to the method's recommender (`engine/v60.ts`; a new method is a new recommender registered there). Temperature and grind start from `engine/start.ts` (data, else guidance in `engine/priors.ts`). It is pure and deterministic (no clock, network or database): the same input always gives the same output, and the input is never modified.
 
 **Input (`SuggestInput`)**
 
@@ -20,7 +20,7 @@ Stable so internals can be replaced later. The types live in `engine/types.ts`; 
 - `target`: `balance` from -1 (sweeter) to +1 (brighter), `strength` (`light`, `medium`, `strong`) and `emphasise` (tasting notes to bring out).
 - `cups` (one cup is 10 g of coffee, so 2 cups is the 20 g / 300 g reference) or an exact `doseG` (5 to 60 g).
 - `filter` (optional): id, brand, model and `flowClass`.
-- `context` (optional): `own` and `friends`, lists of locked recipes (`PriorRecipe`: method, bean traits, temperature, grind already in microns, ratio).
+- `context` (optional): `own` and `friends`, lists of locked recipes (`PriorRecipe`: method, bean id and traits, temperature, grind already in microns). Which list a recipe is in says whose it is.
 - `asOf` (optional): today as `yyyy-mm-dd`, used only for roast freshness. It is a parameter so the engine stays pure.
 
 **Output (`SuggestOutput`)**
@@ -28,7 +28,7 @@ Stable so internals can be replaced later. The types live in `engine/types.ts`; 
 - `recipe`: `doseG`, `waterG`, `ratio`, `tempC`, `grindUm` (microns; the grinder converter turns it into clicks), `filter`, `pours` (cumulative grams with start times), `agitation` (null) and `targetTimeS`.
 - `structure`: the balance and later-pour count actually used, after the notes' nudge and clamping.
 - `ranges`: for `tempC`, `grindUm`, `ratio` and `targetTimeS`. The recipe values always sit inside them.
-- `reasons`: one or more per decision, each with `param`, `what`, `why` and a `source` (`method`, `guidance`, `data` or `assumption`).
+- `reasons`: one or more per decision, each with `param`, `what`, `why` and a `source` (`method`, `guidance`, `data` or `assumption`). The reason for a value always states the value in the recipe.
 - `confidence`: `low`, `medium` or `high`, plus a plain-language `basis` sentence for the UI.
 
 Tuning (manual and assisted) has its own contract in `tuning.md` section 6; `diagnose` is not built yet.
@@ -77,19 +77,19 @@ Everything below is **encoded guidance, not validated science**. Each carries a 
 |---|---|---|
 | Dose / water / ratio | 1:15 default; stronger target tightens towards 1:14, light loosens towards 1:16 | 4:6 reference and dataset (1:15, 1:16.7) |
 | Temperature | Light 94 °C (92 to 96), medium 90 (88 to 92), dark 85 (83 to 88). Unknown roast level is assumed light, and the reasons say so. | Pull & Pour table (93, 88, 83) and Kasuya's ~92 °C, nudged up to match the dataset's light washed coffees (93 to 96 °C). |
-| Process nudges | Natural or anaerobic: 1 °C cooler. Washed light roast: 1 °C hotter. | Common guidance, **unverified**, kept small |
+| Process nudges | Natural or anaerobic: 1 °C cooler. Washed light roast: 1 °C hotter. The range moves with the value. Processes are grouped in `engine/traits.ts` ("pulped natural" counts as honey). | Common guidance, **unverified**, kept small |
 | Grind | About 820 µm (range 100 µm either side), 30 µm coarser for medium roasts and 60 µm for dark. | The 4:6 sources say coarse; 820 µm matches the DF54 dataset. The grinder converter turns it into clicks. |
 | Bloom / first pour | Roasted in the last 7 days: the gap before the second pour is 55 s instead of 45 s. Only when `asOf` is given. | Common guidance, **unverified** |
 | Target time | Last pour start plus a drawdown that scales with the water (210 s, about 3:30, for the reference brew), range 25 s either side. | 4:6 reference; dataset 2:50. The scaling for smaller brews is **unverified**. |
 | Agitation | None by default | Method reference |
-| Filter paper | Fast papers start 30 µm finer, slow papers 30 µm coarser. Unknown flow class means no adjustment, and the reasons say so. Metal and cloth are not treated separately yet. Small and **unverified**. | One source notes some third-party V60 papers are thinner and faster than Hario's |
+| Filter paper | Fast papers start 30 µm finer, slow papers 30 µm coarser. Medium papers and an unknown flow class mean no adjustment, and the reasons say which. Metal and cloth are not treated separately yet. Small and **unverified**. | One source notes some third-party V60 papers are thinner and faster than Hario's |
 
-Tasting notes you want to bring out nudge the balance by at most 0.35 (bright notes such as bergamot, citrus and florals lean brighter; chocolate, caramel and nuts lean sweeter; mixed notes cancel). The mapping is a hand-written lookup in `engine/notes.ts`, and your own balance setting still leads. Ratio follows strength: 1:16 light, 1:15 medium, 1:14 strong.
+Tasting notes you want to bring out nudge the balance by at most 0.35 (bright notes such as bergamot, citrus and florals lean brighter; chocolate, caramel and nuts lean sweeter; mixed notes cancel). Compound and plural forms count ("blueberry", "nutty"). The mapping is a hand-written lookup in `engine/notes.ts`, and your own balance setting still leads. Ratio follows strength: 1:16 light, 1:15 medium, 1:14 strong.
 
 ## 5. Using data
 
-1. **Locked recipes for the same bean** are the strongest prior. If you have one, temperature and grind start from it (the median if there are several), with a narrow range, and confidence is high. If only friends do, the same applies with a slightly wider range and medium confidence, because their grind was converted from their grinder. The pour structure and the ratio still follow your own balance and strength dials.
-2. **Similar beans** (a similarity score on origin, process group, roast level, variety group, notes and altitude, at least 0.6) blend into the guidance: each neighbour pulls the starting temperature and grind, up to 40% in total. Only fields both coffees have are compared, and two coffees sharing too little information are not compared at all. One or two neighbours leave confidence low and say so; three or more tighten the range and give medium. Offline analysis on the first dataset showed that kNN did not beat "predict the average" at ~22 recipes, so neighbours only *nudge and narrow*, never override the structure.
+1. **Locked recipes for the same bean** are the strongest prior. If you have one, temperature and grind start from it (the median if there are several), with a narrow range, and confidence is high. If only friends do, the same applies with a slightly wider range and medium confidence, because their grind was converted from their grinder. The pour structure and the ratio still follow your own balance and strength dials. The grind is not adjusted for your paper, since the recipe already worked, and the reasons say so.
+2. **Similar beans** (a similarity score on origin, process group, roast level, variety group, notes and altitude, at least 0.6) blend into the guidance: each neighbour pulls the starting temperature and grind, up to 40% in total. Process and variety compare on their group when known, otherwise on the text itself. Only fields both coffees have are compared, and two coffees sharing too little information are not compared at all. One or two neighbours leave confidence low and say so; three or more tighten the range and give medium. Offline analysis on the first dataset showed that kNN did not beat "predict the average" at ~22 recipes, so neighbours only *nudge and narrow*, never override the structure.
 3. **Own history** wins over everything else for the same bean.
 
 Seed data: the 4:6 recipes in `data/recipes.json` (8 entries, 6 unique, mostly one creator, one grinder, little outcome data) are test fixtures, not training data.

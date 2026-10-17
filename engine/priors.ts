@@ -1,174 +1,181 @@
-import type { BeanTraits, FilterRef, Reason, RoastLevel, Strength } from './types.ts'
-import { processGroup } from './similarity.ts'
+import { around, type Range } from './math.ts'
+import { BLOOM_GAP_S } from './pours.ts'
+import { processGroup } from './traits.ts'
+import type { BeanTraits, FilterRef, FlowClass, Reason, RoastLevel, Strength } from './types.ts'
+import { formatTemp } from './units.ts'
 
 /**
- * Encoded brewing guidance, not validated science. Every function returns a value, a range
+ * Encoded V60 brewing guidance, not validated science. Every function returns a value, a range
  * and the reasons behind them, so the UI can always say why. See docs/engine.md section 4.
  */
 
 export interface Estimate {
   value: number
-  range: [number, number]
+  range: Range
+  /** The reason for the value itself comes first; side notes (an assumed roast, the filter) follow. */
   reasons: Reason[]
 }
 
-const round5 = (n: number) => Math.round(n / 5) * 5
-const half = (n: number) => Math.round(n * 2) / 2
-const roastName = (level: RoastLevel) => level
+export const describeTemp = (tempC: number) => formatTemp(tempC, 'c')
+export const describeGrind = (grindUm: number) => `About ${grindUm} µm`
 
-const TEMP: Record<RoastLevel, { value: number; range: [number, number] }> = {
+/** The bean's roast level, or light (and a reason saying so) when it is not set. */
+function roastLevelOf(bean: BeanTraits): { level: RoastLevel; assumption: Reason[] } {
+  if (bean.roastLevel) return { level: bean.roastLevel, assumption: [] }
+  const assumption: Reason = {
+    param: 'roast',
+    what: 'Assumed a light roast',
+    why: 'The roast level is not set on this bean. Set it to get a better starting temperature and grind.',
+    source: 'assumption',
+  }
+  return { level: 'light', assumption: [assumption] }
+}
+
+const TEMP: Record<RoastLevel, { value: number; range: Range }> = {
   light: { value: 94, range: [92, 96] },
   medium: { value: 90, range: [88, 92] },
   dark: { value: 85, range: [83, 88] },
 }
 
-export function tempPrior(bean: BeanTraits): Estimate {
-  const reasons: Reason[] = []
-  const level: RoastLevel = bean.roastLevel ?? 'light'
-  if (!bean.roastLevel) {
-    reasons.push({
-      param: 'temp',
-      what: 'Assumed a light roast',
-      why: 'The roast level is not set on this bean. Set it to get a better starting temperature.',
-      source: 'assumption',
-    })
-  }
-
-  let { value, range } = TEMP[level]
+/** Small process nudges (common guidance, unverified). The range moves with the value. */
+function processNudge(bean: BeanTraits, level: RoastLevel): { deltaC: number; why: string } {
   const group = processGroup(bean.process)
-  let nudge = ''
   if (group === 'natural' || group === 'anaerobic') {
-    value -= 1
-    range = [range[0] - 1, range[1] - 1]
-    nudge = ` One degree cooler for a ${group} process, which often tastes sweeter and extracts easily (common guidance, unverified).`
-  } else if (group === 'washed' && level === 'light') {
-    value += 1
-    range = [range[0], range[1]]
-    nudge = ' One degree hotter for a washed light roast, which is dense (common guidance, unverified).'
+    return { deltaC: -1, why: ` One degree cooler for a ${group} process, which often tastes sweeter and extracts easily (common guidance, unverified).` }
   }
+  if (group === 'washed' && level === 'light') {
+    return { deltaC: 1, why: ' One degree hotter for a washed light roast, which is dense (common guidance, unverified).' }
+  }
+  return { deltaC: 0, why: '' }
+}
 
-  reasons.push({
+export function tempPrior(bean: BeanTraits): Estimate {
+  const { level, assumption } = roastLevelOf(bean)
+  const nudge = processNudge(bean, level)
+  const value = TEMP[level].value + nudge.deltaC
+  const [lo, hi] = TEMP[level].range
+  const reason: Reason = {
     param: 'temp',
-    what: `${half(value)} °C`,
-    why: `Starting point for a ${roastName(level)} roast: lighter roasts are denser and need hotter water.${nudge}`,
+    what: describeTemp(value),
+    why: `Starting point for a ${level} roast: lighter roasts are denser and need hotter water.${nudge.why}`,
     source: 'guidance',
-  })
-  return { value: half(value), range: [Math.round(range[0]), Math.round(range[1])], reasons }
+  }
+  return { value, range: [lo + nudge.deltaC, hi + nudge.deltaC], reasons: [reason, ...assumption] }
+}
+
+/** Coarse, as the 4:6 method calls for; the grinder converter turns microns into its own setting. */
+const GRIND_BASE_UM = 820
+const GRIND_SPREAD_UM = 100
+
+const GRIND_BY_ROAST: Record<RoastLevel, { offsetUm: number; why: string }> = {
+  light: { offsetUm: 0, why: '' },
+  medium: { offsetUm: 30, why: ', a touch coarser for a medium roast' },
+  dark: { offsetUm: 60, why: ', coarser again for a dark roast, which extracts easily' },
+}
+
+const GRIND_BY_FLOW: Record<FlowClass, { offsetUm: number; what: string; why: string }> = {
+  fast: {
+    offsetUm: -30,
+    what: 'A little finer for a fast paper',
+    why: 'drains quickly, so the grind starts about 30 µm finer to keep the drawdown on target (small, unverified).',
+  },
+  medium: { offsetUm: 0, what: 'No filter adjustment', why: 'drains at a typical speed, so the grind is not adjusted for it.' },
+  slow: {
+    offsetUm: 30,
+    what: 'A little coarser for a slow paper',
+    why: 'drains slowly, so the grind starts about 30 µm coarser to avoid a long drawdown (small, unverified).',
+  },
+}
+
+/** How the paper shifts the grind. An unknown flow class means no adjustment, and the reason says so. */
+function filterAdjustment(filter: FilterRef | null | undefined): { offsetUm: number; reasons: Reason[] } {
+  if (!filter) return { offsetUm: 0, reasons: [] }
+  const name = `${filter.brand} ${filter.model}`
+  const flow = filter.flowClass ? GRIND_BY_FLOW[filter.flowClass] : null
+  const reason: Reason = flow
+    ? { param: 'filter', what: flow.what, why: `${name} ${flow.why}`, source: 'guidance' }
+    : { param: 'filter', what: 'No filter adjustment', why: `How fast ${name} drains is not known, so the grind is not adjusted for it.`, source: 'assumption' }
+  return { offsetUm: flow?.offsetUm ?? 0, reasons: [reason] }
 }
 
 export function grindPrior(bean: BeanTraits, filter: FilterRef | null | undefined): Estimate {
-  const reasons: Reason[] = []
-  const level: RoastLevel = bean.roastLevel ?? 'light'
-  let value = 820
-  const parts: string[] = ['Coarse, as the 4:6 method calls for (about 820 µm)']
-
-  if (level === 'medium') {
-    value += 30
-    parts.push('a touch coarser for a medium roast')
-  } else if (level === 'dark') {
-    value += 60
-    parts.push('coarser again for a dark roast, which extracts easily')
-  }
-
-  if (filter?.flowClass === 'fast') {
-    value -= 30
-    reasons.push({
-      param: 'filter',
-      what: 'A little finer for a fast paper',
-      why: `${filter.brand} ${filter.model} drains quickly, so the grind starts about 30 µm finer to keep the drawdown on target (small, unverified).`,
-      source: 'guidance',
-    })
-  } else if (filter?.flowClass === 'slow') {
-    value += 30
-    reasons.push({
-      param: 'filter',
-      what: 'A little coarser for a slow paper',
-      why: `${filter.brand} ${filter.model} drains slowly, so the grind starts about 30 µm coarser to avoid a long drawdown (small, unverified).`,
-      source: 'guidance',
-    })
-  } else if (filter) {
-    reasons.push({
-      param: 'filter',
-      what: 'No filter adjustment',
-      why: `How fast ${filter.brand} ${filter.model} drains is not known, so the grind is not adjusted for it.`,
-      source: 'assumption',
-    })
-  }
-
-  reasons.push({
+  const roast = GRIND_BY_ROAST[roastLevelOf(bean).level]
+  const paper = filterAdjustment(filter)
+  const value = GRIND_BASE_UM + roast.offsetUm + paper.offsetUm
+  const reason: Reason = {
     param: 'grind',
-    what: `About ${round5(value)} µm`,
-    why: `${parts.join(', ')}. Your grinder converts this to its own setting.`,
+    what: describeGrind(value),
+    why: `Coarse, as the 4:6 method calls for (about ${GRIND_BASE_UM} µm)${roast.why}. Your grinder converts this to its own setting.`,
     source: 'guidance',
-  })
-  return { value: round5(value), range: [round5(value - 100), round5(value + 100)], reasons }
+  }
+  return { value, range: around(value, GRIND_SPREAD_UM), reasons: [reason, ...paper.reasons] }
 }
 
-const RATIO: Record<Strength, { value: number; range: [number, number] }> = {
-  light: { value: 16, range: [15.5, 16.7] },
-  medium: { value: 15, range: [14.5, 15.8] },
-  strong: { value: 14, range: [13.5, 14.8] },
+const RATIO: Record<Strength, { value: number; range: Range; why: string }> = {
+  light: { value: 16, range: [15.5, 16.7], why: 'loosened towards 1:16' },
+  medium: { value: 15, range: [14.5, 15.8], why: 'kept at 1:15' },
+  strong: { value: 14, range: [13.5, 14.8], why: 'tightened towards 1:14' },
 }
 
 export function ratioPrior(strength: Strength): Estimate {
-  const { value, range } = RATIO[strength]
-  return {
-    value,
-    range,
-    reasons: [
-      {
-        param: 'ratio',
-        what: `1:${value}`,
-        why: `The 4:6 reference is 1:15; a ${strength} cup is ${strength === 'strong' ? 'tightened towards 1:14' : strength === 'light' ? 'loosened towards 1:16' : 'kept at 1:15'}.`,
-        source: 'method',
-      },
-    ],
-  }
+  const { value, range, why } = RATIO[strength]
+  const reason: Reason = { param: 'ratio', what: `1:${value}`, why: `The 4:6 reference is 1:15; a ${strength} cup is ${why}.`, source: 'method' }
+  return { value, range, reasons: [reason] }
 }
+
+/** The 4:6 reference brew: 300 g of water, draining for about 55 s after the last pour starts. */
+const REFERENCE_WATER_G = 300
+const REFERENCE_DRAWDOWN_S = 55
+/** Share of the drawdown that does not shrink with a smaller brew. */
+const FIXED_DRAWDOWN_SHARE = 0.7
+const TIME_SPREAD_S = 25
+
+const minutes = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 /** Seconds of drawdown after the last pour, scaled for smaller or larger brews. */
 export function targetTime(lastPourAtS: number, waterG: number): Estimate {
-  const drawdown = 55 * (0.7 + (0.3 * waterG) / 300)
-  const value = Math.round((lastPourAtS + drawdown) / 5) * 5
-  return {
-    value,
-    range: [value - 25, value + 25],
-    reasons: [
-      {
-        param: 'time',
-        what: `About ${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')} in total`,
-        why: 'The last pour plus a short drawdown; the 4:6 reference finishes around 3:30 for 300 g (scaled for smaller brews, unverified).',
-        source: 'guidance',
-      },
-    ],
+  const scale = FIXED_DRAWDOWN_SHARE + ((1 - FIXED_DRAWDOWN_SHARE) * waterG) / REFERENCE_WATER_G
+  const value = Math.round((lastPourAtS + REFERENCE_DRAWDOWN_S * scale) / 5) * 5
+  const reason: Reason = {
+    param: 'time',
+    what: `About ${minutes(value)} in total`,
+    why: 'The last pour plus a short drawdown; the 4:6 reference finishes around 3:30 for 300 g (scaled for smaller brews, unverified).',
+    source: 'guidance',
   }
+  return { value, range: around(value, TIME_SPREAD_S), reasons: [reason] }
+}
+
+/** Milliseconds since the epoch for a real yyyy-mm-dd date, or null (so "2026-02-31" is refused). */
+function parseDate(text: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null
+  const time = Date.parse(`${text}T00:00:00Z`)
+  return !Number.isNaN(time) && new Date(time).toISOString().startsWith(text) ? time : null
 }
 
 /** Days between two yyyy-mm-dd dates, or null when either is not a date. */
 export function daysBetween(from: string, to: string): number | null {
-  const parse = (text: string) => {
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text)
-    return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null
-  }
-  const a = parse(from)
-  const b = parse(to)
+  const a = parseDate(from)
+  const b = parseDate(to)
   return a === null || b === null ? null : Math.round((b - a) / 86_400_000)
 }
 
+/** Coffee roasted this recently still gives off a lot of gas and gets a longer bloom. */
+const FRESH_DAYS = 7
+const FRESH_EXTRA_BLOOM_S = 10
+
+const roastedAgo = (days: number) => (days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`)
+
 /** Seconds before the second pour: the first pour is the bloom, and fresh coffee needs longer. */
 export function bloomGap(roastDate: string | null | undefined, asOf: string | undefined): { gapS: number; reason: Reason | null } {
-  if (!roastDate || !asOf) return { gapS: 45, reason: null }
-  const age = daysBetween(roastDate, asOf)
-  if (age !== null && age >= 0 && age < 7) {
-    return {
-      gapS: 55,
-      reason: {
-        param: 'bloom',
-        what: 'A longer first pour',
-        why: `Roasted ${age === 0 ? 'today' : age === 1 ? 'yesterday' : `${age} days ago`}: fresh coffee gives off more gas, so the bloom gets 10 extra seconds (common guidance, unverified).`,
-        source: 'guidance',
-      },
-    }
+  const age = roastDate && asOf ? daysBetween(roastDate, asOf) : null
+  if (age === null || age < 0 || age >= FRESH_DAYS) return { gapS: BLOOM_GAP_S, reason: null }
+  return {
+    gapS: BLOOM_GAP_S + FRESH_EXTRA_BLOOM_S,
+    reason: {
+      param: 'bloom',
+      what: 'A longer bloom',
+      why: `Roasted ${roastedAgo(age)}: fresh coffee gives off more gas, so the bloom gets ${FRESH_EXTRA_BLOOM_S} extra seconds (common guidance, unverified).`,
+      source: 'guidance',
+    },
   }
-  return { gapS: 45, reason: null }
 }

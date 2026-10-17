@@ -22,13 +22,11 @@ const withBean = (bean: Partial<SuggestInput['bean']>, rest: Partial<SuggestInpu
 })
 
 const prior = (overrides: Partial<PriorRecipe> = {}): PriorRecipe => ({
-  source: 'own',
   method: 'v60',
   beanId: 'elto',
   bean: base.bean,
   tempC: 93,
   grindUm: 800,
-  ratio: 15,
   ...overrides,
 })
 
@@ -71,6 +69,12 @@ describe('dose, cups and strength', () => {
       expect(() => suggest({ ...base, doseG })).toThrow(EngineError)
     }
     expect(() => suggest({ ...base, cups: 0 })).toThrow(EngineError)
+  })
+
+  it('refuses a balance or strength that is not one', () => {
+    expect(() => suggest({ ...base, target: { ...base.target, balance: Number.NaN } })).toThrow(EngineError)
+    const strength = 'extra' as SuggestInput['target']['strength']
+    expect(() => suggest({ ...base, target: { ...base.target, strength } })).toThrow(EngineError)
   })
 
   it('tightens the ratio and adds pours for a stronger cup', () => {
@@ -120,7 +124,7 @@ describe('temperature', () => {
   it('assumes a light roast, and says so, when the roast level is unknown', () => {
     const out = suggest(withBean({ roastLevel: null, process: 'Honey' }))
     expect(out.recipe.tempC).toBe(94)
-    expect(out.reasons.some((r) => r.param === 'temp' && r.source === 'assumption')).toBe(true)
+    expect(out.reasons.some((r) => r.param === 'roast' && r.source === 'assumption')).toBe(true)
   })
 })
 
@@ -147,6 +151,12 @@ describe('grind and filter', () => {
     expect(out.recipe.grindUm).toBe(820)
     expect(out.recipe.filter?.model).toBe('V60')
     expect(out.reasons.find((r) => r.param === 'filter')?.source).toBe('assumption')
+  })
+
+  it('does not call a medium paper unknown', () => {
+    const out = grind({ id: 'm', brand: 'Hario', model: 'V60', flowClass: 'medium' })
+    expect(out.recipe.grindUm).toBe(820)
+    expect(out.reasons.find((r) => r.param === 'filter')?.source).toBe('guidance')
   })
 })
 
@@ -181,7 +191,13 @@ describe('tasting notes', () => {
     expect(run(['bergamot']).reasons.some((r) => r.param === 'balance')).toBe(true)
     const clamped = run([], 3)
     expect(clamped.structure.balance).toBe(1)
-    expect(clamped.reasons.some((r) => r.param === 'balance')).toBe(true)
+    expect(clamped.reasons.find((r) => r.param === 'balance')?.why).toMatch(/^Your balance setting/)
+  })
+
+  it('do not claim a lean when the balance is already at the end of the dial', () => {
+    const out = run(['bergamot'], 1)
+    expect(out.structure.balance).toBe(1)
+    expect(out.reasons.find((r) => r.param === 'balance')?.what).toBe('Balance at the end of the dial')
   })
 })
 
@@ -220,7 +236,7 @@ describe('learning from recipes', () => {
   })
 
   it('uses a friend\'s locked recipe with medium confidence', () => {
-    const out = suggest({ ...base, context: { own: [], friends: [prior({ source: 'friend', tempC: 94, grindUm: 810 })] } })
+    const out = suggest({ ...base, context: { own: [], friends: [prior({ tempC: 94, grindUm: 810 })] } })
     expect(out.recipe.tempC).toBe(94)
     expect(out.recipe.grindUm).toBe(810)
     expect(out.confidence.level).toBe('medium')
@@ -230,14 +246,14 @@ describe('learning from recipes', () => {
   it('prefers your own recipe over a friend\'s', () => {
     const out = suggest({
       ...base,
-      context: { own: [prior({ tempC: 91 })], friends: [prior({ source: 'friend', tempC: 95 })] },
+      context: { own: [prior({ tempC: 91 })], friends: [prior({ tempC: 95 })] },
     })
     expect(out.recipe.tempC).toBe(91)
     expect(out.confidence.level).toBe('high')
   })
 
   it('takes the middle of several friends', () => {
-    const friends = [90, 94, 96].map((tempC) => prior({ source: 'friend', tempC }))
+    const friends = [90, 94, 96].map((tempC) => prior({ tempC }))
     expect(suggest({ ...base, context: { own: [], friends } }).recipe.tempC).toBe(94)
   })
 
@@ -245,7 +261,7 @@ describe('learning from recipes', () => {
     const out = suggest({
       ...base,
       target: { balance: 1, strength: 'strong', emphasise: [] },
-      context: { own: [prior({ ratio: 17 })], friends: [] },
+      context: { own: [prior()], friends: [] },
     })
     expect(out.structure).toEqual({ balance: 1, laterPours: 4 })
     expect(out.recipe.ratio).toBe(14)
@@ -255,6 +271,19 @@ describe('learning from recipes', () => {
     const out = suggest({ ...base, context: { own: [prior({ method: 'espresso' })], friends: [] } })
     expect(out.confidence.level).toBe('low')
     expect(out.recipe.tempC).toBe(95)
+  })
+
+  it('says when it takes the middle of several of your recipes', () => {
+    const out = suggest({ ...base, context: { own: [prior({ tempC: 90 }), prior({ tempC: 94 })], friends: [] } })
+    expect(out.recipe.tempC).toBe(92)
+    expect(out.reasons.find((r) => r.param === 'temp')?.why).toMatch(/2 of your locked recipes .*middle value/)
+  })
+
+  it('explains why the paper does not change a grind taken from a locked recipe', () => {
+    const filter = { id: 'f', brand: 'CAFEC', model: 'T-90', flowClass: 'fast' as const }
+    const out = suggest({ ...base, filter, context: { own: [prior({ grindUm: 700 })], friends: [] } })
+    expect(out.recipe.grindUm).toBe(700)
+    expect(out.reasons.find((r) => r.param === 'filter')?.why).toMatch(/not adjusted for CAFEC T-90/)
   })
 
   it('keeps the data range tight around the borrowed value', () => {
@@ -267,7 +296,6 @@ describe('learning from recipes', () => {
 describe('learning from similar beans', () => {
   const similar = (id: string, tempC: number, grindUm: number): PriorRecipe =>
     prior({
-      source: 'friend',
       beanId: id,
       bean: { origin: 'Ethiopia', process: 'Washed', roastLevel: 'light', notes: ['bergamot'] },
       tempC,
@@ -291,6 +319,15 @@ describe('learning from similar beans', () => {
     expect(out.recipe.grindUm).toBeLessThan(820)
   })
 
+  it('explains the blended values, not the guidance it started from', () => {
+    const friends = [similar('a', 90, 700), similar('b', 90, 700), similar('c', 90, 700)]
+    const out = suggest({ ...base, filter: { id: 'f', brand: 'CAFEC', model: 'T-90', flowClass: 'fast' }, context: { own: [], friends } })
+    const reason = (param: string) => out.reasons.filter((r) => r.param === param)
+    expect(reason('temp')).toEqual([expect.objectContaining({ what: `${out.recipe.tempC}°C`, source: 'data' })])
+    expect(reason('grind')).toEqual([expect.objectContaining({ what: `About ${out.recipe.grindUm} µm`, source: 'data' })])
+    expect(reason('filter')).toHaveLength(1)
+  })
+
   it('never lets neighbours override the guidance entirely', () => {
     const friends = Array.from({ length: 8 }, (_, i) => similar(`n${i}`, 80, 400))
     const out = suggest({ ...base, context: { own: [], friends } })
@@ -300,7 +337,6 @@ describe('learning from similar beans', () => {
 
   it('ignores coffees that are not alike', () => {
     const different = prior({
-      source: 'friend',
       beanId: 'z',
       bean: { origin: 'Brazil', process: 'Natural', roastLevel: 'dark', notes: ['cocoa'] },
       tempC: 80,
@@ -346,9 +382,9 @@ describe('invariants over many inputs', () => {
   })
 
   it('is deterministic and does not touch its input', () => {
-    const input = Object.freeze(
-      withBean({}, { context: { own: [prior()], friends: [] }, target: { balance: 0.2, strength: 'medium', emphasise: ['bergamot'] } }),
-    )
+    const input = withBean({}, { context: { own: [prior({ tempC: 94 }), prior({ tempC: 90 })], friends: [] }, target: { balance: 0.2, strength: 'medium', emphasise: ['bergamot'] } })
+    const before = structuredClone(input)
     expect(suggest(input)).toEqual(suggest(input))
+    expect(input).toEqual(before)
   })
 })
