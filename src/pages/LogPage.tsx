@@ -89,7 +89,7 @@ export function LogPage() {
     setSaving(true)
     const result: BrewResult = {
       brewedAt: new Date(session.startedAt).toISOString(),
-      totalTimeS: session.finishedS!,
+      totalTimeS: session.untimed ? null : session.finishedS,
       taste,
       compared: previous ? compared : null,
       yieldG: yieldText.trim() === '' ? null : yieldG,
@@ -136,7 +136,13 @@ export function LogPage() {
         <div className="min-w-0">
           <h1 className="truncate text-lg leading-tight font-medium">How did it go?</h1>
           <p className="truncate text-xs text-muted">
-            {bag.bean.name} · <span className="num">{clock(session.finishedS)}</span> total
+            {bag.bean.name}
+            {!session.untimed && (
+              <>
+                {' · '}
+                <span className="num">{clock(session.finishedS)}</span> total
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -186,7 +192,7 @@ export function LogPage() {
         <div className="flex items-center justify-between gap-4">
           <span>
             <span className="block font-medium">Lock this as my recipe</span>
-            <span className="block text-xs text-muted">Keeps these exact numbers, and friends can see them.</span>
+            <span className="block text-xs text-muted">Rate it and keep these exact numbers. Friends can see them.</span>
           </span>
           <Switch label="Lock this as my recipe" checked={lock} onChange={setLock} />
         </div>

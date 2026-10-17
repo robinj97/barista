@@ -115,8 +115,8 @@ export type Compared = 'sweeter' | 'more_acidity' | 'same'
 /** What happened in a brew, as logged. */
 export interface BrewResult {
   brewedAt: string
-  /** Seconds from the start of the timer to the end of the drawdown. */
-  totalTimeS: number
+  /** Seconds from the start of the timer to the end of the drawdown. Null when the timer was not used. */
+  totalTimeS: number | null
   taste: Taste | null
   /** Against the previous brew of this bean. Null when there was none or it was skipped. */
   compared: Compared | null
