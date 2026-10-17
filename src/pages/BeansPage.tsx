@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { PageHeader } from '../layout/PageHeader'
 import { sampleBeans, type SampleStatus } from './sampleBeans'
 
 type Filter = 'all' | SampleStatus
@@ -17,8 +18,7 @@ export function BeansPage() {
 
   return (
     <>
-      <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Beans</h1>
-      <p className="mt-1 text-sm text-muted">Sample beans for layout only.</p>
+      <PageHeader title="Beans" subtitle="Sample beans for layout only." />
 
       <div className="mt-5 flex gap-2" role="group" aria-label="Filter beans">
         {filters.map((item) => (

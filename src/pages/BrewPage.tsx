@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { ChoiceSheet } from '../components/ChoiceSheet'
-
-const methods = ['V60', 'AeroPress', 'Espresso']
+import { useProfile } from '../data/hooks'
+import { METHOD_OPTIONS, type Method } from '../data/types'
+import { PageHeader } from '../layout/PageHeader'
 
 export function BrewPage() {
-  const [method, setMethod] = useState('V60')
+  const profile = useProfile()
+  const [chosen, setChosen] = useState<Method | null>(null)
+  const method = chosen ?? profile.data?.default_method ?? 'v60'
+
   return (
     <>
-      <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Brew</h1>
-      <p className="mt-1 text-sm text-muted">Pick a bean and method to get a starting recipe.</p>
+      <PageHeader title="Brew" subtitle="Pick a bean and method to get a starting recipe." />
       <div className="mt-6">
-        <ChoiceSheet title="Method" options={methods} value={method} onChange={setMethod} />
+        <ChoiceSheet title="Method" options={METHOD_OPTIONS} value={method} onChange={setChosen} />
       </div>
     </>
   )
