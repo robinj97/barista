@@ -99,6 +99,7 @@ export function AddBagSheet({ open, onOpenChange }: AddBagSheetProps) {
         onOpenChange(next)
       }}
       title={TITLES[step.name]}
+      fill={step.name === 'search'}
     >
       {step.name === 'search' && (
         <SearchStep
