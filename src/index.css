@@ -1,44 +1,106 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/instrument-sans';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+/* Design tokens: Nordic. Cool stone, one clay accent. Dark follows the system. */
 :root {
-  --bg: #ffffff;
-  --ink: #16130f;
-  --muted: #5e5853;
-  --hairline: #ece9e5;
-  --soft: #f5f3f0;
-  --accent: #7a4024;
+  --bg: #f0f2ef;
+  --ink: #1b2220;
+  --muted: #66706c;
+  --hairline: #dde2de;
+  --soft: #e6eae7;
+  --accent: #a2563a;
+  --accent-soft: #f0d8cc;
+  --accent-ink: #ffffff;
+
+  --tint-sand: #e2d6c6;
+  --tint-sage: #cbdccf;
+  --tint-rose: #ebd3cc;
+  --tint-sky: #cbd5e2;
+
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14110e;
-    --ink: #f2eee9;
-    --muted: #a39b94;
-    --hairline: #2a2521;
-    --soft: #1d1915;
-    --accent: #d09a7a;
+    --bg: #121715;
+    --ink: #e8edea;
+    --muted: #939d98;
+    --hairline: #27302d;
+    --soft: #1b2321;
+    --accent: #d98b68;
+    --accent-soft: #3a2a22;
+    --accent-ink: #121715;
+
+    --tint-sand: #2a2620;
+    --tint-sage: #202b24;
+    --tint-rose: #2e2321;
+    --tint-sky: #212733;
   }
 }
 
-* {
-  box-sizing: border-box;
+@theme inline {
+  --color-bg: var(--bg);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --color-soft: var(--soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-tint-sand: var(--tint-sand);
+  --color-tint-sage: var(--tint-sage);
+  --color-tint-rose: var(--tint-rose);
+  --color-tint-sky: var(--tint-sky);
+
+  --font-sans: 'Instrument Sans Variable', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: system-ui, sans-serif;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    overscroll-behavior-y: none;
+  }
 }
 
-.hello {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+/* Numbers (weights, temps, times) use mono with tabular figures. */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
-.hello h1 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: var(--accent);
+/* Pebble shapes for bean covers: no two beans are the same stone. */
+@utility pebble-1 {
+  border-radius: 62% 38% 54% 46% / 48% 56% 44% 52%;
+}
+@utility pebble-2 {
+  border-radius: 44% 56% 38% 62% / 58% 42% 58% 42%;
+}
+@utility pebble-3 {
+  border-radius: 54% 46% 62% 38% / 40% 60% 40% 60%;
+}
+
+/* Continuous corners where the browser supports them. */
+@utility squircle {
+  @supports (corner-shape: squircle) {
+    corner-shape: squircle;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
