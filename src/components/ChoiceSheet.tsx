@@ -6,15 +6,17 @@ interface ChoiceSheetProps {
   options: string[]
   value: string
   onChange: (value: string) => void
+  /** Colour of the trigger: 'soft' on the page, 'bg' when it sits inside a soft card. */
+  tone?: 'soft' | 'bg'
 }
 
 /** Choices live in bottom sheets, not new pages. */
-export function ChoiceSheet({ title, options, value, onChange }: ChoiceSheetProps) {
+export function ChoiceSheet({ title, options, value, onChange, tone = 'soft' }: ChoiceSheetProps) {
   const [open, setOpen] = useState(false)
 
   return (
     <Drawer.Root open={open} onOpenChange={setOpen}>
-      <Drawer.Trigger className="flex h-14 w-full items-center justify-between rounded-full bg-soft px-6 text-left transition-transform active:scale-[0.98]">
+      <Drawer.Trigger className={`flex h-14 w-full items-center justify-between rounded-full px-6 text-left transition-transform active:scale-[0.98] ${tone === 'bg' ? 'bg-bg' : 'bg-soft'}`}>
         <span className="text-muted">{title}</span>
         <span className="font-medium">{value}</span>
       </Drawer.Trigger>

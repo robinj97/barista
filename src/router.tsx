@@ -5,6 +5,7 @@ import { BeansPage } from './pages/BeansPage'
 import { BrewPage } from './pages/BrewPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ProfilePage } from './pages/ProfilePage'
 
 export const routes: RouteObject[] = [
   {
@@ -15,6 +16,7 @@ export const routes: RouteObject[] = [
       { path: 'beans/:id', element: <BeanPage /> },
       { path: 'brew', element: <BrewPage /> },
       { path: 'library', element: <LibraryPage /> },
+      { path: 'profile', element: <ProfilePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

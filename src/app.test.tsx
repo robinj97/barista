@@ -5,6 +5,9 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Session } from '@supabase/supabase-js'
 import { AuthContext, type AuthState } from './auth/AuthContext'
 import { AuthGate } from './auth/AuthGate'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ApiContext } from './data/ApiContext'
+import { createMockApi } from './dev/mockApi'
 import { routes } from './router'
 
 const signedIn = { user: { email: 'robin@example.com' } } as Session
@@ -23,9 +26,13 @@ function auth(session: Session | null, overrides: Partial<AuthState> = {}): Auth
 function renderAt(path: string, state: AuthState = auth(signedIn)) {
   render(
     <AuthContext.Provider value={state}>
-      <AuthGate>
-        <RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />
-      </AuthGate>
+      <ApiContext.Provider value={createMockApi()}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <AuthGate>
+            <RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />
+          </AuthGate>
+        </QueryClientProvider>
+      </ApiContext.Provider>
     </AuthContext.Provider>,
   )
 }
@@ -61,10 +68,11 @@ describe('app shell', () => {
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
   })
 
-  it('shows the account and signs out from the Library tab', async () => {
+  it('opens the profile from the avatar button and signs out there', async () => {
     const signOut = vi.fn(async () => {})
     renderAt('/library', auth(signedIn, { signOut }))
-    expect(screen.getByText('robin@example.com')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'Profile' }))
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(signOut).toHaveBeenCalled()
   })

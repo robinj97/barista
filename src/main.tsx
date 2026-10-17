@@ -1,17 +1,40 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
 import './index.css'
 import { AuthGate } from './auth/AuthGate'
 import { AuthProvider } from './auth/AuthProvider'
+import { ApiContext } from './data/ApiContext'
+import { supabaseApi } from './data/supabaseApi'
 import { router } from './router'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AuthProvider>
-      <AuthGate>
-        <RouterProvider router={router} />
-      </AuthGate>
-    </AuthProvider>
-  </StrictMode>,
-)
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+})
+
+const root = createRoot(document.getElementById('root')!)
+
+if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')) {
+  void import('./dev/MockApp').then(({ default: MockApp }) => {
+    root.render(
+      <StrictMode>
+        <MockApp />
+      </StrictMode>,
+    )
+  })
+} else {
+  root.render(
+    <StrictMode>
+      <AuthProvider>
+        <AuthGate>
+          <ApiContext.Provider value={supabaseApi}>
+            <QueryClientProvider client={queryClient}>
+              <RouterProvider router={router} />
+            </QueryClientProvider>
+          </ApiContext.Provider>
+        </AuthGate>
+      </AuthProvider>
+    </StrictMode>,
+  )
+}
