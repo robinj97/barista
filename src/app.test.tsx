@@ -31,7 +31,7 @@ describe('app shell', () => {
   it('opens a bean page from the list', async () => {
     renderAt('/beans')
     await userEvent.click(screen.getByRole('link', { name: /Elto Arbegona/ }))
-    expect(screen.getByRole('heading', { name: 'Bean' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Elto Arbegona' })).toBeInTheDocument()
   })
 
   it('shows a not-found page for unknown routes', () => {

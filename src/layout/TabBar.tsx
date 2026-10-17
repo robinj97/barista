@@ -7,8 +7,8 @@ const icon = {
   strokeWidth: 1.7,
   strokeLinecap: 'round',
   strokeLinejoin: 'round',
-  width: 24,
-  height: 24,
+  width: 20,
+  height: 20,
   viewBox: '0 0 24 24',
   'aria-hidden': true,
 } as const
@@ -51,16 +51,17 @@ export function TabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-10 border-t border-hairline bg-bg pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-10 -translate-x-1/2"
     >
-      <ul className="mx-auto flex max-w-xl">
+      <ul className="flex gap-1 rounded-full border border-hairline bg-soft/85 p-1.5 backdrop-blur-xl">
         {tabs.map((tab) => (
-          <li key={tab.to} className="flex-1">
+          <li key={tab.to}>
             <NavLink
               to={tab.to}
+              aria-label={tab.label}
               className={({ isActive }) =>
-                `flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium ${
-                  isActive ? 'text-accent' : 'text-muted'
+                `flex h-12 w-[4.5rem] flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-medium transition-colors duration-200 ${
+                  isActive ? 'bg-bg text-accent' : 'text-muted'
                 }`
               }
             >
