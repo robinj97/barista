@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { GRINDER_SEED } from './grinderSeed.ts'
 
-const files = import.meta.glob('../supabase/migrations/*_grinder_seed.sql', {
+const files = import.meta.glob('../supabase/migrations/*_grinder_seed*.sql', {
   query: '?raw',
   import: 'default',
   eager: true,
 }) as Record<string, string>
 
-const sql = Object.values(files)[0] ?? ''
+const sql = Object.values(files).join('\n')
 
 describe('grinder seed stays in sync with the migration', () => {
   it('finds the migration', () => {

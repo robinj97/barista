@@ -82,4 +82,6 @@ export const GRINDER_SEED: GrinderModel[] = [
   { id: '1zpresso-zp6-special', brand: '1Zpresso', model: 'ZP6 Special', unitLabel: 'clicks', step: 1, points: [] },
   { id: 'timemore-bricks-01s', brand: 'Timemore', model: 'Bricks 01S', unitLabel: 'steps', step: 1, points: [] },
   { id: 'lopder-maxa', brand: 'Lopder', model: 'MAXA', unitLabel: 'clicks', step: 1, max: 60, points: [] },
+  { id: 'kingrinder-k2', brand: 'Kingrinder', model: 'K2', unitLabel: 'clicks', step: 1, points: [] },
+  { id: 'kingrinder-k7', brand: 'Kingrinder', model: 'K7', unitLabel: 'clicks', step: 1, points: [] },
 ]

@@ -27,12 +27,25 @@ Applied by `supabase/migrations/*_grinder_seed.sql` and mirrored in `engine/grin
 | 1Zpresso ZP6 Special | none | Only a step size (about 22 µm/click) and a rough range; no anchor setting. |
 | Timemore Bricks 01S | none | Only a step size (about 10 µm/step); no anchor setting. |
 | Lopder MAXA | none | 60-click dial; no microns data. |
+| Kingrinder K2 | none | See the Kingrinder note below. |
+| Kingrinder K7 | none | See the Kingrinder note below. |
 
 Why this matters:
 
 - Two-point grinders pin the slope only between about 820 and 850 µm. Anything outside that range is extrapolated and flagged. The recipes people actually brew (light-roast filter) should mostly fall inside it, but espresso and French press will not.
 - With integer rounding, a fine-step grinder like the JX-Pro lands within about one click of the truth at best. The tests allow for this.
 - All the "equivalent setting" pairs share the same two reference sizes, so they are consistent with each other by construction. They are not independent measurements.
+
+## Kingrinder K2 and K7
+
+Both are in the catalogue but not convertible, because we could not find a trustworthy "this setting gives this size" anchor, and the per-click figures disagree:
+
+- **K2:** the maker's product page reportedly gives 18 µm per click, but one guide quotes a 0 to 1030 µm range over up to about 140 clicks, which works out near 7 µm per click. Click counts depend on where "zero" is set, and the dial number may not match counted clicks.
+- **K7:** one retailer lists 16 µm per click and 160 settings; another source says about 10 µm per click. We found no official spec page.
+- A review of a related model (Kingrinder P2) found the advertised per-click figure described axial burr travel, not the change in grind size, so these numbers could describe the wrong thing.
+- Published "clicks from zero" tables for brew methods exist (for example V60 55 to 95 clicks on the K2), but they are not microns and depend on the zero point.
+
+What would fix it: a measured or manufacturer-published pair such as "K7 at N clicks is about X µm", or users on these grinders locking recipes next to friends on calibrated grinders, so offsets can be learned.
 
 ## Data issues found (please check)
 
