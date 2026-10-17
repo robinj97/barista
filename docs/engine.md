@@ -5,7 +5,7 @@ Status: design draft. Nothing is implemented yet.
 ## 1. Goals and limits
 
 - Suggest a starting recipe for a bean, method and target flavour, and explain why.
-- After each brew, suggest **one** change with a reason.
+- After each brew, support two tuning modes: manual (full control) and assisted (questions, diagnosis, **one** suggested change with a reason). See `tuning.md`.
 - No LLM. Deterministic, pure TypeScript, unit-tested, runs server-side (inputs include shared data) and, for the pure parts, on the client.
 - Honest about what it knows. We have no good dataset yet, so v1 is **encoded brewing guidance plus a small amount of data**, not a learned model. Output always carries a confidence statement. The learned part comes later from users' own brews and feedback (see `architecture.md`, `brews` table).
 
@@ -52,23 +52,8 @@ interface SuggestOutput {
   confidence: { level: 'low' | 'medium' | 'high'; basis: string }
 }
 
-interface AdjustInput {
-  recipe: SuggestOutput['recipe']
-  history: BrewResult[]           // earlier brews of this bean/recipe lineage
-  feedback: {
-    taste: 'sour' | 'balanced' | 'bitter'
-    strength: 'weak' | 'right' | 'strong'
-    notes: Record<string, 'yes' | 'bit' | 'no'>
-    drawdownS?: number; yieldMl?: number
-  }
-}
-
-interface AdjustOutput {
-  change: { param: string; from: number; to: number }  // exactly one
-  recipe: SuggestOutput['recipe']
-  reason: string
-  stepSize: 'large' | 'medium' | 'small'
-}
+// Tuning (manual and assisted) has its own contract: see tuning.md section 6.
+// Assisted tuning is diagnose(input) -> next question | diagnosis with one suggested change.
 ```
 
 ## 3. Pour structure: a parametric 4:6
@@ -141,23 +126,30 @@ low     -> mostly the structured priors (default while data is thin)
 
 The UI shows `basis` in plain words, e.g. "Based on the 4:6 method and general light-roast guidance; no similar beans yet. Expect 2-3 brews."
 
-## 7. Feedback adjustment
+## 7. Tuning
 
-Standard extraction logic, one variable per brew:
+Two modes, both available on any brew. Full design, research and contract are in [`tuning.md`](tuning.md).
+
+- **Manual tuning:** every parameter editable, with effect hints, history kept as immutable versions.
+- **Assisted tuning:** the engine asks a few plain-language questions, ranks competing causes (under-extracted, over-extracted, uneven, too weak, too strong, delicate notes masked, water, old beans, equipment, expectation), and suggests exactly one change with a reason and what to look for next. When the evidence is ambiguous (for example the temperature question for delicate coffees, where sources disagree) it says so, lowers confidence and labels the change a test.
+
+Quick feedback rules (the simple, always-available layer that assisted tuning builds on):
 
 | Feedback | Change (in order of preference) |
 |---|---|
 | Sour / thin / fast drawdown | finer grind, then hotter water |
 | Bitter / dry / slow drawdown | coarser grind, then cooler water |
+| Sour and bitter together | not a grind problem: technique and bed evenness first |
 | Weak (but balanced) | tighter ratio, or one more pour |
 | Too strong / heavy | looser ratio, or one fewer pour |
-| Notes missing but balanced | shift `balance` toward the note's side |
+| Notes missing but balanced | ambiguous: see `tuning.md` (`masked`) |
 
 Rules:
 
-- Exactly one change per brew, with the reason shown ("sour and drained in 2:50, so 2 clicks finer, everything else unchanged").
+- Exactly one change per assisted suggestion, with the reason shown ("sour and drained in 2:10, so 2 clicks finer, everything else unchanged").
 - Step size shrinks as the range narrows (large, then medium, then small). Reversals (we overshot) halve the step.
 - Grind steps are computed in microns and displayed in the user's grinder units, using their personal offset.
+- Causes that are not recipe parameters (water, bean age, equipment) produce advice instead of a parameter change.
 
 ## 8. Test plan
 
@@ -167,7 +159,7 @@ Written before the engine, from day one.
 2. **Method reference.** `balance = 0, strength = medium, 300 g` gives 60, 120, 180, 240, 300.
 3. **Monotonic properties.** More `b` means larger pour 1; stronger means more pours; sums always equal `W`; every pour is positive.
 4. **Scaling.** Cups scale water and dose; ratio unchanged.
-5. **Adjustment.** Each feedback combination yields exactly one change, in the right direction, with a smaller step after a reversal.
+5. **Adjustment and diagnosis.** Each feedback combination yields exactly one change, in the right direction, with a smaller step after a reversal. Table-driven diagnosis scenarios (including the ambiguous Geisha case) are listed in `tuning.md` section 8.
 6. **Confidence.** Changes with the data present (none / similar / friend-locked).
 7. **Contract.** Types are validated at the boundary (shared schema).
 8. **Later, offline.** A notebook-based leave-one-out comparison against "predict the average" once there are several hundred diverse recipes or real brew-plus-feedback pairs.
@@ -184,3 +176,4 @@ Written before the engine, from day one.
 - Hario UK: [Interview with Tetsu Kasuya](https://www.hario.co.uk/blogs/hario-ambassadors/hario-v60-recipe-interview-with-hario-ambassador-tetsu-kasuya) (his reference recipe and the first-pour rule).
 - Honest Coffee Guide: [Tetsu Kasuya 4:6 method](https://honestcoffeeguide.com/brew-recipes/tetsu-kasuya-4-6-method/) (alternative pour-count mapping, drain-based timing).
 - Kurasu: [2016 World Brewers Cup champion Tetsu Kasuya](https://kurasu.kyoto/blogs/kurasu-journal/2016-world-brewers-cup-champion-tetsu-kasuya) (background).
+- Tuning research (taste-to-cause mapping, lever effects, water) is listed with links in [`tuning.md`](tuning.md) section 2, including where sources disagree and which are espresso-only.

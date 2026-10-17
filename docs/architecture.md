@@ -17,6 +17,7 @@ Settled in planning sessions with Robin.
 | Beans | Shared catalogue (no duplicates) plus a personal library layered on top. If a friend has a bean dialed, you are told. |
 | Engine | Server-side, pure TypeScript module, no LLM. See `engine.md`. |
 | Server language | **TypeScript** (Supabase Edge Functions run on Deno; there is no Python/Java option there, and a TS engine can be shared with the client). |
+| Tuning | Two modes on any brew: **manual** (full control, effect hints) and **assisted** (the app asks plain-language questions, diagnoses the likely cause, suggests one change). See `tuning.md`. |
 | Offline | Brewing and logging must work offline and sync later. |
 | Training data | Every brew stores the exact recipe parameters used plus feedback answers, never a reference to something editable. |
 | Frontend | React + Vite + TypeScript PWA on Netlify, Tailwind v4, bun. |
@@ -154,7 +155,11 @@ create table brews (                 -- append-only log; the future training dat
   params jsonb not null,             -- copy of what was actually brewed
   actual_time_s int, yield_ml numeric,
   feedback jsonb,                    -- taste axes, strength, per-note hit/miss
-  change_applied jsonb,              -- the one change made after this brew
+  tuning jsonb,                      -- mode, questions asked + answers, question-bank version,
+                                     -- hypothesis shares, suggestion, accepted/modified/ignored,
+                                     -- manual diff; see tuning.md section 7
+  change_applied jsonb,              -- the change actually made after this brew
+  outcome_improved boolean,          -- set when the next brew is logged (did the suggestion help?)
   brewed_at timestamptz not null default now()
 );
 ```
@@ -164,6 +169,8 @@ create table brews (                 -- append-only log; the future training dat
 - `recipe_versions` rows are never updated or deleted (enforced by a trigger). The only mutable pointer is `recipes.locked_version_id`.
 - **Fork = copy.** Saving a friend's recipe copies their locked version's `params` into a new recipe of yours as its root version, and records `forked_from_version_id`. After that your copy has no dependency on the friend's data, so "reset to original" is just "point back at your root version". It keeps working even if the friend re-locks or deletes.
 - "The friend has a newer version" is a read of their current `locked_version_id` compared with what you forked. It never overwrites anything.
+- `brews.tuning` records what the assisted flow asked, concluded and suggested, and `outcome_improved` is filled in from the next brew's overall rating. Together they are the cause/change/result data we lack today.
+- Question banks, hypothesis catalogues and likelihood tables are versioned data shipped with the engine, not rows users can edit. `brews.tuning` stores the bank version so old answers stay interpretable.
 - `brews.params` is a snapshot, so later edits can never change what a brew means.
 - Grind is stored in microns everywhere and converted for display.
 
@@ -233,6 +240,7 @@ Unchanged from the kickoff plan: shell (2), Supabase + auth + schema + RLS (3), 
 
 ## 9. Open questions
 
+- Assisted tuning questions need testing with real novices (see `tuning.md` section 9).
 - Should a friend be able to see which of their friends' locked recipes I've saved? Default: no.
 - Do we let users delete their account and what happens to recipes friends forked? Fork-as-copy means the forks survive; confirm that is acceptable.
 - Rate limits and abuse on the shared catalogue are ignored while the user base is friends only.
