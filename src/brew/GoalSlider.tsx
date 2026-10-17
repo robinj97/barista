@@ -4,7 +4,7 @@ interface GoalSliderProps {
 }
 
 /** "Balanced", "40% sweeter" or "60% more acidity": what the slider is set to. */
-export function balanceLabel(balance: number): string {
+function balanceLabel(balance: number): string {
   if (balance === 0) return 'Balanced'
   return `${Math.round(Math.abs(balance) * 100)}% ${balance < 0 ? 'sweeter' : 'more acidity'}`
 }

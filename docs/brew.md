@@ -14,7 +14,7 @@ Status: **set-up and recipe built** (this doc). Brewing mode, logging and saving
 | Topic | Decision |
 |---|---|
 | Scope of the first PR | Set-up and recipe together. Nothing is saved yet. |
-| Goal control | One always-visible slider (-1 to +1) with labelled stops **Sweeter, Balanced, More acidity** (-0.6, 0, +0.6). Tap a label or drag; a value between the stops leaves none selected. A line under it shows the water in the first two pours, the only thing the goal moves, so you see it change. Strength is Light, Medium, Strong chips. |
+| Goal control | One always-visible slider (-1 to +1) labelled **Sweeter** and **More acidity** at the ends. Drag the handle; a readout above says what it is set to ("Balanced", "40% sweeter", "60% more acidity"). The labels are plain text, not buttons, so nothing can be bumped by accident. Strength is Light, Medium, Strong chips. |
 | Editing | Everything on the recipe is editable: coffee, water, ratio, temperature, total time, grind and each pour. You accept a suggestion and change what you like, or build the whole recipe by hand; both use the same screen. |
 | Bring out | **Removed.** The first version let you tick the bean's tasting notes, which nudged the balance by about 7 g on the first pour. See "Does the goal change the taste?" below: the method can only lean a cup sweeter or towards more acidity, it cannot aim at a specific flavour, and the nudge was far too small to taste. Old links that still carry `notes=` are ignored. |
 | No grinder | An inline "Add your grinder" button opens the same picker as Profile. Until then the grind shows in microns. |
