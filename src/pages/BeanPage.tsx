@@ -112,7 +112,7 @@ export function BeanPage() {
       </section>
 
       <Link
-        to="/brew"
+        to={`/brew?bag=${bag.id}`}
         className="mt-6 grid h-12 place-items-center rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]"
       >
         Start dialing in

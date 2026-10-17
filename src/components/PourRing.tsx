@@ -2,11 +2,13 @@ import { ringSegments, type RingPour } from './ringSegments'
 
 interface PourRingProps {
   pours: RingPour[]
-  /** Index of the pour in progress; earlier pours are shown as done. */
-  current: number
+  /** Index of the pour in progress; earlier pours are shown as done. Omit to show every pour as filled. */
+  current?: number
+  /** Replaces the "pour N of M" line under the total. */
+  caption?: string
 }
 
-export function PourRing({ pours, current }: PourRingProps) {
+export function PourRing({ pours, current = pours.length - 1, caption }: PourRingProps) {
   const radius = 70
   const circumference = 2 * Math.PI * radius
   const segments = ringSegments(pours, circumference)
@@ -37,7 +39,7 @@ export function PourRing({ pours, current }: PourRingProps) {
           <span className="text-sm text-muted"> g</span>
         </span>
         <span className="text-xs text-muted">
-          pour {Math.min(current + 1, pours.length)} of {pours.length}
+          {caption ?? `pour ${Math.min(current + 1, pours.length)} of ${pours.length}`}
         </span>
       </div>
     </div>

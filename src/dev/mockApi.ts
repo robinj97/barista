@@ -44,6 +44,8 @@ export interface MockOptions {
   latencyMs?: number
   profile?: Partial<Profile>
   grinderIds?: string[]
+  /** Catalogue filter ids already in the user's list; the first becomes the default. */
+  filterIds?: string[]
   bags?: Bag[]
   /** Ids of catalogue beans that friends have a locked recipe for, with how many. */
   friendRecipes?: Record<string, number>
@@ -64,7 +66,9 @@ export function createMockApi(options: MockOptions = {}): Api {
     ...options.profile,
   }
   const grinderIds = new Set(options.grinderIds ?? [])
-  const myFilters = new Map<string, { nickname: string | null; isDefault: boolean }>()
+  const myFilters = new Map<string, { nickname: string | null; isDefault: boolean }>(
+    (options.filterIds ?? []).map((id, i) => [id, { nickname: null, isDefault: i === 0 }]),
+  )
   const filters = [...SEED_FILTERS]
   const catalogue = [...SEED_BEANS]
   const bags = [...(options.bags ?? [])]
