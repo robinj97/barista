@@ -9,3 +9,20 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# The service worker and manifest must always be revalidated, or installed apps can keep
+# running an old version after a deploy.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/registerSW.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "no-cache"

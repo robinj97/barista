@@ -300,3 +300,9 @@ Unchanged from the kickoff plan: shell (2), Supabase + auth + schema + RLS (3), 
 - Should a friend be able to see which of their friends' locked recipes I've saved? Default: no.
 - Do we let users delete their account and what happens to recipes friends forked? Fork-as-copy means the forks survive; confirm that is acceptable.
 - Rate limits and abuse on the shared catalogue are ignored while the user base is friends only.
+
+## 10. Deployment
+
+- Hosted on Netlify as **brygg** (`https://brygg.netlify.app`). Build settings live in `netlify.toml` (`bun run build`, publish `dist`, Node 22, SPA fallback, no-cache headers for the service worker and manifest).
+- Build-time environment variables on Netlify: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Both are public values that end up in the browser bundle; no secret belongs in a `VITE_` variable.
+- Sign-in on the live address needs the URL in two places: Google Cloud (Authorized JavaScript origins) and Supabase (Authentication, URL Configuration: Site URL and the Redirect URLs allow-list, which should keep `http://localhost:5173/**` for development).
