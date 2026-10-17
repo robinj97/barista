@@ -162,6 +162,12 @@ export const supabaseApi: Api = {
     fail(error)
   },
 
+  async listRoasters() {
+    const { data, error } = await supabase.from('beans').select('roaster')
+    fail(error)
+    return data.map((row) => row.roaster)
+  },
+
   async listMyBags(): Promise<Bag[]> {
     const { data, error } = await supabase
       .from('user_beans')

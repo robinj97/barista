@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthContext'
+import { uniqueRoasters } from '../beans/roasters'
 import { useToast } from '../components/toastContext'
 import { useApi } from './ApiContext'
 import type { AddBagInput, Bag, NewFilter, Profile, ProfilePatch } from './types'
@@ -141,6 +142,16 @@ export const bagKeys = {
   search: (query: string) => ['beans', 'search', query] as const,
 }
 
+/** Distinct roasters already in the catalogue. Small today; paginate or search server-side if it grows. */
+export function useRoasters() {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['beans', 'roasters'] as const,
+    queryFn: async () => uniqueRoasters(await api.listRoasters()),
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useMyBags() {
   const api = useApi()
   return useQuery({ queryKey: bagKeys.mine, queryFn: () => api.listMyBags() })
@@ -183,6 +194,7 @@ export function useAddBag() {
     onSettled: () => {
       void client.invalidateQueries({ queryKey: bagKeys.mine })
       void client.invalidateQueries({ queryKey: ['beans', 'search'] })
+      void client.invalidateQueries({ queryKey: ['beans', 'roasters'] })
     },
   })
 }

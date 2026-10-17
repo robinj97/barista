@@ -42,10 +42,14 @@ Get a new bag into the user's inventory in about 30 seconds, with as little typi
 
 1. **Search field**, focused on open. Matches roaster and bean name, tolerant of spelling (trigram match on the normalised key) and of word order.
 2. **Results** from the shared catalogue: bean cover, name, "roaster · origin · process". A badge **"Sam has this dialed in"** when a friend has a locked recipe for it. Beans you already own show "In your beans" and open the existing bag instead of duplicating it.
-3. **Last row, always:** `Not here? Add "<query>" as a new bean`. It prefills the name field with what was typed.
+3. **Last row, always.** What was typed is never assumed to be a bean name:
+   - a **known roaster** (exact, or followed by more words) fills the Roaster field, and the rest fills the Name field: "Add a new bean from Coffea Circulor" or "Not here? Add “Brand New” from Coffea Circulor";
+   - anything else asks: `Not here? Add “<query>” as a new…` with **Roaster** and **Bean name** buttons, so nothing is guessed.
 4. Picking a result goes straight to step 4.4.
 
 ### 4.3 New bean
+
+The form opens with whatever the search told us (see 4.2). The roaster field suggests known roasters as you type, and going back from the bag step keeps everything entered.
 
 Required: **roaster** and **name** (inline messages: "Enter a roaster", "Enter a name").
 

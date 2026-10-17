@@ -7,7 +7,12 @@ import { TagInput } from './TagInput'
 import { useDebouncedValue } from './useDebouncedValue'
 
 interface NewBeanStepProps {
+  /** The details entered earlier, restored when you come back from the next step. */
+  draft?: NewBean
+  initialRoaster: string
   initialName: string
+  /** Known roasters, offered as type-ahead on the roaster field. */
+  roasters: string[]
   onBack: () => void
   onContinue: (bean: NewBean) => void
   onPickExisting: (bean: BeanMatch) => void
@@ -16,17 +21,17 @@ interface NewBeanStepProps {
 const field = 'h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent'
 const label = 'px-2 text-xs text-muted'
 
-export function NewBeanStep({ initialName, onBack, onContinue, onPickExisting }: NewBeanStepProps) {
-  const [roaster, setRoaster] = useState('')
-  const [name, setName] = useState(initialName)
-  const [origin, setOrigin] = useState('')
-  const [region, setRegion] = useState('')
-  const [process, setProcess] = useState<string | null>(null)
-  const [roastLevel, setRoastLevel] = useState<RoastLevel | null>(null)
-  const [notes, setNotes] = useState<string[]>([])
-  const [variety, setVariety] = useState('')
-  const [altitude, setAltitude] = useState('')
-  const [producer, setProducer] = useState('')
+export function NewBeanStep({ draft, initialRoaster, initialName, roasters, onBack, onContinue, onPickExisting }: NewBeanStepProps) {
+  const [roaster, setRoaster] = useState(draft?.roaster ?? initialRoaster)
+  const [name, setName] = useState(draft?.name ?? initialName)
+  const [origin, setOrigin] = useState(draft?.origin ?? '')
+  const [region, setRegion] = useState(draft?.region ?? '')
+  const [process, setProcess] = useState<string | null>(draft?.process ?? null)
+  const [roastLevel, setRoastLevel] = useState<RoastLevel | null>(draft?.roastLevel ?? null)
+  const [notes, setNotes] = useState<string[]>(draft?.roasterNotes ?? [])
+  const [variety, setVariety] = useState(draft?.variety ?? '')
+  const [altitude, setAltitude] = useState(draft?.altitudeM ? String(draft.altitudeM) : '')
+  const [producer, setProducer] = useState(draft?.producer ?? '')
   const [errors, setErrors] = useState<{ roaster?: string; name?: string; altitude?: string }>({})
 
   // "Did you mean...?": near matches while the roaster and name are typed.
@@ -71,12 +76,17 @@ export function NewBeanStep({ initialName, onBack, onContinue, onPickExisting }:
       <div className="space-y-3">
         <label className="block">
           <span className={label}>Roaster</span>
-          <input value={roaster} onChange={(e) => { setRoaster(e.target.value); setErrors((p) => ({ ...p, roaster: undefined })) }} className={`${field} mt-1`} aria-invalid={!!errors.roaster} autoComplete="organization" />
+          <input value={roaster} onChange={(e) => { setRoaster(e.target.value); setErrors((p) => ({ ...p, roaster: undefined })) }} className={`${field} mt-1`} aria-invalid={!!errors.roaster} autoComplete="off" list="roasters" autoFocus={!initialRoaster} />
+          <datalist id="roasters">
+            {roasters.map((known) => (
+              <option key={known} value={known} />
+            ))}
+          </datalist>
           {errors.roaster && <span role="alert" className="mt-1 block px-2 text-sm text-accent">{errors.roaster}</span>}
         </label>
         <label className="block">
           <span className={label}>Name</span>
-          <input value={name} onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: undefined })) }} className={`${field} mt-1`} aria-invalid={!!errors.name} />
+          <input value={name} onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: undefined })) }} className={`${field} mt-1`} aria-invalid={!!errors.name} autoFocus={!!initialRoaster && !initialName} />
           {errors.name && <span role="alert" className="mt-1 block px-2 text-sm text-accent">{errors.name}</span>}
         </label>
       </div>

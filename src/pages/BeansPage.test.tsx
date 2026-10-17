@@ -1,7 +1,13 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { makeBag, renderApp } from '../test/renderApp'
+
+/** Searching something that matches no known roaster asks what it is; pick "Bean name". */
+async function addAsBeanName(user: ReturnType<typeof userEvent.setup>) {
+  const group = await screen.findByRole('group', { name: 'Add as a new bean' })
+  await user.click(within(group).getByRole('button', { name: 'Bean name' }))
+}
 
 async function openSheet(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: 'Add a bag' }))
@@ -74,7 +80,7 @@ describe('Adding a bag', () => {
     const user = userEvent.setup()
     renderApp('/beans')
     await user.type(await openSheet(user), 'Sibarist Test')
-    await user.click(await screen.findByRole('button', { name: /as a new bean/ }))
+    await addAsBeanName(user)
 
     expect(screen.getByLabelText('Name')).toHaveValue('Sibarist Test')
     await user.type(screen.getByLabelText('Roaster'), 'Sibarist')
@@ -95,7 +101,7 @@ describe('Adding a bag', () => {
     const user = userEvent.setup()
     renderApp('/beans')
     await user.type(await openSheet(user), 'x')
-    await user.click(await screen.findByRole('button', { name: /as a new bean/ }))
+    await addAsBeanName(user)
     await user.clear(screen.getByLabelText('Name'))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     const alerts = await screen.findAllByRole('alert')
@@ -106,7 +112,7 @@ describe('Adding a bag', () => {
     const user = userEvent.setup()
     renderApp('/beans')
     await user.type(await openSheet(user), 'x')
-    await user.click(await screen.findByRole('button', { name: /as a new bean/ }))
+    await addAsBeanName(user)
     await user.type(screen.getByLabelText('Roaster'), 'R')
     await user.click(screen.getByText('More details'))
     await user.type(screen.getByLabelText('Altitude (m)'), '99999')
@@ -118,7 +124,7 @@ describe('Adding a bag', () => {
     const user = userEvent.setup()
     renderApp('/beans')
     await user.type(await openSheet(user), 'x')
-    await user.click(await screen.findByRole('button', { name: /as a new bean/ }))
+    await addAsBeanName(user)
     await user.type(screen.getByLabelText('Roaster'), 'Coffea Circulor')
     await user.clear(screen.getByLabelText('Name'))
     await user.type(screen.getByLabelText('Name'), 'Elto')
@@ -145,6 +151,73 @@ describe('Adding a bag', () => {
     await user.click(screen.getByRole('button', { name: 'Add to my beans' }))
     expect(await screen.findByText(/Couldn't add Pink Bourbon/)).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Bag not found' })).toBeInTheDocument()
+  })
+})
+
+describe('Adding a new bean from what you searched', () => {
+  it('puts a known roaster in the roaster field, not the bean name', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    await user.type(await openSheet(user), 'Coffea Circulor')
+    await user.click(await screen.findByRole('button', { name: 'Add a new bean from Coffea Circulor' }))
+    expect(screen.getByLabelText('Roaster')).toHaveValue('Coffea Circulor')
+    expect(screen.getByLabelText('Name')).toHaveValue('')
+    expect(screen.getByLabelText('Name')).toHaveFocus()
+  })
+
+  it('splits a known roaster from the bean name that follows it', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    await user.type(await openSheet(user), 'coffea circulor Brand New')
+    await user.click(await screen.findByRole('button', { name: 'Not here? Add “Brand New” from Coffea Circulor' }))
+    expect(screen.getByLabelText('Roaster')).toHaveValue('Coffea Circulor')
+    expect(screen.getByLabelText('Name')).toHaveValue('Brand New')
+  })
+
+  it('asks what an unknown name is instead of guessing', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    await user.type(await openSheet(user), 'Sibarist')
+    const group = await screen.findByRole('group', { name: 'Add as a new bean' })
+    await user.click(within(group).getByRole('button', { name: 'Roaster' }))
+    expect(screen.getByLabelText('Roaster')).toHaveValue('Sibarist')
+    expect(screen.getByLabelText('Name')).toHaveValue('')
+
+    await user.click(screen.getByRole('button', { name: /Back to search/ }))
+    const again = await screen.findByRole('group', { name: 'Add as a new bean' })
+    await user.click(within(again).getByRole('button', { name: 'Bean name' }))
+    expect(screen.getByLabelText('Roaster')).toHaveValue('')
+    expect(screen.getByLabelText('Name')).toHaveValue('Sibarist')
+  })
+
+  it('offers known roasters as type-ahead without duplicates', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    await user.type(await openSheet(user), 'zz')
+    await addAsBeanName(user)
+    await screen.findByLabelText('Roaster')
+    const options = [...document.querySelectorAll('#roasters option')].map((o) => (o as HTMLOptionElement).value)
+    await vi.waitFor(() => {
+      const now = [...document.querySelectorAll('#roasters option')].map((o) => (o as HTMLOptionElement).value)
+      expect(now).toEqual(["Coffea Circulor", "Father's", 'Placeholder Roasters'])
+    })
+    expect(options.length).toBeGreaterThanOrEqual(0)
+  })
+
+  it('keeps what you typed when you go back from the bag step', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    await user.type(await openSheet(user), 'Brand New Bean')
+    await addAsBeanName(user)
+    await user.type(screen.getByLabelText('Roaster'), 'Sibarist')
+    await user.click(screen.getByRole('radio', { name: 'Washed' }))
+    await user.type(screen.getByLabelText('Tasting notes from the bag'), 'jasmine{Enter}')
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: '← Back' }))
+    expect(screen.getByLabelText('Roaster')).toHaveValue('Sibarist')
+    expect(screen.getByLabelText('Name')).toHaveValue('Brand New Bean')
+    expect(screen.getByRole('radio', { name: 'Washed' })).toBeChecked()
+    expect(screen.getByRole('button', { name: 'Remove jasmine' })).toBeInTheDocument()
   })
 })
 

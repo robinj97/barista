@@ -82,6 +82,8 @@ export interface Api {
   /** Removes a filter from the user's list. Removing the default promotes another one. */
   removeMyFilter(filterId: string): Promise<void>
 
+  /** Roasters that already exist in the shared catalogue, for matching and type-ahead. */
+  listRoasters(): Promise<string[]>
   listMyBags(): Promise<Bag[]>
   /** Catalogue search: every word matches roaster + name in any order, tolerant of small typos. */
   searchBeans(query: string): Promise<BeanMatch[]>

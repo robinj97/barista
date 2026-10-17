@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Sheet } from '../components/Sheet'
-import { useAddBag, useMyBags } from '../data/hooks'
+import { useAddBag, useMyBags, useRoasters } from '../data/hooks'
 import type { Bag, Bean, BeanMatch, NewBean } from '../data/types'
 import { BagStep, type BagDetails } from './BagStep'
 import { NewBeanStep } from './NewBeanStep'
+import type { Prefill } from './roasters'
 import { SearchStep } from './SearchStep'
 
 type Step =
   | { name: 'search' }
-  | { name: 'new'; typed: string }
+  | { name: 'new'; prefill: Prefill; draft?: NewBean }
   | { name: 'bag'; target: { kind: 'existing'; bean: Bean } | { kind: 'new'; bean: NewBean; id: string } }
 
 interface AddBagSheetProps {
@@ -29,6 +30,7 @@ export function AddBagSheet({ open, onOpenChange }: AddBagSheetProps) {
   const navigate = useNavigate()
   const addBag = useAddBag()
   const bags = useMyBags()
+  const roasters = useRoasters().data ?? []
 
   function pick(match: BeanMatch) {
     const existing = bags.data?.find((bag) => bag.bean.id === match.id)
@@ -103,12 +105,16 @@ export function AddBagSheet({ open, onOpenChange }: AddBagSheetProps) {
           query={query}
           onQueryChange={setQuery}
           onPick={pick}
-          onAddNew={(typed) => setStep({ name: 'new', typed })}
+          roasters={roasters}
+          onAddNew={(prefill) => setStep({ name: 'new', prefill })}
         />
       )}
       {step.name === 'new' && (
         <NewBeanStep
-          initialName={step.typed}
+          draft={step.draft}
+          initialRoaster={step.prefill.roaster ?? ''}
+          initialName={step.prefill.name ?? ''}
+          roasters={roasters}
           onBack={() => setStep({ name: 'search' })}
           onContinue={(bean) => setStep({ name: 'bag', target: { kind: 'new', bean, id: crypto.randomUUID() } })}
           onPickExisting={pick}
@@ -119,7 +125,13 @@ export function AddBagSheet({ open, onOpenChange }: AddBagSheetProps) {
           beanId={step.target.kind === 'existing' ? step.target.bean.id : step.target.id}
           name={step.target.bean.name}
           roaster={step.target.bean.roaster}
-          onBack={() => setStep(step.target.kind === 'existing' ? { name: 'search' } : { name: 'new', typed: step.target.bean.name })}
+          onBack={() =>
+            setStep(
+              step.target.kind === 'existing'
+                ? { name: 'search' }
+                : { name: 'new', prefill: {}, draft: step.target.bean },
+            )
+          }
           onSubmit={submit}
         />
       )}

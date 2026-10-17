@@ -156,6 +156,8 @@ export function createMockApi(options: MockOptions = {}): Api {
       return wait(undefined)
     },
 
+    listRoasters: () => wait(catalogue.map((b) => b.roaster)),
+
     listMyBags: () => wait([...bags].sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
 
     async searchBeans(query) {
