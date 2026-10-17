@@ -376,7 +376,7 @@ describe('Bean page', () => {
     expect(screen.getByText('Sidama')).toBeInTheDocument()
     expect(screen.getByText('bergamot')).toBeInTheDocument()
     expect(screen.getByText(/No recipes yet/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Start dialing in' })).toHaveAttribute('href', '/brew')
+    expect(screen.getByRole('link', { name: 'Start dialing in' })).toHaveAttribute('href', '/brew?bag=bag-b-elto')
   })
 
   it('removes a bag after confirming', async () => {

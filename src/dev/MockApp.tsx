@@ -30,6 +30,7 @@ export default function MockApp() {
     createMockApi({
       latencyMs: 120,
       grinderIds: ['turin-df54', 'kingrinder-k7'],
+      filterIds: ['f-cafec-t90'],
       bags: withBags ? SAMPLE_BAGS : [],
     }),
   )
