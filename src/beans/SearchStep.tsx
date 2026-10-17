@@ -26,7 +26,7 @@ export function SearchStep({ query, onQueryChange, onPick, roasters, onAddNew }:
 
   return (
     <div className="space-y-2 px-3 pb-2">
-      <label className="block">
+      <label className="sticky top-0 z-10 block bg-bg pb-1">
         <span className="sr-only">Search roaster or bean</span>
         <input
           type="search"
