@@ -32,6 +32,7 @@ interface SuggestInput {
   }
   cups: number                    // scales dose and water
   grinder: GrinderRef             // used only for display conversion, not by the engine
+  filter?: FilterRef              // from the user's filters; flowClass feeds the priors below
   context: {
     own: PriorRecipe[]            // my locked/past recipes (any bean)
     friends: PriorRecipe[]        // friends' locked recipes visible to me
@@ -43,6 +44,7 @@ interface SuggestOutput {
     doseG: number; waterG: number; ratio: number
     tempC: number
     grindUm: number               // microns; clients convert to grinder units
+    filter: FilterRef | null
     pours: { atS: number; toG: number }[]   // cumulative grams, as in the dataset
     agitation: string | null
     targetTimeS: number
@@ -105,6 +107,7 @@ Everything below is **encoded guidance, not validated science**. Each carries a 
 | Bloom / first pour | Fresher roast (<7 days) gets more bloom time | Common guidance, **unverified** |
 | Target time | ~3:00-3:30 total for 300 g | 4:6 reference; dataset 2:50 |
 | Agitation | None by default | Method reference |
+| Filter paper | Faster papers (thin, open) start a touch finer and expect a shorter drawdown; slower papers start slightly coarser. Metal and cloth are separate cases. Magnitude is small and **unverified**; `flowClass` unknown means no adjustment. | One source notes some third-party V60 papers are thinner and faster than Hario's |
 
 Targets for notes ("emphasise tangerine") nudge `balance` (citrus/floral toward brighter, chocolate/caramel toward sweeter) and the reasons text. This mapping is a hand-written lookup and is easy to test.
 

@@ -21,6 +21,7 @@ Sources are mostly roaster, retailer and barista-education pages. There is littl
 - **Under-extracted tends to taste sour, thin, sometimes salty or grassy, lacking sweetness. Over-extracted tends to taste bitter, harsh, drying or astringent.** The SCA brewing control chart is the standard frame: an ideal window of extraction yield (often quoted around 18-22%) and strength (TDS) with under, over, weak and strong regions around it. The exact numbers need checking against SCA's own chart, because the figures we found come from secondary sources. ([Open Exam Prep summary of the SCA chart](https://open-exam-prep.com/study-guides/sca-q-grader/brewing-science-water-chemistry/brewing-control-chart))
 - **Sour and bitter *together* (or a hollow middle with sharp front and bitter finish, with little sweetness) usually means uneven extraction** (channeling, poor bed, uneven grind), not a grind problem. Changing grind won't fix it; technique and grinder quality do. ([Complete Home Barista](https://completehomebarista.com/guides/taste-based-extraction-diagnosis/), [Complete Home Barista on V60](https://completehomebarista.com/problems/pour-over-failure/))
 - **Astringency (a drying, puckery finish) is easy to mistake for sourness.** Users need a way to tell them apart. ([Home-Barista thread](https://www.home-barista.com/brewing/is-it-sourness-or-astringency-t62634.html), anecdotal but a common beginner confusion)
+- **Filter paper changes the baseline.** Papers differ in thickness and flow, so the same grind drains at different speeds. Drawdown evidence is compared with the target for the filter in use, and changing paper resets that expectation. ([Complete Home Barista on V60](https://completehomebarista.com/problems/pour-over-failure/))
 - **Drawdown time is evidence.** For a V60, much faster than about 2:30 points to a coarse grind or channeling; slower than about 3:30-4:00 points to a fine grind or clogging by fines. Stirring during the main pour and pouring hard push fines and cut channels. ([Complete Home Barista on V60](https://completehomebarista.com/problems/pour-over-failure/))
 - **Beans that are old (or too fresh) taste flat or uneven, and no recipe change fixes that.** One source suggests grinding coarser for stale beans; this was espresso-specific. ([Complete Home Barista](https://completehomebarista.com/guides/taste-based-extraction-diagnosis/))
 - **Change one variable at a time.** Universal advice and our existing rule.
@@ -65,6 +66,7 @@ What each lever tends to do. Direction is reliable; magnitude is not, which is w
 | First-pour split (4:6 balance dial) | Shifts character | Sweeter vs brighter | | See `engine.md`. |
 | Agitation (stir, swirl, hard pour) | Yes | Pushes fines to the filter, can slow flow | Channeling when overdone | Keep to bloom unless needed. |
 | Bloom time | Affects evenness | | Uneven if skipped on fresh coffee | Fresher beans need more. |
+| Filter paper | Changes flow, so changes drawdown time and extraction | Faster or slower drawdown at the same grind | Thin papers: under-extraction if grind isn't adjusted; slow papers: clogging | A context fact, picked from the user's filters. Switching paper resets drawdown expectations. |
 | Water minerals | Changes extraction and taste | | Flat (high alkalinity), thin or sharp (soft) | Not a recipe parameter; a context fact. |
 | Bean freshness | Changes everything | | Flat when old | Not tunable; flagged, not fixed. |
 
@@ -100,7 +102,7 @@ Each question is data: wording, answer options, an example for each option, and 
 - **Notes:** per bean note: tasted it / hint / not at all.
 - **Sweetness:** was there any? yes / a little / no.
 - **Observations (from the brew screen, not asked if already logged):** drawdown time against target; bed after brewing (flat / uneven / dark ring or crater); clumps or visible dry patches.
-- **Context (asked once, remembered):** water (tap / filtered / bottled / not sure), bean age (taken from roast date), grinder.
+- **Context (asked once, remembered):** water (tap / filtered / bottled / not sure), bean age (taken from roast date), grinder. The filter is taken from the recipe, not asked.
 - **Cooling:** "did it taste different as it cooled?" (low weight, our own hypothesis, unverified).
 
 ### 5.3 Choosing the next question
@@ -150,7 +152,7 @@ interface DiagnoseInput {
   bean: BeanAttrs
   brew: { actualTimeS?: number; yieldMl?: number; observations?: Observation[] }
   answers: Record<QuestionId, Answer>  // answered so far
-  context: { water?: WaterInfo; beanAgeDays?: number; grinder?: GrinderRef }
+  context: { water?: WaterInfo; beanAgeDays?: number; grinder?: GrinderRef; filter?: FilterRef }
   history: BrewResult[]                // earlier brews of this lineage, including past suggestions and outcomes
   bank: { version: string; questions: Question[]; hypotheses: Hypothesis[] }
 }

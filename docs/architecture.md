@@ -17,6 +17,7 @@ Settled in planning sessions with Robin.
 | Beans | Shared catalogue (no duplicates) plus a personal library layered on top. If a friend has a bean dialed, you are told. |
 | Engine | Server-side, pure TypeScript module, no LLM. See `engine.md`. |
 | Server language | **TypeScript** (Supabase Edge Functions run on Deno; there is no Python/Java option there, and a TS engine can be shared with the client). |
+| Equipment | Users keep a personal list of **grinders** and **filters** in their profile. Recipe screens pick from those lists in a bottom sheet (with "add" at the end). Same pattern for both. |
 | Tuning | Two modes on any brew: **manual** (full control, effect hints) and **assisted** (the app asks plain-language questions, diagnoses the likely cause, suggests one change). See `tuning.md`. |
 | Offline | Brewing and logging must work offline and sync later. |
 | Training data | Every brew stores the exact recipe parameters used plus feedback answers, never a reference to something editable. |
@@ -98,6 +99,30 @@ create table user_grinders (
   primary key (user_id, grinder_id)
 );
 
+-- filters (V60 paper, same pattern as grinders) --------------------------
+create table filters (                -- shared catalogue, seeded and user-addable
+  id uuid primary key,
+  brand text not null,
+  model text not null,                -- 'T-90', 'Abaca', 'Hario V60 paper', ...
+  size text,                          -- '01', '02', '03' for V60 cones
+  material text not null default 'paper'
+    check (material in ('paper','metal','cloth')),
+  flow_class text
+    check (flow_class in ('fast','medium','slow')),  -- rough, null = unknown
+  bleached boolean,
+  match_key text not null,            -- normalised, so 'CAFEC T-90' and 'CAFEC T90' match
+  created_by uuid references profiles,
+  unique (match_key, size)
+);
+
+create table user_filters (           -- "my gear": the dropdown source
+  user_id uuid references profiles,
+  filter_id uuid references filters,
+  nickname text,
+  is_default boolean not null default false,   -- preselected on new recipes
+  primary key (user_id, filter_id)
+);
+
 -- beans ----------------------------------------------------------------
 create table beans (                 -- shared catalogue: facts about the coffee
   id uuid primary key,
@@ -167,7 +192,8 @@ create table brews (                 -- append-only log; the future training dat
 ### Invariants
 
 - `recipe_versions` rows are never updated or deleted (enforced by a trigger). The only mutable pointer is `recipes.locked_version_id`.
-- **Fork = copy.** Saving a friend's recipe copies their locked version's `params` into a new recipe of yours as its root version, and records `forked_from_version_id`. After that your copy has no dependency on the friend's data, so "reset to original" is just "point back at your root version". It keeps working even if the friend re-locks or deletes.
+- **Equipment in recipes.** A recipe version's `params` stores a snapshot of the filter used (`{ filterId, brand, model, flowClass }`), and the grinder as microns, so versions stay meaningful if the catalogue changes. The user's current choice comes from `user_filters`.
+- **Fork = copy.** Saving a friend's recipe copies their locked version's `params` into a new recipe of yours as its root version, and records `forked_from_version_id`. If the friend's filter is not in your `user_filters`, the fork screen shows it with a prompt to pick one of yours (or add it); the engine adjusts for the difference in flow class. Grind is converted the same way as before. After that your copy has no dependency on the friend's data, so "reset to original" is just "point back at your root version". It keeps working even if the friend re-locks or deletes.
 - "The friend has a newer version" is a read of their current `locked_version_id` compared with what you forked. It never overwrites anything.
 - `brews.tuning` records what the assisted flow asked, concluded and suggested, and `outcome_improved` is filled in from the next brew's overall rating. Together they are the cause/change/result data we lack today.
 - Question banks, hypothesis catalogues and likelihood tables are versioned data shipped with the engine, not rows users can edit. `brews.tuning` stores the bank version so old answers stay interpretable.
@@ -195,6 +221,8 @@ $$;
 | `invites` | inviter | inviter inserts; acceptance only through `accept-invite` |
 | `grinders`, `grinder_calibration` | any signed-in user | none (curated by migrations) |
 | `user_grinders` | owner | owner |
+| `filters` | any signed-in user | insert by any signed-in user (deduped on `match_key`); no update/delete |
+| `user_filters` | owner | owner |
 | `beans` | any signed-in user | insert by any signed-in user; **no update/delete** (personal edits go in `user_beans`) |
 | `user_beans` | owner | owner |
 | `recipes` | owner, **or** (`locked_version_id is not null` and `are_friends(owner_id, auth.uid())`) | owner |
@@ -222,7 +250,7 @@ Requirement: logging a brew on weak signal must feel instant and never lose data
 - Client mints UUIDv7 ids, so rows can be created offline and inserted idempotently (`insert ... on conflict (id) do nothing`).
 - Writes go to an **IndexedDB outbox** first, then the UI updates optimistically (TanStack Query), then a sync loop drains the outbox when online.
 - Conflicts are mostly designed away: brews and recipe versions are append-only, so two devices can't clash. The only mutable fields are `recipes.locked_version_id` and `user_beans` fields; those are last-write-wins.
-- The service worker precaches the app shell and the grinder catalogue. Engine suggestions need the network; if offline, the last suggestion for the bean stays available and a "will refresh when online" note is shown.
+- The service worker precaches the app shell and the grinder and filter catalogues. Engine suggestions need the network; if offline, the last suggestion for the bean stays available and a "will refresh when online" note is shown.
 - Wake lock while on the brew screen; it must be requested from a user gesture on iOS.
 
 ## 7. Engine placement
@@ -240,6 +268,8 @@ Unchanged from the kickoff plan: shell (2), Supabase + auth + schema + RLS (3), 
 
 ## 9. Open questions
 
+- Should the dripper (V60 plastic, ceramic, glass, Neo and so on) get the same treatment as grinders and filters? The 4:6 fixtures record it, and it affects flow too. A generic `equipment` table with a `kind` column would avoid a third copy of the same pattern. Decide before the schema is built.
+- The fixture data spells one filter two ways (`CAFEC T-90` and `CAFEC T90`); importing it should go through `filters.match_key`.
 - Assisted tuning questions need testing with real novices (see `tuning.md` section 9).
 - Should a friend be able to see which of their friends' locked recipes I've saved? Default: no.
 - Do we let users delete their account and what happens to recipes friends forked? Fork-as-copy means the forks survive; confirm that is acceptable.
