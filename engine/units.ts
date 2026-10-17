@@ -1,3 +1,5 @@
+import { roundTo } from './math.ts'
+
 /** Display units. Everything is stored in degrees C; the unit is only a display preference. */
 
 export type TempUnit = 'c' | 'f'
@@ -7,7 +9,7 @@ export const fToC = (fahrenheit: number): number => ((fahrenheit - 32) * 5) / 9
 
 /** Value in the display unit: whole degrees F, half-degree C. */
 export function toDisplayTemp(celsius: number, unit: TempUnit): number {
-  return unit === 'f' ? Math.round(cToF(celsius)) : Math.round(celsius * 2) / 2
+  return unit === 'f' ? Math.round(cToF(celsius)) : roundTo(celsius, 0.5)
 }
 
 /** Back to degrees C for storage, rounded to a tenth to avoid float noise. */
