@@ -1,7 +1,21 @@
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import type { CalibrationSource } from '../../engine/grinder.ts'
-import { byBrandModel, filterMatchKey, type Api, type CatalogueGrinder, type FilterRow, type MyFilter, type MyGrinder, type Profile } from './types'
+import {
+  byBrandModel,
+  filterMatchKey,
+  type Api,
+  type Bag,
+  type BagStatus,
+  type Bean,
+  type BeanMatch,
+  type CatalogueGrinder,
+  type FilterRow,
+  type MyFilter,
+  type MyGrinder,
+  type Profile,
+  type RoastLevel,
+} from './types'
 
 type GrinderRow = Database['public']['Tables']['grinders']['Row']
 type CalibrationRow = Pick<Database['public']['Tables']['grinder_calibration']['Row'], 'setting' | 'microns' | 'source'>
@@ -23,6 +37,24 @@ function toGrinder(row: GrinderWithPoints): CatalogueGrinder {
       microns: point.microns,
       source: point.source as CalibrationSource,
     })),
+  }
+}
+
+type BeanRow = Database['public']['Tables']['beans']['Row']
+
+function toBean(row: BeanRow): Bean {
+  return {
+    id: row.id,
+    roaster: row.roaster,
+    name: row.name,
+    origin: row.origin,
+    region: row.region,
+    producer: row.producer,
+    variety: row.variety,
+    process: row.process,
+    altitudeM: row.altitude_m,
+    roastLevel: row.roast_level as RoastLevel | null,
+    roasterNotes: row.roaster_notes,
   }
 }
 
@@ -127,6 +159,82 @@ export const supabaseApi: Api = {
 
   async removeMyFilter(filterId) {
     const { error } = await supabase.rpc('remove_my_filter', { target: filterId })
+    fail(error)
+  },
+
+  async listMyBags(): Promise<Bag[]> {
+    const { data, error } = await supabase
+      .from('user_beans')
+      .select('id, roast_date, grams_remaining, status, created_at, beans(*)')
+      .order('created_at', { ascending: false })
+    fail(error)
+    return (
+      data as unknown as {
+        id: string
+        roast_date: string | null
+        grams_remaining: number | null
+        status: string
+        created_at: string
+        beans: BeanRow
+      }[]
+    ).map((row) => ({
+      id: row.id,
+      bean: toBean(row.beans),
+      roastDate: row.roast_date,
+      gramsRemaining: row.grams_remaining,
+      status: row.status as BagStatus,
+      createdAt: row.created_at,
+    }))
+  },
+
+  async searchBeans(query): Promise<BeanMatch[]> {
+    const { data, error } = await supabase.rpc('search_beans', { q: query })
+    fail(error)
+    return data.map((row) => ({
+      id: row.id,
+      roaster: row.roaster,
+      name: row.name,
+      origin: row.origin,
+      region: row.region,
+      producer: row.producer,
+      variety: row.variety,
+      process: row.process,
+      altitudeM: row.altitude_m,
+      roastLevel: row.roast_level as RoastLevel | null,
+      roasterNotes: row.roaster_notes,
+      owned: row.owned,
+      friendsWithRecipe: row.friends_with_recipe,
+    }))
+  },
+
+  async addBag(input) {
+    const { newBean } = input
+    const { error } = await supabase.rpc('add_bag', {
+      p_bag_id: input.bagId,
+      p_bean_id: input.beanId,
+      p_new_bean_id: input.newBeanId,
+      p_new_bean: newBean
+        ? {
+            roaster: newBean.roaster,
+            name: newBean.name,
+            origin: newBean.origin ?? null,
+            region: newBean.region ?? null,
+            producer: newBean.producer ?? null,
+            variety: newBean.variety ?? null,
+            process: newBean.process ?? null,
+            altitude_m: newBean.altitudeM ?? null,
+            roast_level: newBean.roastLevel ?? null,
+            roaster_notes: newBean.roasterNotes,
+          }
+        : undefined,
+      p_roast_date: input.roastDate ?? undefined,
+      p_grams: input.grams ?? undefined,
+    })
+    fail(error)
+  },
+
+  async removeBag(bagId) {
+    const { error } = await supabase.from('user_beans').delete().eq('id', bagId)
     fail(error)
   },
 }

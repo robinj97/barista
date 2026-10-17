@@ -1,6 +1,6 @@
 # Barista: adding a bag of beans
 
-Status: spec draft for review. Nothing here is built yet. Decisions marked **Decided** were agreed in discussion; **Proposed** items still need a yes.
+Status: built (see section 7). Decisions marked **Decided** were agreed in discussion; **Proposed** items were my defaults.
 
 ## 1. Goal
 
@@ -93,16 +93,18 @@ While the roaster and name are typed, a "Did you mean…?" strip shows near matc
 - Floating "+" opens the add sheet.
 - Sample data (`sampleBeans`) and the placeholder recipe on the bean page are removed. The bean page shows the bean details, your bag details, an empty "Recipes" area ("No recipes yet") until recipes exist, and a "Start dialing in" button that opens the Brew tab.
 
-## 7. Build plan (after this spec is agreed)
+## 7. What was built (and differences from the plan)
 
-1. Migration: `beans.roast_level`, the `add_bag` and `search_beans` functions, plus tests in `supabase/tests`.
-2. Types regenerated, `Api` interface and mock extended, query hooks.
-3. Empty state, add sheet, new-bean form, bag step, floating button.
-4. Real list and bean page; sample data removed.
-5. Tests for each step; checked at 390px in light and dark.
+- **Database:** `beans.roast_level`, length and note-count constraints, `search_beans(q)` and `add_bag(...)`. Search needs every word to appear in roaster + name (any order) or a close `word_similarity` match; whole-string trigram similarity was too weak for short queries against long names, so the follow-up migration switched to `word_similarity`.
+- **Friend signal** shows a count ("A friend has this dialed in", "3 friends have this dialed in"), not names. Showing names needs friend profile reads and is a later refinement.
+- **Add flow:** empty-state button or floating pebble "+", search sheet, new-bean form with "Did you mean...?", bag step with roast-date and size chips. Bags you already own open their bag page instead of duplicating.
+- **Optimistic add:** the bag shows in the list at once with a client-made id. If saving fails the bag is taken out again and a toast explains.
+- **Beans tab and bean page** read real data; sample data is gone. The bean page has no edit yet (roast date and size are set when adding), and "Remove this bag" deletes the bag (bags with brews cannot be removed yet).
+- Tests: `supabase/tests/beans.test.sql` for the database, and UI tests for the empty state, list, add flows, validation, duplicates, failure rollback and removal.
 
 ## 8. Still open
 
+- Names for the friend signal, and editing a bag after adding it.
 - Exact wording of the roast-date chips ("3 days ago", "1 week ago", "2 weeks ago") once we see them on a phone.
 - Freshness advice (for example more bloom for fresh coffee) is a tuning topic still being researched, so the flow shows "Roasted N days ago" and no advice yet.
 - Photo of the bag as the cover image, and photo scanning itself (build step 9).

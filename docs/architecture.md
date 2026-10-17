@@ -201,6 +201,12 @@ The schema above is implemented in `supabase/migrations/` and applied to the Sup
 - Grinders and calibration data are curated by migrations. The seed (eleven grinders, seven with calibration; the K7 curve is estimated) is in `*_grinder_seed*.sql`; `grinders.setting_step` records the smallest adjustment. See `grinders.md` for provenance and caveats.
 - `supabase/tests/rls.test.sql` checks the policies with three simulated users inside one rolled-back transaction.
 
+### Beans (built)
+
+- `beans` is the shared catalogue of static facts only (roaster, name, origin, region, producer, variety, process, altitude, roast level, the roaster's tasting notes). Roast date, bag size, status and notes live on the private `user_beans` row.
+- `public.search_beans(q)` searches the catalogue and reports `owned` and `friends_with_recipe`; `public.add_bag(...)` creates the bean when needed and the bag in one transaction, reusing an exact roaster + name match. Both run as the caller.
+- Details: `add-bean.md`.
+
 ### Profile and gear (built)
 
 - `profiles` also holds `temp_unit` (`c` or `f`) and `default_method`. Temperatures are always stored in degrees C; the unit is only how they are shown (`engine/units.ts`).
