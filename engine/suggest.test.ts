@@ -121,6 +121,11 @@ describe('temperature', () => {
     expect(temp({ roastLevel: 'light', process: 'Anaerobic natural' })).toBe(93)
   })
 
+  it('keeps a washed light roast inside the dataset range, and moves the range down for naturals', () => {
+    expect(suggest(withBean({ roastLevel: 'light', process: 'Washed' })).ranges.tempC).toEqual([92, 96])
+    expect(suggest(withBean({ roastLevel: 'light', process: 'Natural' })).ranges.tempC).toEqual([91, 95])
+  })
+
   it('assumes a light roast, and says so, when the roast level is unknown', () => {
     const out = suggest(withBean({ roastLevel: null, process: 'Honey' }))
     expect(out.recipe.tempC).toBe(94)

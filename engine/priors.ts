@@ -37,7 +37,10 @@ const TEMP: Record<RoastLevel, { value: number; range: Range }> = {
   dark: { value: 85, range: [83, 88] },
 }
 
-/** Small process nudges (common guidance, unverified). The range moves with the value. */
+/**
+ * Small process nudges (common guidance, unverified). A cooler nudge moves the range down with it;
+ * a hotter one keeps the range, which already tops out at the hottest light washed brew in the dataset (96 °C).
+ */
 function processNudge(bean: BeanTraits, level: RoastLevel): { deltaC: number; why: string } {
   const group = processGroup(bean.process)
   if (group === 'natural' || group === 'anaerobic') {
@@ -60,7 +63,8 @@ export function tempPrior(bean: BeanTraits): Estimate {
     why: `Starting point for a ${level} roast: lighter roasts are denser and need hotter water.${nudge.why}`,
     source: 'guidance',
   }
-  return { value, range: [lo + nudge.deltaC, hi + nudge.deltaC], reasons: [reason, ...assumption] }
+  const shift = Math.min(nudge.deltaC, 0)
+  return { value, range: [lo + shift, hi + shift], reasons: [reason, ...assumption] }
 }
 
 /** Coarse, as the 4:6 method calls for; the grinder converter turns microns into its own setting. */

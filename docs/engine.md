@@ -77,7 +77,7 @@ Everything below is **encoded guidance, not validated science**. Each carries a 
 |---|---|---|
 | Dose / water / ratio | 1:15 default; stronger target tightens towards 1:14, light loosens towards 1:16 | 4:6 reference and dataset (1:15, 1:16.7) |
 | Temperature | Light 94 °C (92 to 96), medium 90 (88 to 92), dark 85 (83 to 88). Unknown roast level is assumed light, and the reasons say so. | Pull & Pour table (93, 88, 83) and Kasuya's ~92 °C, nudged up to match the dataset's light washed coffees (93 to 96 °C). |
-| Process nudges | Natural or anaerobic: 1 °C cooler. Washed light roast: 1 °C hotter. The range moves with the value. Processes are grouped in `engine/traits.ts` ("pulped natural" counts as honey). | Common guidance, **unverified**, kept small |
+| Process nudges | Natural or anaerobic: 1 °C cooler. Washed light roast: 1 °C hotter. A cooler nudge moves the range down; a hotter one keeps it (light stays 92 to 96, the dataset's light washed range). Processes are grouped in `engine/traits.ts` ("pulped natural" counts as honey). | Common guidance, **unverified**, kept small |
 | Grind | About 820 µm (range 100 µm either side), 30 µm coarser for medium roasts and 60 µm for dark. | The 4:6 sources say coarse; 820 µm matches the DF54 dataset. The grinder converter turns it into clicks. |
 | Bloom / first pour | Roasted in the last 7 days: the gap before the second pour is 55 s instead of 45 s. Only when `asOf` is given. | Common guidance, **unverified** |
 | Target time | Last pour start plus a drawdown that scales with the water (210 s, about 3:30, for the reference brew), range 25 s either side. | 4:6 reference; dataset 2:50. The scaling for smaller brews is **unverified**. |
