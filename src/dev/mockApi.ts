@@ -176,6 +176,15 @@ export function createMockApi(options: MockOptions = {}): Api {
 
     listMyBags: () => wait([...bags].sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
 
+    async browseBeans() {
+      const owned = new Set(bags.map((b) => b.bean.id))
+      return wait(
+        [...catalogue]
+          .sort((x, y) => x.roaster.localeCompare(y.roaster) || x.name.localeCompare(y.name))
+          .map((b) => ({ ...b, owned: owned.has(b.id), friendsWithRecipe: friendRecipes[b.id] ?? 0 })),
+      )
+    },
+
     async searchBeans(query) {
       const tokens = query
         .toLowerCase()

@@ -4,6 +4,7 @@ import type { CalibrationSource } from '../../engine/grinder.ts'
 import type { BrewChoices } from '../brew/params'
 import type { Json } from '../lib/database.types'
 import {
+  BROWSE_LIMIT,
   byBrandModel,
   filterMatchKey,
   type Api,
@@ -48,8 +49,10 @@ function toGrinder(row: GrinderWithPoints): CatalogueGrinder {
 }
 
 type BeanRow = Database['public']['Tables']['beans']['Row']
+/** The bean columns every catalogue query returns. */
+type BeanFields = Omit<BeanRow, 'match_key' | 'created_at' | 'created_by'>
 
-function toBean(row: BeanRow): Bean {
+function toBean(row: BeanFields): Bean {
   return {
     id: row.id,
     roaster: row.roaster,
@@ -63,6 +66,16 @@ function toBean(row: BeanRow): Bean {
     roastLevel: row.roast_level as RoastLevel | null,
     roasterNotes: row.roaster_notes,
   }
+}
+
+/** A catalogue row from search_beans or browse_beans: the bean plus what is personal about it. */
+type BeanMatchRow = BeanFields & {
+  owned: boolean
+  friends_with_recipe: number
+}
+
+function toBeanMatch(row: BeanMatchRow): BeanMatch {
+  return { ...toBean(row), owned: row.owned, friendsWithRecipe: row.friends_with_recipe }
 }
 
 function fail(error: { message: string } | null): asserts error is null {
@@ -200,24 +213,16 @@ export const supabaseApi: Api = {
     }))
   },
 
+  async browseBeans(): Promise<BeanMatch[]> {
+    const { data, error } = await supabase.rpc('browse_beans', { max_results: BROWSE_LIMIT })
+    fail(error)
+    return data.map(toBeanMatch)
+  },
+
   async searchBeans(query): Promise<BeanMatch[]> {
     const { data, error } = await supabase.rpc('search_beans', { q: query })
     fail(error)
-    return data.map((row) => ({
-      id: row.id,
-      roaster: row.roaster,
-      name: row.name,
-      origin: row.origin,
-      region: row.region,
-      producer: row.producer,
-      variety: row.variety,
-      process: row.process,
-      altitudeM: row.altitude_m,
-      roastLevel: row.roast_level as RoastLevel | null,
-      roasterNotes: row.roaster_notes,
-      owned: row.owned,
-      friendsWithRecipe: row.friends_with_recipe,
-    }))
+    return data.map(toBeanMatch)
   },
 
   async addBag(input) {

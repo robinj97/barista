@@ -610,6 +610,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      browse_beans: {
+        Args: { max_results?: number }
+        Returns: {
+          altitude_m: number
+          friends_with_recipe: number
+          id: string
+          name: string
+          origin: string
+          owned: boolean
+          process: string
+          producer: string
+          region: string
+          roast_level: string
+          roaster: string
+          roaster_notes: string[]
+          variety: string
+        }[]
+      }
       lock_recipe: {
         Args: {
           p_actual_time_s: number | null

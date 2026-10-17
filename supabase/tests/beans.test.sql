@@ -1,4 +1,4 @@
--- Beans: search_beans, add_bag and the static-versus-private split. Same style as the other
+-- Beans: search_beans, browse_beans, add_bag and the static-versus-private split. Same style as the other
 -- tests: one DO block, ends by raising BEANS_TESTS_PASSED so everything rolls back.
 
 do $$
@@ -106,6 +106,10 @@ begin
   assert n = 0, 'wildcard characters are not special';
   select count(*) into n from public.search_beans('colombia');
   assert n = 0, 'a different origin word does not match';
+  select * into r from public.browse_beans() where id = bean;
+  assert not r.owned and r.friends_with_recipe = 1, 'browse_beans carries the same owned and friend signals';
+  select count(*) into n from public.browse_beans(1);
+  assert n = 1, 'browse_beans respects its cap';
 
   perform public.add_bag(p_new_bean := '{"roaster":"coffea  circulor","name":"ELTO arbegona!"}', p_bag_id := bag_b);
   select count(*) into n from public.beans;
