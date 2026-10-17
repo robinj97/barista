@@ -22,7 +22,7 @@ export function suggestV60(input: SuggestInput, doseG: number): SuggestOutput {
   const laterPours = laterPoursFor(strength)
   const bloom = bloomGap(input.bean.roastDate, input.asOf)
   const start = startingPoint(input)
-  const ratioEst = ratioPrior(strength)
+  const ratioEst = ratioPrior()
 
   // Water: custom pours decide it (scaled to an explicit water amount), else a water amount, else a ratio.
   const waterG = o.waterG ?? (o.pours ? o.pours.at(-1)!.toG : Math.round(doseG * (o.ratio ?? ratioEst.value)))

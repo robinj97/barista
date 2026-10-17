@@ -77,10 +77,10 @@ describe('dose, cups and strength', () => {
     expect(() => suggest({ ...base, target: { ...base.target, strength } })).toThrow(EngineError)
   })
 
-  it('tightens the ratio and adds pours for a stronger cup', () => {
+  it('adds pours for a stronger cup and leaves the ratio alone', () => {
     const light = suggest({ ...base, target: { ...base.target, strength: 'light' } })
     const strong = suggest({ ...base, target: { ...base.target, strength: 'strong' } })
-    expect(light.recipe.ratio).toBeGreaterThan(strong.recipe.ratio)
+    expect(light.recipe.ratio).toBe(strong.recipe.ratio)
     expect(light.structure.laterPours).toBeLessThan(strong.structure.laterPours)
     expect(light.recipe.pours.length).toBeLessThan(strong.recipe.pours.length)
   })
@@ -262,14 +262,14 @@ describe('learning from recipes', () => {
     expect(suggest({ ...base, context: { own: [], friends } }).recipe.tempC).toBe(94)
   })
 
-  it('still builds the pours and ratio from your own dials', () => {
+  it('still builds the pours from your own dials, at 1:15', () => {
     const out = suggest({
       ...base,
       target: { balance: 1, strength: 'strong', emphasise: [] },
       context: { own: [prior()], friends: [] },
     })
     expect(out.structure).toEqual({ balance: 1, laterPours: 4 })
-    expect(out.recipe.ratio).toBe(14)
+    expect(out.recipe.ratio).toBe(15)
   })
 
   it('ignores recipes for other methods', () => {
