@@ -28,6 +28,7 @@ export type Database = {
           process: string | null
           producer: string | null
           region: string | null
+          roast_level: string | null
           roaster: string
           roaster_notes: string[]
           variety: string | null
@@ -43,6 +44,7 @@ export type Database = {
           process?: string | null
           producer?: string | null
           region?: string | null
+          roast_level?: string | null
           roaster: string
           roaster_notes?: string[]
           variety?: string | null
@@ -58,6 +60,7 @@ export type Database = {
           process?: string | null
           producer?: string | null
           region?: string | null
+          roast_level?: string | null
           roaster?: string
           roaster_notes?: string[]
           variety?: string | null
@@ -573,9 +576,39 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { token: string }; Returns: Json }
+      add_bag: {
+        Args: {
+          p_bag_id?: string
+          p_bean_id?: string
+          p_grams?: number
+          p_new_bean?: Json
+          p_new_bean_id?: string
+          p_roast_date?: string
+        }
+        Returns: string
+      }
       add_my_filter: { Args: { target: string }; Returns: undefined }
       create_invite: { Args: never; Returns: string }
       remove_my_filter: { Args: { target: string }; Returns: undefined }
+      search_beans: {
+        Args: { max_results?: number; q: string }
+        Returns: {
+          altitude_m: number
+          friends_with_recipe: number
+          id: string
+          name: string
+          origin: string
+          owned: boolean
+          process: string
+          producer: string
+          region: string
+          roast_level: string
+          roaster: string
+          roaster_notes: string[]
+          score: number
+          variety: string
+        }[]
+      }
       set_default_filter: { Args: { target: string }; Returns: undefined }
     }
     Enums: {

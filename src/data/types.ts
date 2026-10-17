@@ -81,4 +81,74 @@ export interface Api {
   setDefaultFilter(filterId: string): Promise<void>
   /** Removes a filter from the user's list. Removing the default promotes another one. */
   removeMyFilter(filterId: string): Promise<void>
+
+  /** Roasters that already exist in the shared catalogue, for matching and type-ahead. */
+  listRoasters(): Promise<string[]>
+  listMyBags(): Promise<Bag[]>
+  /** Catalogue search: every word matches roaster + name in any order, tolerant of small typos. */
+  searchBeans(query: string): Promise<BeanMatch[]>
+  /**
+   * Adds a bag, creating the shared bean first when needed. Idempotent for the same `bagId`.
+   * An exact roaster + name match reuses the existing catalogue bean.
+   */
+  addBag(input: AddBagInput): Promise<void>
+  removeBag(bagId: string): Promise<void>
+}
+
+export type RoastLevel = 'light' | 'medium' | 'dark'
+export type BagStatus = 'new' | 'dialing_in' | 'locked'
+
+/** What is true of the coffee itself. Shared with every signed-in user. */
+export interface Bean {
+  id: string
+  roaster: string
+  name: string
+  origin: string | null
+  region: string | null
+  producer: string | null
+  variety: string | null
+  process: string | null
+  altitudeM: number | null
+  roastLevel: RoastLevel | null
+  roasterNotes: string[]
+}
+
+export interface BeanMatch extends Bean {
+  /** You already have a bag of it. */
+  owned: boolean
+  /** How many friends have a locked recipe for it. */
+  friendsWithRecipe: number
+}
+
+/** Your own bag of a bean. Roast date and size are private to you. */
+export interface Bag {
+  id: string
+  bean: Bean
+  roastDate: string | null
+  gramsRemaining: number | null
+  status: BagStatus
+  createdAt: string
+}
+
+export interface NewBean {
+  roaster: string
+  name: string
+  origin?: string
+  region?: string
+  producer?: string
+  variety?: string
+  process?: string
+  altitudeM?: number
+  roastLevel?: RoastLevel
+  roasterNotes: string[]
+}
+
+export interface AddBagInput {
+  /** Minted on the device so the add can be retried safely and shown at once. */
+  bagId: string
+  beanId?: string
+  newBean?: NewBean
+  newBeanId?: string
+  roastDate?: string | null
+  grams?: number | null
 }

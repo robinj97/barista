@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthContext'
+import { uniqueRoasters } from '../beans/roasters'
+import { useToast } from '../components/toastContext'
 import { useApi } from './ApiContext'
-import type { NewFilter, Profile, ProfilePatch } from './types'
+import type { AddBagInput, Bag, NewFilter, Profile, ProfilePatch } from './types'
 
 export const keys = {
   profile: (userId: string) => ['profile', userId] as const,
@@ -132,5 +134,78 @@ export function useRemoveFilter() {
   return useMutation({
     mutationFn: (filterId: string) => api.removeMyFilter(filterId),
     onSettled: () => client.invalidateQueries({ queryKey: keys.myFilters(userId) }),
+  })
+}
+
+export const bagKeys = {
+  mine: ['bags', 'mine'] as const,
+  search: (query: string) => ['beans', 'search', query] as const,
+}
+
+/** Distinct roasters already in the catalogue. Small today; paginate or search server-side if it grows. */
+export function useRoasters() {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['beans', 'roasters'] as const,
+    queryFn: async () => uniqueRoasters(await api.listRoasters()),
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useMyBags() {
+  const api = useApi()
+  return useQuery({ queryKey: bagKeys.mine, queryFn: () => api.listMyBags() })
+}
+
+/** Searches the shared catalogue once there are at least two characters. */
+export function useBeanSearch(query: string) {
+  const api = useApi()
+  const trimmed = query.trim()
+  return useQuery({
+    queryKey: bagKeys.search(trimmed.toLowerCase()),
+    queryFn: () => api.searchBeans(trimmed),
+    enabled: trimmed.length >= 2,
+    staleTime: 30_000,
+    placeholderData: (previous) => previous,
+  })
+}
+
+/**
+ * Optimistic: the bag appears in the list at once. If saving fails it is removed again and a
+ * message is shown. The same bag id makes a retry safe.
+ */
+export function useAddBag() {
+  const api = useApi()
+  const client = useQueryClient()
+  const toast = useToast()
+
+  return useMutation({
+    mutationFn: ({ input }: { input: AddBagInput; optimistic: Bag }) => api.addBag(input),
+    onMutate: async ({ optimistic }) => {
+      await client.cancelQueries({ queryKey: bagKeys.mine })
+      const previous = client.getQueryData<Bag[]>(bagKeys.mine)
+      client.setQueryData<Bag[]>(bagKeys.mine, [optimistic, ...(previous ?? [])])
+      return { previous }
+    },
+    onError: (_error, { optimistic }, context) => {
+      client.setQueryData(bagKeys.mine, context?.previous ?? [])
+      toast.show(`Couldn't add ${optimistic.bean.name}. Check your connection and try again.`)
+    },
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: bagKeys.mine })
+      void client.invalidateQueries({ queryKey: ['beans', 'search'] })
+      void client.invalidateQueries({ queryKey: ['beans', 'roasters'] })
+    },
+  })
+}
+
+export function useRemoveBag() {
+  const api = useApi()
+  const client = useQueryClient()
+  const toast = useToast()
+  return useMutation({
+    mutationFn: (bagId: string) => api.removeBag(bagId),
+    onError: () => toast.show("Couldn't remove that bag. Bags with brews can't be removed yet."),
+    onSettled: () => client.invalidateQueries({ queryKey: bagKeys.mine }),
   })
 }

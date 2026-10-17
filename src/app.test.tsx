@@ -1,41 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { RouterProvider, createMemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
-import type { Session } from '@supabase/supabase-js'
-import { AuthContext, type AuthState } from './auth/AuthContext'
-import { AuthGate } from './auth/AuthGate'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ApiContext } from './data/ApiContext'
-import { createMockApi } from './dev/mockApi'
-import { routes } from './router'
+import { auth, makeBag, renderApp, signedIn } from './test/renderApp'
 
-const signedIn = { user: { email: 'robin@example.com' } } as Session
-
-function auth(session: Session | null, overrides: Partial<AuthState> = {}): AuthState {
-  return {
-    session,
-    loading: false,
-    error: null,
-    signInWithGoogle: async () => {},
-    signOut: async () => {},
-    ...overrides,
-  }
-}
-
-function renderAt(path: string, state: AuthState = auth(signedIn)) {
-  render(
-    <AuthContext.Provider value={state}>
-      <ApiContext.Provider value={createMockApi()}>
-        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-          <AuthGate>
-            <RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />
-          </AuthGate>
-        </QueryClientProvider>
-      </ApiContext.Provider>
-    </AuthContext.Provider>,
-  )
-}
+const renderAt = (path: string, state = auth(signedIn), mock = {}) => renderApp(path, { auth: state, mock })
 
 describe('app shell', () => {
   it('redirects / to the Beans tab', () => {
@@ -58,9 +26,9 @@ describe('app shell', () => {
   })
 
   it('opens a bean page from the list', async () => {
-    renderAt('/beans')
-    await userEvent.click(screen.getByRole('link', { name: /Elto Arbegona/ }))
-    expect(screen.getByRole('heading', { name: 'Elto Arbegona' })).toBeInTheDocument()
+    renderAt('/beans', auth(signedIn), { bags: [makeBag('b-elto')] })
+    await userEvent.click(await screen.findByRole('link', { name: /Elto Arbegona/ }))
+    expect(await screen.findByRole('heading', { name: 'Elto Arbegona' })).toBeInTheDocument()
   })
 
   it('shows a not-found page for unknown routes', () => {

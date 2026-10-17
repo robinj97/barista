@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router/dom'
 import './index.css'
 import { AuthGate } from './auth/AuthGate'
 import { AuthProvider } from './auth/AuthProvider'
+import { ToastProvider } from './components/Toast'
 import { ApiContext } from './data/ApiContext'
 import { supabaseApi } from './data/supabaseApi'
 import { supabase } from './lib/supabase'
@@ -36,7 +37,9 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock
         <AuthGate>
           <ApiContext.Provider value={supabaseApi}>
             <QueryClientProvider client={queryClient}>
-              <RouterProvider router={router} />
+              <ToastProvider>
+                <RouterProvider router={router} />
+              </ToastProvider>
             </QueryClientProvider>
           </ApiContext.Provider>
         </AuthGate>

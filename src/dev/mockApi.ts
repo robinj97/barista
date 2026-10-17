@@ -1,5 +1,37 @@
 import { GRINDER_SEED } from '../../engine/grinderSeed.ts'
-import { byBrandModel, filterMatchKey, type Api, type FilterRow, type MyFilter, type MyGrinder, type Profile } from '../data/types'
+import {
+  byBrandModel,
+  filterMatchKey,
+  type Api,
+  type Bag,
+  type Bean,
+  type FilterRow,
+  type MyFilter,
+  type MyGrinder,
+  type Profile,
+} from '../data/types'
+
+const bean = (b: Partial<Bean> & Pick<Bean, 'id' | 'roaster' | 'name'>): Bean => ({
+  origin: null,
+  region: null,
+  producer: null,
+  variety: null,
+  process: null,
+  altitudeM: null,
+  roastLevel: null,
+  roasterNotes: [],
+  ...b,
+})
+
+/** Shared catalogue the mock starts with. */
+export const SEED_BEANS: Bean[] = [
+  bean({ id: 'b-elto', roaster: 'Coffea Circulor', name: 'Elto Arbegona', origin: 'Ethiopia', region: 'Sidama', process: 'Washed', roastLevel: 'light', roasterNotes: ['bergamot', 'tangerine'] }),
+  bean({ id: 'b-pink', roaster: "Father's", name: 'Pink Bourbon', origin: 'Colombia', variety: 'Pink Bourbon', process: 'Washed', roastLevel: 'light', roasterNotes: ['citrus', 'floral', 'hibiscus'] }),
+  bean({ id: 'b-geisha', roaster: 'Placeholder Roasters', name: 'Tanzania Geisha', origin: 'Tanzania', region: 'Arusha', variety: 'Geisha', process: 'Washed', roastLevel: 'light', roasterNotes: ['black tea', 'candied lemon', 'vanilla'] }),
+  bean({ id: 'b-guji', roaster: 'Coffea Circulor', name: 'Guji Natural', origin: 'Ethiopia', region: 'Guji', process: 'Natural', roastLevel: 'light' }),
+]
+
+const beanKey = (roaster: string, name: string) => (roaster + name).replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
 
 const SEED_FILTERS: FilterRow[] = [
   { id: 'f-cafec-t90', brand: 'CAFEC', model: 'T-90', size: '02', material: 'paper', flow_class: 'fast', bleached: null, created_by: null, match_key: 'cafect90' },
@@ -12,6 +44,11 @@ export interface MockOptions {
   latencyMs?: number
   profile?: Partial<Profile>
   grinderIds?: string[]
+  bags?: Bag[]
+  /** Ids of catalogue beans that friends have a locked recipe for, with how many. */
+  friendRecipes?: Record<string, number>
+  /** Make addBag fail, to test rollback. */
+  failAddBag?: boolean
 }
 
 /** In-memory Api for tests and the dev preview. Mirrors the rules the database enforces. */
@@ -29,6 +66,10 @@ export function createMockApi(options: MockOptions = {}): Api {
   const grinderIds = new Set(options.grinderIds ?? [])
   const myFilters = new Map<string, { nickname: string | null; isDefault: boolean }>()
   const filters = [...SEED_FILTERS]
+  const catalogue = [...SEED_BEANS]
+  const bags = [...(options.bags ?? [])]
+  for (const bag of bags) if (!catalogue.some((b) => b.id === bag.bean.id)) catalogue.push(bag.bean)
+  const friendRecipes = options.friendRecipes ?? { 'b-elto': 1 }
 
   const wait = <T,>(value: T): Promise<T> =>
     new Promise((resolve) => setTimeout(() => resolve(structuredClone(value)), latencyMs))
@@ -112,6 +153,68 @@ export function createMockApi(options: MockOptions = {}): Api {
       if (rest.length && !rest.some((f) => myFilters.get(f.id)!.isDefault)) {
         myFilters.set(rest[0]!.id, { ...myFilters.get(rest[0]!.id)!, isDefault: true })
       }
+      return wait(undefined)
+    },
+
+    listRoasters: () => wait(catalogue.map((b) => b.roaster)),
+
+    listMyBags: () => wait([...bags].sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+
+    async searchBeans(query) {
+      const tokens = query
+        .toLowerCase()
+        .split(/\s+/)
+        .map((t) => t.replace(/[^a-z0-9]/g, ''))
+        .filter(Boolean)
+      if (tokens.length === 0) return wait([])
+      const owned = new Set(bags.map((b) => b.bean.id))
+      return wait(
+        catalogue
+          .filter((b) => tokens.every((t) => beanKey(b.roaster, b.name).includes(t)))
+          .map((b) => ({ ...b, owned: owned.has(b.id), friendsWithRecipe: friendRecipes[b.id] ?? 0 })),
+      )
+    },
+
+    async addBag(input) {
+      await wait(undefined)
+      if (options.failAddBag) throw new Error('Could not save')
+      if (bags.some((b) => b.id === input.bagId)) return
+      let target = input.beanId ? catalogue.find((b) => b.id === input.beanId) : undefined
+      if (!target && input.newBean) {
+        const nb = input.newBean
+        if (!nb.roaster.trim() || !nb.name.trim()) throw new Error('invalid_bean_name')
+        target = catalogue.find((b) => beanKey(b.roaster, b.name) === beanKey(nb.roaster, nb.name))
+        if (!target) {
+          target = bean({
+            id: input.newBeanId ?? `b-${catalogue.length + 1}`,
+            roaster: nb.roaster.trim(),
+            name: nb.name.trim(),
+            origin: nb.origin ?? null,
+            region: nb.region ?? null,
+            producer: nb.producer ?? null,
+            variety: nb.variety ?? null,
+            process: nb.process ?? null,
+            altitudeM: nb.altitudeM ?? null,
+            roastLevel: nb.roastLevel ?? null,
+            roasterNotes: nb.roasterNotes,
+          })
+          catalogue.push(target)
+        }
+      }
+      if (!target) throw new Error('bean_required')
+      bags.push({
+        id: input.bagId,
+        bean: target,
+        roastDate: input.roastDate ?? null,
+        gramsRemaining: input.grams ?? null,
+        status: 'new',
+        createdAt: new Date().toISOString(),
+      })
+    },
+
+    async removeBag(bagId) {
+      const at = bags.findIndex((b) => b.id === bagId)
+      if (at >= 0) bags.splice(at, 1)
       return wait(undefined)
     },
   }
