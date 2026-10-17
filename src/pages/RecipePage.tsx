@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { micronsToSetting } from '../../engine/grinder.ts'
+import { micronsToSetting, settingToMicrons } from '../../engine/grinder.ts'
 import { suggest } from '../../engine/suggest.ts'
-import { formatTemp } from '../../engine/units.ts'
+import { LIMITS } from '../../engine/overrides.ts'
+import { formatTemp, fromDisplayTemp, toDisplayTemp } from '../../engine/units.ts'
 import type { Confidence } from '../../engine/grinder.ts'
 import { beanCover } from '../beans/cover'
 import { toISODate } from '../beans/dates'
 import { buildSuggestInput, clock } from '../brew/buildInput'
-import { GOAL_LABELS, goalOf, parseChoices, toSearchParams } from '../brew/params'
+import { EditSheet } from '../brew/EditSheet'
+import { clearEdits, hasEdits, resetEdit, setCups, setDose, setGrind, setPours, setRatio, setTemp, setTime, setWater } from '../brew/edits'
+import { GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices, type RecipeEdits } from '../brew/params'
+import { PoursSheet } from '../brew/PoursSheet'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { WhySheet } from '../brew/WhySheet'
 import { PourRing } from '../components/PourRing'
@@ -21,14 +25,17 @@ const CONFIDENCE_TEXT: Record<Confidence, string> = {
   high: 'Based on your own recipe',
 }
 
-function Spec({ label, value }: { label: string; value: string }) {
+function Spec({ label, value, edited, onEdit }: { label: string; value: string; edited: boolean; onEdit: () => void }) {
   return (
-    <div className="squircle rounded-3xl bg-soft px-4 py-3">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="num mt-0.5 text-base">{value}</dd>
-    </div>
+    <button type="button" onClick={onEdit} aria-label={`${label}: ${value}${edited ? ', set by you' : ''}. Edit`} className="squircle relative rounded-3xl bg-soft px-4 py-3 text-left active:scale-[0.97]">
+      <span className="block text-xs text-muted">{label}</span>
+      <span className="num mt-0.5 block text-base">{value}</span>
+      {edited && <span className="absolute top-3 right-3 size-1.5 rounded-full bg-accent" aria-hidden />}
+    </button>
   )
 }
+
+type Editing = 'dose' | 'water' | 'ratio' | 'temp' | 'time' | 'grind' | 'pours' | null
 
 /** The suggested recipe for the choices on the set-up screen. Nothing is saved yet. */
 export function RecipePage() {
@@ -36,6 +43,8 @@ export function RecipePage() {
   const choices = parseChoices(params)
   const selection = useBrewSelection(choices)
   const [why, setWhy] = useState(false)
+  const [editing, setEditing] = useState<Editing>(null)
+  const [keepWater, setKeepWater] = useState(false)
   // Fixed when the screen opens, so the recipe does not change under you at midnight.
   const [today] = useState(() => toISODate(new Date()))
 
@@ -77,7 +86,16 @@ export function RecipePage() {
   const myGrinder = selection.grinder
   const converted = myGrinder && isCalibrated(myGrinder.grinder) ? micronsToSetting(myGrinder.grinder, recipe.grindUm, myGrinder.offsetUm) : null
 
-  const setCups = (cups: number) => setParams(toSearchParams({ ...choices, bagId: bag.id, cups }), { replace: true })
+  const apply = (next: BrewChoices) => setParams(toSearchParams({ ...next, bagId: bag.id }), { replace: true })
+  const shown = { ratio: recipe.waterG / recipe.doseG, waterG: recipe.waterG }
+  const has = (...keys: (keyof RecipeEdits)[]) => keys.some((key) => key in choices.edits)
+  const isOverridden = (key: (typeof out.overridden)[number]) => out.overridden.includes(key)
+  const close = () => setEditing(null)
+  const nudgeDose = (direction: 1 | -1) => {
+    const doseG = Math.min(LIMITS.doseG[1], Math.max(LIMITS.doseG[0], recipe.doseG + direction))
+    apply(setDose(choices, doseG, 'ratio', shown))
+  }
+  const unitLabel = myGrinder?.grinder.unitLabel ?? 'µm'
 
   return (
     <>
@@ -97,7 +115,7 @@ export function RecipePage() {
         onClick={() => setWhy(true)}
         className="mx-auto mt-5 flex h-9 items-center rounded-full bg-accent-soft px-4 text-sm text-accent"
       >
-        {CONFIDENCE_TEXT[out.confidence.level]} ›
+        {out.overridden.length > 0 ? 'Your edits · started from a suggestion' : CONFIDENCE_TEXT[out.confidence.level]} ›
       </button>
 
       <div className="mt-4">
@@ -105,16 +123,23 @@ export function RecipePage() {
       </div>
 
       <dl className="mt-4 grid grid-cols-3 gap-2" aria-label="Recipe">
-        <Spec label="Coffee" value={`${recipe.doseG} g`} />
-        <Spec label="Water" value={`${recipe.waterG} g`} />
-        <Spec label="Ratio" value={`1:${recipe.ratio}`} />
-        <Spec label="Water temp" value={formatTemp(recipe.tempC, unit)} />
-        <Spec label="Total time" value={`~${clock(recipe.targetTimeS)}`} />
-        <Spec label="Filter" value={recipe.filter ? recipe.filter.model : 'None'} />
+        <Spec label="Coffee" value={`${recipe.doseG} g`} edited={isOverridden('doseG')} onEdit={() => setEditing('dose')} />
+        <Spec label="Water" value={`${recipe.waterG} g`} edited={isOverridden('waterG') || isOverridden('pours')} onEdit={() => setEditing('water')} />
+        <Spec label="Ratio" value={`1:${recipe.ratio}`} edited={isOverridden('ratio')} onEdit={() => setEditing('ratio')} />
+        <Spec label="Water temp" value={formatTemp(recipe.tempC, unit)} edited={isOverridden('tempC')} onEdit={() => setEditing('temp')} />
+        <Spec label="Total time" value={`~${clock(recipe.targetTimeS)}`} edited={isOverridden('targetTimeS')} onEdit={() => setEditing('time')} />
+        <div className="squircle rounded-3xl bg-soft px-4 py-3">
+          <dt className="text-xs text-muted">Filter</dt>
+          <dd className="num mt-0.5 text-base">{recipe.filter ? recipe.filter.model : 'None'}</dd>
+        </div>
       </dl>
 
       <section aria-label="Grind" className="squircle mt-3 rounded-4xl bg-soft px-5 py-4">
-        <p className="text-xs text-muted">Grind{myGrinder ? ` · ${grinderName(myGrinder.grinder)}` : ''}</p>
+        <button type="button" onClick={() => setEditing('grind')} aria-label="Edit grind" className="flex w-full items-center gap-1.5 text-left text-xs text-muted">
+          Grind{myGrinder ? ` · ${grinderName(myGrinder.grinder)}` : ''}
+          {isOverridden('grindUm') && <span className="size-1.5 rounded-full bg-accent" aria-hidden />}
+          <span className="ml-auto">Edit</span>
+        </button>
         {converted && myGrinder ? (
           <>
             <p className="num mt-1 text-2xl">
@@ -150,13 +175,30 @@ export function RecipePage() {
         <SegmentedControl
           label="Cups"
           options={[1, 2, 3, 4].map((n) => ({ value: String(n), label: String(n) }))}
-          value={String(choices.cups)}
-          onChange={(value) => setCups(Number(value))}
+          value={isOverridden('doseG') ? '' : String(choices.cups)}
+          onChange={(value) => apply(setCups(choices, Number(value), shown))}
         />
+      </div>
+      <div className="mt-3 flex items-center justify-between px-2">
+        <span className="text-sm text-muted">Coffee</span>
+        <div className="flex items-center gap-2">
+          <button type="button" aria-label="Less coffee" onClick={() => nudgeDose(-1)} className="size-10 rounded-full bg-soft active:scale-95">
+            −
+          </button>
+          <span className="num w-14 text-center">{recipe.doseG} g</span>
+          <button type="button" aria-label="More coffee" onClick={() => nudgeDose(1)} className="size-10 rounded-full bg-soft active:scale-95">
+            +
+          </button>
+        </div>
       </div>
 
       <section aria-label="Pours" className="mt-4">
-        <h2 className="px-2 text-xs font-medium text-muted">Pours</h2>
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-xs font-medium text-muted">Pours{isOverridden('pours') ? ' · yours' : ''}</h2>
+          <button type="button" onClick={() => setEditing('pours')} className="h-9 rounded-full px-3 text-sm text-accent">
+            Edit pours
+          </button>
+        </div>
         <ol className="mt-2 space-y-1">
           {recipe.pours.map((pour, index) => (
             <li key={pour.atS} className="flex items-center gap-3 rounded-full py-2 pr-5 pl-2">
@@ -173,6 +215,113 @@ export function RecipePage() {
       <button type="button" onClick={() => setWhy(true)} className="mt-5 h-12 w-full rounded-full bg-soft active:scale-[0.98]">
         Why these numbers
       </button>
+
+      {hasEdits(choices) && (
+        <button type="button" onClick={() => apply(clearEdits(choices))} className="mt-2 h-11 w-full rounded-full text-sm text-muted">
+          Reset all to the suggestion
+        </button>
+      )}
+
+      <EditSheet
+        open={editing === 'dose'}
+        onOpenChange={(open) => !open && close()}
+        title="Coffee"
+        value={recipe.doseG}
+        unit="g"
+        step={0.5}
+        places={1}
+        min={LIMITS.doseG[0]}
+        max={LIMITS.doseG[1]}
+        onSave={(value) => apply(setDose(choices, value, keepWater ? 'water' : 'ratio', shown))}
+        onReset={has('doseG') ? () => apply(resetEdit(choices, 'doseG')) : undefined}
+      >
+        <div className="mt-2 flex items-center justify-between px-1">
+          <span className="text-sm text-muted">Water</span>
+          <SegmentedControl
+            label="Water when coffee changes"
+            options={[
+              { value: 'follow', label: 'Follows ratio' },
+              { value: 'keep', label: 'Stays' },
+            ]}
+            value={keepWater ? 'keep' : 'follow'}
+            onChange={(value) => setKeepWater(value === 'keep')}
+          />
+        </div>
+      </EditSheet>
+      <EditSheet
+        open={editing === 'water'}
+        onOpenChange={(open) => !open && close()}
+        title="Water"
+        value={recipe.waterG}
+        unit="g"
+        step={10}
+        min={LIMITS.waterG[0]}
+        max={LIMITS.waterG[1]}
+        onSave={(value) => apply(setWater(choices, value))}
+        onReset={has('waterG', 'ratio', 'pours') ? () => apply(resetEdit(choices, 'waterG', 'ratio', 'pours')) : undefined}
+      />
+      <EditSheet
+        open={editing === 'ratio'}
+        onOpenChange={(open) => !open && close()}
+        title="Ratio (1 : …)"
+        value={recipe.ratio}
+        unit=""
+        step={0.5}
+        places={1}
+        min={LIMITS.ratio[0]}
+        max={LIMITS.ratio[1]}
+        onSave={(value) => apply(setRatio(choices, value, recipe.doseG))}
+        onReset={has('ratio', 'waterG', 'pours') ? () => apply(resetEdit(choices, 'ratio', 'waterG', 'pours')) : undefined}
+      />
+      <EditSheet
+        open={editing === 'temp'}
+        onOpenChange={(open) => !open && close()}
+        title="Water temp"
+        value={toDisplayTemp(recipe.tempC, unit)}
+        unit={unit === 'c' ? '°C' : '°F'}
+        step={1}
+        places={unit === 'c' ? 1 : 0}
+        min={Math.ceil(toDisplayTemp(LIMITS.tempC[0], unit))}
+        max={Math.floor(toDisplayTemp(LIMITS.tempC[1], unit))}
+        onSave={(value) => apply(setTemp(choices, Math.round(fromDisplayTemp(value, unit) * 10) / 10))}
+        onReset={has('tempC') ? () => apply(resetEdit(choices, 'tempC')) : undefined}
+      />
+      <EditSheet
+        open={editing === 'time'}
+        onOpenChange={(open) => !open && close()}
+        title="Total time"
+        value={recipe.targetTimeS}
+        unit="s"
+        step={5}
+        min={LIMITS.targetTimeS[0]}
+        max={LIMITS.targetTimeS[1]}
+        onSave={(value) => apply(setTime(choices, value))}
+        onReset={has('targetTimeS') ? () => apply(resetEdit(choices, 'targetTimeS')) : undefined}
+      />
+      <EditSheet
+        open={editing === 'grind'}
+        onOpenChange={(open) => !open && close()}
+        title="Grind"
+        value={converted && myGrinder ? converted.setting : recipe.grindUm}
+        unit={unitLabel}
+        step={converted && myGrinder ? myGrinder.grinder.step : 10}
+        places={converted ? 1 : 0}
+        min={converted && myGrinder ? (myGrinder.grinder.min ?? 0) : LIMITS.grindUm[0]}
+        max={converted && myGrinder ? (myGrinder.grinder.max ?? 1000) : LIMITS.grindUm[1]}
+        onSave={(value) => {
+          const microns = converted && myGrinder ? settingToMicrons(myGrinder.grinder, value, myGrinder.offsetUm).microns : value
+          apply(setGrind(choices, Math.min(LIMITS.grindUm[1], Math.max(LIMITS.grindUm[0], Math.round(microns)))))
+        }}
+        onReset={has('grindUm') ? () => apply(resetEdit(choices, 'grindUm')) : undefined}
+      />
+      <PoursSheet
+        open={editing === 'pours'}
+        onOpenChange={(open) => !open && close()}
+        pours={recipe.pours}
+        edited={has('pours')}
+        onSave={(pours) => apply(setPours(choices, pours))}
+        onReset={() => apply(resetEdit(choices, 'pours'))}
+      />
 
       <WhySheet open={why} onOpenChange={setWhy} basis={out.confidence.basis} reasons={out.reasons} />
     </>

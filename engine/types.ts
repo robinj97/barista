@@ -58,8 +58,10 @@ export interface SuggestInput {
   }
   /** One cup is 10 g of coffee, so 2 cups is the 20 g / 300 g reference recipe. */
   cups: number
-  /** Overrides cups when the user sets an exact dose. */
+  /** The user's own dose in grams. Overrides cups. */
   doseG?: number
+  /** Values the user set themselves. Everything else still comes from the suggestion. */
+  overrides?: Overrides
   filter?: FilterRef | null
   /** Recipes to learn from. Own wins over friends, and same-bean beats similar beans. */
   context?: { own: PriorRecipe[]; friends: PriorRecipe[] }
@@ -68,7 +70,7 @@ export interface SuggestInput {
 }
 
 export type ReasonParam = 'structure' | 'balance' | 'roast' | 'temp' | 'grind' | 'ratio' | 'time' | 'bloom' | 'filter' | 'dose'
-export type ReasonSource = 'method' | 'guidance' | 'data' | 'assumption'
+export type ReasonSource = 'method' | 'guidance' | 'data' | 'assumption' | 'you'
 
 export interface Reason {
   param: ReasonParam
@@ -76,6 +78,25 @@ export interface Reason {
   why: string
   source: ReasonSource
 }
+
+/**
+ * Things a person may set by hand (the dose is `SuggestInput.doseG`). Linking rules, with the dose
+ * always known: a water amount decides the ratio; otherwise a ratio decides the water; custom pours
+ * decide the water (scaled to `waterG` if that is given too).
+ */
+export interface Overrides {
+  waterG?: number
+  ratio?: number
+  tempC?: number
+  /** Microns. */
+  grindUm?: number
+  /** The first pour starts at 0 s. Replaces the 4:6 pours, so balance and strength no longer apply. */
+  pours?: Pour[]
+  targetTimeS?: number
+}
+
+/** Which recipe values the person set (rather than the suggestion). */
+export type OverrideKey = 'doseG' | 'waterG' | 'ratio' | 'pours' | 'tempC' | 'grindUm' | 'targetTimeS'
 
 export interface SuggestOutput {
   recipe: {
@@ -94,6 +115,8 @@ export interface SuggestOutput {
   ranges: Partial<Record<'tempC' | 'grindUm' | 'ratio' | 'targetTimeS', [number, number]>>
   reasons: Reason[]
   confidence: { level: Confidence; basis: string }
+  /** The values that came from the person, in a fixed order. Empty when this is the pure suggestion. */
+  overridden: OverrideKey[]
 }
 
 export type EngineErrorCode = 'unsupported_method' | 'invalid_input'

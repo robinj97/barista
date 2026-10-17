@@ -39,24 +39,29 @@ describe('Brew: set up', () => {
     expect(await screen.findByText(/Your default method \(Espresso\) isn't available yet/)).toBeInTheDocument()
   })
 
-  it('picks a goal with chips, and a custom balance with the fine-tune slider', async () => {
+  it('always shows the goal slider, and its stops and live pour numbers follow it', async () => {
     const user = userEvent.setup()
     renderApp('/brew', { mock: { bags: [geisha] } })
-    const goal = await screen.findByRole('radiogroup', { name: 'Sweeter or more acidity' })
-    expect(within(goal).getByRole('radio', { name: 'Balanced' })).toBeChecked()
+    const slider = await screen.findByRole('slider', { name: 'Sweeter or more acidity' })
+    expect(slider).toHaveValue('0')
+    expect(screen.getByRole('button', { name: 'Balanced' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText(/First pour 60 g · second pour 60 g/)).toBeInTheDocument()
 
-    await user.click(within(goal).getByRole('radio', { name: 'More acidity' }))
-    expect(within(goal).getByRole('radio', { name: 'More acidity' })).toBeChecked()
-    expect(screen.getByText('60% more acidity')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'More acidity' }))
+    expect(slider).toHaveValue('0.6')
+    expect(screen.getByRole('button', { name: 'More acidity' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText(/First pour 60 g · second pour 60 g/)).not.toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('Fine-tune balance'), { target: { value: '-0.3' } })
-    expect(await screen.findByText('30% sweeter')).toBeInTheDocument()
-    expect(within(goal).queryByRole('radio', { checked: true })).not.toBeInTheDocument()
+    fireEvent.change(slider, { target: { value: '-0.3' } })
+    expect(slider).toHaveValue('-0.3')
+    for (const name of ['Sweeter', 'Balanced', 'More acidity']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false')
+    }
   })
 
   it('never calls the goal "brighter" on screen', async () => {
     renderApp('/brew', { mock: { bags: [geisha] } })
-    await screen.findByRole('radiogroup', { name: 'Sweeter or more acidity' })
+    await screen.findByRole('slider', { name: 'Sweeter or more acidity' })
     expect(screen.queryByText(/brighter/i)).not.toBeInTheDocument()
   })
 
@@ -95,7 +100,7 @@ describe('Brew: set up', () => {
   it('goes to the recipe for what you chose', async () => {
     const user = userEvent.setup()
     renderApp('/brew', { mock: { bags: [geisha] } })
-    await user.click(await screen.findByRole('radio', { name: 'More acidity' }))
+    await user.click(await screen.findByRole('button', { name: 'More acidity' }))
     await user.click(screen.getByRole('link', { name: 'Suggest a recipe' }))
     expect(await screen.findByRole('heading', { name: 'Tanzania Geisha' })).toBeInTheDocument()
     expect(screen.getByText(/V60 · more acidity, medium/)).toBeInTheDocument()
@@ -206,6 +211,114 @@ describe('Brew: the recipe', () => {
     await user.click(screen.getByRole('link', { name: 'Back to set up' }))
     const strength = await screen.findByRole('radiogroup', { name: 'Strength' })
     expect(within(strength).getByRole('radio', { name: 'Strong' })).toBeChecked()
-    expect(within(await screen.findByRole('radiogroup', { name: 'Sweeter or more acidity' })).getByRole('radio', { name: 'More acidity' })).toBeChecked()
+    expect(await screen.findByRole('slider', { name: 'Sweeter or more acidity' })).toHaveValue('0.6')
   })
 })
+
+describe('Brew: editing the recipe', () => {
+  const at = (query = '') => `/brew/recipe?bag=bag-b-geisha&balance=0&strength=medium&cups=2${query}`
+  const mock = { bags: [geisha], grinderIds: ['turin-df54'], filterIds: ['f-cafec-t90'] }
+  const spec = (label: string) => within(screen.getByLabelText('Recipe')).getByText(label).nextSibling
+
+  it('changes the coffee and lets the water follow the ratio', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: /^Coffee: 20 g/ }))
+    const input = await screen.findByRole('spinbutton', { name: /^Coffee/ })
+    await user.clear(input)
+    await user.type(input, '15')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(spec('Coffee')).toHaveTextContent('15 g')
+    expect(spec('Water')).toHaveTextContent('225 g')
+    expect(spec('Ratio')).toHaveTextContent('1:15')
+    expect(screen.getByRole('button', { name: /^Coffee: 15 g, set by you/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Your edits · started from a suggestion/ })).toBeInTheDocument()
+  })
+
+  it('can keep the water when the coffee changes', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: /^Coffee: 20 g/ }))
+    await user.click(await screen.findByRole('radio', { name: 'Stays' }))
+    const input = screen.getByRole('spinbutton', { name: /^Coffee/ })
+    await user.clear(input)
+    await user.type(input, '15')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(spec('Water')).toHaveTextContent('300 g')
+    expect(spec('Ratio')).toHaveTextContent('1:20')
+  })
+
+  it('steps the coffee a gram at a time next to the cups shortcut, which clears it again', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: 'Less coffee' }))
+    expect(spec('Coffee')).toHaveTextContent('19 g')
+    expect(within(screen.getByRole('radiogroup', { name: 'Cups' })).queryByRole('radio', { checked: true })).not.toBeInTheDocument()
+    await user.click(within(screen.getByRole('radiogroup', { name: 'Cups' })).getByRole('radio', { name: '2' }))
+    expect(spec('Coffee')).toHaveTextContent('20 g')
+  })
+
+  it('edits temperature, and puts one value back', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: /^Water temp/ }))
+    const input = await screen.findByRole('spinbutton', { name: /^Water temp/ })
+    await user.clear(input)
+    await user.type(input, '90')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(spec('Water temp')).toHaveTextContent('90°C')
+    await user.click(screen.getByRole('button', { name: /^Water temp/ }))
+    await user.click(await screen.findByRole('button', { name: 'Back to the suggestion' }))
+    expect(spec('Water temp')).toHaveTextContent('95°C')
+  })
+
+  it('refuses a number outside the limits', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: /^Coffee: 20 g/ }))
+    const input = await screen.findByRole('spinbutton', { name: /^Coffee/ })
+    await user.clear(input)
+    await user.type(input, '400')
+    expect(screen.getByRole('alert')).toHaveTextContent('Use a number from 5 to 60.')
+    expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled()
+  })
+
+  it('edits each pour, and the last one is the water', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: 'Edit pours' }))
+    const last = await screen.findByLabelText('Pour 5 total water')
+    await user.clear(last)
+    await user.type(last, '280')
+    await user.click(screen.getByRole('button', { name: 'Remove pour 3' }))
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    const rows = within(screen.getByRole('region', { name: 'Pours' })).getAllByRole('listitem')
+    expect(rows).toHaveLength(4)
+    expect(rows[3]).toHaveTextContent('280 g')
+    expect(spec('Water')).toHaveTextContent('280 g')
+    expect(screen.getByText('Pours · yours')).toBeInTheDocument()
+  })
+
+  it('does not accept pours that go backwards', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: 'Edit pours' }))
+    const second = await screen.findByLabelText('Pour 2 total water')
+    await user.clear(second)
+    await user.type(second, '10')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled()
+  })
+
+  it('resets everything to the suggestion', async () => {
+    const user = userEvent.setup()
+    renderApp(at('&temp=88&dose=18'), { mock })
+    expect(await screen.findByLabelText('Recipe')).toBeInTheDocument()
+    expect(spec('Coffee')).toHaveTextContent('18 g')
+    await user.click(screen.getByRole('button', { name: 'Reset all to the suggestion' }))
+    expect(spec('Coffee')).toHaveTextContent('20 g')
+    expect(spec('Water temp')).toHaveTextContent('95°C')
+    expect(screen.queryByRole('button', { name: 'Reset all to the suggestion' })).not.toBeInTheDocument()
+  })
+})
+

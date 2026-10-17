@@ -1,3 +1,4 @@
+import { validateDose, validateOverrides } from './overrides.ts'
 import { EngineError, STRENGTHS, type Method, type SuggestInput, type SuggestOutput } from './types.ts'
 import { suggestV60 } from './v60.ts'
 
@@ -13,8 +14,6 @@ export function supportsMethod(method: Method): boolean {
 
 /** One cup is 10 g of coffee, so 2 cups is the 20 g / 300 g reference recipe. */
 const DOSE_PER_CUP_G = 10
-const MIN_DOSE_G = 5
-const MAX_DOSE_G = 60
 
 /**
  * Suggest a starting recipe for a bean and a target flavour, with the reason for every
@@ -32,8 +31,7 @@ function validatedDose(input: SuggestInput): number {
   if (!Number.isFinite(input.target.balance)) throw new EngineError('invalid_input', 'Balance must be a number')
   if (!STRENGTHS.includes(input.target.strength)) throw new EngineError('invalid_input', `Unknown strength ${input.target.strength}`)
   const doseG = input.doseG ?? DOSE_PER_CUP_G * input.cups
-  if (!Number.isFinite(doseG) || doseG < MIN_DOSE_G || doseG > MAX_DOSE_G) {
-    throw new EngineError('invalid_input', `Dose must be between ${MIN_DOSE_G} and ${MAX_DOSE_G} g`)
-  }
+  validateDose(doseG)
+  validateOverrides(input.overrides)
   return doseG
 }
