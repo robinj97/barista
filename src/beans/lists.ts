@@ -18,3 +18,8 @@ export const FLAVOURS = [
   'brown sugar', 'molasses', 'vanilla', 'chocolate', 'cocoa', 'hazelnut', 'almond', 'black tea',
   'green tea', 'floral', 'citrus', 'stone fruit', 'berry', 'tropical', 'nutty', 'spice', 'cinnamon',
 ]
+
+export const VARIETIES = [
+  'Bourbon', 'Pink Bourbon', 'Yellow Bourbon', 'Caturra', 'Catuai', 'Castillo', 'Geisha', 'Heirloom',
+  'Java', 'Maragogipe', 'Mundo Novo', 'Pacamara', 'Pacas', 'SL28', 'SL34', 'Sidra', 'Typica', 'Wush Wush',
+]

@@ -55,12 +55,13 @@ Required: **roaster** and **name** (inline messages: "Enter a roaster", "Enter a
 
 Asked up front, all optional:
 
+- **Variety:** type-ahead plus free text.
 - **Origin:** country with type-ahead, plus free-text region.
 - **Process:** chips (Washed, Natural, Honey, Anaerobic, Other), single choice.
 - **Roast level:** chips (Light, Medium, Dark), single choice.
 - **Tasting notes:** tag input with suggestions from a flavour vocabulary, plus free text. The notes become the notes you can choose to bring out when brewing.
 
-Under **More** (collapsed): variety, altitude (m), producer.
+Under **More** (collapsed): altitude (m), producer. Variety is asked up front, next to origin, with type-ahead for common varieties (Geisha, Bourbon, SL28...), because it powers the card's accent line.
 
 While the roaster and name are typed, a "Did you mean…?" strip shows near matches from the catalogue so the same coffee is not created twice. Choosing one jumps to 4.4.
 
@@ -95,6 +96,8 @@ While the roaster and name are typed, a "Did you mean…?" strip shows near matc
 - List of your bags as pebble-cover cards, same look as today but from real data. Filter chips All, Dialing in, Locked stay.
 - The "dialing in" feature card appears only when a bag has that status.
 - Floating "+" opens the add sheet.
+- **Cards show what you need to pick a bean at a glance:** an accent line with the variety (or the origin when there is none) and the process, then the name, roaster and status, then up to three tasting notes as tinted chips with "+N" for the rest.
+- **Search** above the status chips matches name, roaster, variety, process, origin, region, producer and tasting notes. Every word must match, in any order, and it combines with the status filter.
 - Sample data (`sampleBeans`) and the placeholder recipe on the bean page are removed. The bean page shows the bean details, your bag details, an empty "Recipes" area ("No recipes yet") until recipes exist, and a "Start dialing in" button that opens the Brew tab.
 
 ## 7. What was built (and differences from the plan)

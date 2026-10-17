@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { AddBagSheet } from '../beans/AddBagSheet'
+import { eyebrow, matchesSearch, visibleNotes } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
 import { EmptyBeans } from '../beans/EmptyBeans'
 import { STATUS_LABELS } from '../beans/labels'
@@ -19,10 +20,12 @@ const FILTERS: { value: Filter; label: string }[] = [
 export function BeansPage() {
   const bags = useMyBags()
   const [filter, setFilter] = useState<Filter>('all')
+  const [search, setSearch] = useState('')
   const [adding, setAdding] = useState(false)
 
   const all = bags.data ?? []
-  const visible = all.filter((bag) => filter === 'all' || bag.status === filter)
+  const visible = all.filter((bag) => (filter === 'all' || bag.status === filter) && matchesSearch(bag, search))
+  const searching = search.trim().length > 0
 
   return (
     <>
@@ -47,7 +50,19 @@ export function BeansPage() {
 
       {bags.isSuccess && all.length > 0 && (
         <>
-          <div className="mt-5 flex gap-2" role="group" aria-label="Filter beans">
+          <label className="mt-5 block">
+            <span className="sr-only">Search your beans</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search name, variety, process or notes"
+              enterKeyHint="search"
+              className="h-11 w-full rounded-full bg-soft px-5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            />
+          </label>
+
+          <div className="mt-3 flex gap-2" role="group" aria-label="Filter beans">
             {FILTERS.map((item) => (
               <button
                 key={item.value}
@@ -64,25 +79,54 @@ export function BeansPage() {
           </div>
 
           {visible.length === 0 ? (
-            <p className="mt-8 text-center text-sm text-muted">No beans here yet.</p>
+            <p className="mt-8 text-center text-sm text-muted">
+              {searching ? (
+                <>
+                  No beans match “{search.trim()}”.{' '}
+                  <button type="button" onClick={() => setSearch('')} className="underline">
+                    Clear search
+                  </button>
+                </>
+              ) : (
+                'No beans here yet.'
+              )}
+            </p>
           ) : (
             <ul className="mt-4 space-y-2.5">
               {visible.map((bag) => {
-                const cover = beanCover(bag.bean.id)
+                const { bean } = bag
+                const cover = beanCover(bean.id)
+                const line = eyebrow(bean)
+                const notes = visibleNotes(bean.roasterNotes)
                 return (
                   <li key={bag.id}>
                     <Link
                       to={`/beans/${bag.id}`}
-                      className="squircle flex min-h-[4.5rem] items-center gap-4 rounded-4xl bg-soft py-3 pr-5 pl-3 transition-transform active:scale-[0.98]"
+                      className="squircle flex items-start gap-4 rounded-4xl bg-soft py-3.5 pr-5 pl-3.5 transition-transform active:scale-[0.98]"
                     >
-                      <span className={`size-[3.25rem] shrink-0 ${cover.tint} ${cover.pebble}`} aria-hidden />
+                      <span className={`mt-0.5 size-[3.25rem] shrink-0 ${cover.tint} ${cover.pebble}`} aria-hidden />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{bag.bean.name}</span>
+                        {line && <span className="block truncate text-xs font-medium text-accent">{line}</span>}
+                        <span className="block truncate font-medium">{bean.name}</span>
                         <span className="block truncate text-xs text-muted">
-                          {bag.bean.roaster} · {STATUS_LABELS[bag.status]}
+                          {bean.roaster} · {STATUS_LABELS[bag.status]}
                         </span>
+                        {notes.shown.length > 0 && (
+                          <span className="mt-2 flex flex-wrap gap-1.5">
+                            {notes.shown.map((note) => (
+                              <span key={note} className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs text-accent">
+                                {note}
+                              </span>
+                            ))}
+                            {notes.extra > 0 && (
+                              <span className="rounded-full bg-bg px-2.5 py-0.5 text-xs text-muted">+{notes.extra}</span>
+                            )}
+                          </span>
+                        )}
                       </span>
-                      {bag.gramsRemaining != null && <span className="num text-xs text-muted">{bag.gramsRemaining} g</span>}
+                      {bag.gramsRemaining != null && (
+                        <span className="num mt-1 text-xs text-muted">{bag.gramsRemaining} g</span>
+                      )}
                     </Link>
                   </li>
                 )
