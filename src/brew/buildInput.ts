@@ -1,9 +1,20 @@
-import type { FlowClass, SuggestInput } from '../../engine/types.ts'
-import type { Bag, FilterRow } from '../data/types'
+import type { BeanTraits, FlowClass, PriorRecipe, SuggestInput } from '../../engine/types.ts'
+import type { Bag, Bean, FilterRow } from '../data/types'
 import type { BrewChoices } from './params'
 
-/** Turns what is on the screen into what the engine needs. */
-export function buildSuggestInput(bag: Bag, choices: BrewChoices, filter: FilterRow | null, asOf: string): SuggestInput {
+/** What the engine compares beans by. */
+export const beanTraits = (bean: Bean): BeanTraits => ({
+  origin: bean.origin,
+  region: bean.region,
+  process: bean.process,
+  variety: bean.variety,
+  roastLevel: bean.roastLevel,
+  altitudeM: bean.altitudeM,
+  notes: bean.roasterNotes,
+})
+
+/** Turns what is on the screen into what the engine needs. `own` are your own recipes to learn from. */
+export function buildSuggestInput(bag: Bag, choices: BrewChoices, filter: FilterRow | null, asOf: string, own: PriorRecipe[] = []): SuggestInput {
   const { bean } = bag
   return {
     method: 'v60',
@@ -34,6 +45,7 @@ export function buildSuggestInput(bag: Bag, choices: BrewChoices, filter: Filter
       ? { id: filter.id, brand: filter.brand, model: filter.model, flowClass: filter.flow_class as FlowClass | null }
       : null,
     asOf,
+    context: { own, friends: [] },
   }
 }
 

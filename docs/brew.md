@@ -84,9 +84,19 @@ Be honest about what the goal chips and slider do. They move one thing: how the 
 
 Yield is stored in the database's `yield_ml` column; 1 g of coffee is taken as 1 ml.
 
+## Your own recipes feed the suggestion
+
+Your locked recipe for a bean is what the next suggestion starts from: its temperature and grind (the engine's "own" source, high confidence, pill "Based on your own recipe"). The pour structure and ratio still follow the goal and strength you pick. Locked recipes for *other* beans also count as "similar beans" evidence, as the engine already supported.
+
+**Your working recipe** replaces the locked one only when the last brew of it was marked **good** and is newer than the lock. A brew that tasted sour, bitter, weak or heavy is something to fix, not a starting point, so it is ignored here (that is assisted tuning's job, later). `src/brew/ownPriors.ts` builds the data; a recipe is worked out without any context, so it cannot be its own basis. The numbers brewed are stored in the brew session when the timer starts, so the log screen shows exactly what you brewed even if the basis changes afterwards. Friends' recipes are not used yet (no friends feature).
+
+## Library
+
+The **Library** tab lists the recipes you have locked in, across all beans, newest first: bean, stars, how many times you brewed it (all versions), dose, water and temperature. It differs from the bean page in that a recipe stays here when its bag is empty or gone, and it is where archiving lives. Tap a row to start a brew from it (the same pre-fill as the bean page). **Archive** asks first; it hides the recipe from friends and your lists but keeps your brews (the row is flagged `archived_at`, never deleted). A **Mine / Friends** switch will come with the friends feature.
+
 ## Still to do
 
-- Feeding your locked and friends' recipes into the engine's `context`, so the confidence pill can say "Based on your own recipe".
-- The Library tab listing locked recipes and brews.
+- Friends and invites, then friends' locked recipes in the suggestion and the Library.
+- Assisted tuning from logged brews ("it tasted sour, what should I change?").
 - Opening Brew on the last brewed bean, and remembering the last grinder and filter.
 - Checking "sweeter or more acidity" answers against the first-pour change, once there are enough brews.

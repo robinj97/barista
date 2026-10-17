@@ -5,7 +5,7 @@ import { uniqueRoasters } from '../beans/roasters'
 import { useToast } from '../components/toastContext'
 import { useApi } from './ApiContext'
 import { bagKey, draftKey, enqueue, flushOutbox, isNetworkError } from './outbox'
-import type { AddBagInput, Bag, BagPatch, Draft, LockRecipeInput, NewFilter, Profile, ProfilePatch, SaveDraftInput } from './types'
+import type { AddBagInput, Bag, BagPatch, Draft, LockedRecipe, LockRecipeInput, NewFilter, Profile, ProfilePatch, SaveDraftInput } from './types'
 
 export const keys = {
   profile: (userId: string) => ['profile', userId] as const,
@@ -261,6 +261,25 @@ export function useMyDrafts() {
 export function useMyRecipes() {
   const api = useApi()
   return useQuery({ queryKey: recipesKey, queryFn: () => api.listMyRecipes() })
+}
+
+/** Archives a locked recipe. It leaves your lists at once; if saving fails it comes back. */
+export function useArchiveRecipe() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (recipeId: string) => api.archiveRecipe(recipeId),
+    onMutate: async (recipeId) => {
+      await client.cancelQueries({ queryKey: recipesKey })
+      const previous = client.getQueryData<LockedRecipe[]>(recipesKey)
+      client.setQueryData<LockedRecipe[]>(recipesKey, (list = []) => list.filter((r) => r.id !== recipeId))
+      return { previous }
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) client.setQueryData(recipesKey, context.previous)
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: recipesKey }),
+  })
 }
 
 export type SaveOutcome = 'saved' | 'queued'
