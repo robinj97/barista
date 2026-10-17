@@ -83,6 +83,22 @@ begin
   select count(*) into n from public.user_filters where is_default and filter_id = f2;
   assert n = 1, 'a failed default change leaves the default alone';
 
+  -- add and remove keep exactly one default in a non-empty list
+  perform public.remove_my_filter(f2);
+  select count(*) into n from public.user_filters where is_default and filter_id = f1;
+  assert n = 1, 'removing the default promotes another filter';
+  perform public.add_my_filter(f2);
+  perform public.add_my_filter(f2);
+  select count(*) into n from public.user_filters;
+  assert n = 2, 'adding a filter twice does nothing';
+  select count(*) into n from public.user_filters where is_default and filter_id = f1;
+  assert n = 1, 'adding to a list that has a default keeps it';
+  perform public.remove_my_filter(f1);
+  perform public.remove_my_filter(f2);
+  perform public.add_my_filter(f1);
+  select count(*) into n from public.user_filters where is_default and filter_id = f1;
+  assert n = 1, 'the first filter in an empty list becomes the default';
+
   -- B cannot touch A's profile or gear
   reset role;
   perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
@@ -109,6 +125,12 @@ begin
   exception when others then failed := true;
   end;
   assert failed, 'anon cannot call set_default_filter';
+  failed := false;
+  begin
+    perform public.add_my_filter(f1);
+  exception when others then failed := true;
+  end;
+  assert failed, 'anon cannot call add_my_filter';
 
   reset role;
   raise exception 'PROFILE_TESTS_PASSED';

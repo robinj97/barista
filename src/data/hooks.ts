@@ -6,9 +6,9 @@ import type { NewFilter, Profile, ProfilePatch } from './types'
 export const keys = {
   profile: (userId: string) => ['profile', userId] as const,
   grinderCatalogue: ['grinders', 'catalogue'] as const,
-  myGrinders: ['grinders', 'mine'] as const,
+  myGrinders: (userId: string) => ['grinders', 'mine', userId] as const,
   filterCatalogue: ['filters', 'catalogue'] as const,
-  myFilters: ['filters', 'mine'] as const,
+  myFilters: (userId: string) => ['filters', 'mine', userId] as const,
 }
 
 function useUserId(): string {
@@ -52,24 +52,27 @@ export function useGrinderCatalogue() {
 
 export function useMyGrinders() {
   const api = useApi()
-  return useQuery({ queryKey: keys.myGrinders, queryFn: () => api.listMyGrinders() })
+  const userId = useUserId()
+  return useQuery({ queryKey: keys.myGrinders(userId), queryFn: () => api.listMyGrinders() })
 }
 
 export function useAddGrinder() {
   const api = useApi()
+  const userId = useUserId()
   const client = useQueryClient()
   return useMutation({
     mutationFn: (grinderId: string) => api.addMyGrinder(grinderId),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.myGrinders }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.myGrinders(userId) }),
   })
 }
 
 export function useRemoveGrinder() {
   const api = useApi()
+  const userId = useUserId()
   const client = useQueryClient()
   return useMutation({
     mutationFn: (grinderId: string) => api.removeMyGrinder(grinderId),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.myGrinders }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.myGrinders(userId) }),
   })
 }
 
@@ -80,21 +83,24 @@ export function useFilterCatalogue() {
 
 export function useMyFilters() {
   const api = useApi()
-  return useQuery({ queryKey: keys.myFilters, queryFn: () => api.listMyFilters() })
+  const userId = useUserId()
+  return useQuery({ queryKey: keys.myFilters(userId), queryFn: () => api.listMyFilters() })
 }
 
 export function useAddFilter() {
   const api = useApi()
+  const userId = useUserId()
   const client = useQueryClient()
   return useMutation({
     mutationFn: (filterId: string) => api.addMyFilter(filterId),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.myFilters }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.myFilters(userId) }),
   })
 }
 
 /** Creates the filter in the shared catalogue, then adds it to the user's list. */
 export function useCreateAndAddFilter() {
   const api = useApi()
+  const userId = useUserId()
   const client = useQueryClient()
   return useMutation({
     mutationFn: async (input: NewFilter) => {
@@ -103,7 +109,7 @@ export function useCreateAndAddFilter() {
       return filter
     },
     onSettled: () => {
-      void client.invalidateQueries({ queryKey: keys.myFilters })
+      void client.invalidateQueries({ queryKey: keys.myFilters(userId) })
       void client.invalidateQueries({ queryKey: keys.filterCatalogue })
     },
   })
@@ -111,18 +117,20 @@ export function useCreateAndAddFilter() {
 
 export function useSetDefaultFilter() {
   const api = useApi()
+  const userId = useUserId()
   const client = useQueryClient()
   return useMutation({
     mutationFn: (filterId: string) => api.setDefaultFilter(filterId),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.myFilters }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.myFilters(userId) }),
   })
 }
 
 export function useRemoveFilter() {
   const api = useApi()
+  const userId = useUserId()
   const client = useQueryClient()
   return useMutation({
     mutationFn: (filterId: string) => api.removeMyFilter(filterId),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.myFilters }),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.myFilters(userId) }),
   })
 }

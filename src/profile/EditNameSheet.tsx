@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Sheet } from '../components/Sheet'
+import { useOnOpen } from '../hooks/useOnOpen'
 
 interface EditNameSheetProps {
   open: boolean
@@ -11,6 +12,10 @@ interface EditNameSheetProps {
 export function EditNameSheet({ open, onOpenChange, initialName, onSave }: EditNameSheetProps) {
   const [name, setName] = useState(initialName)
   const [error, setError] = useState<string | null>(null)
+  useOnOpen(open, () => {
+    setName(initialName)
+    setError(null)
+  })
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -24,13 +29,7 @@ export function EditNameSheet({ open, onOpenChange, initialName, onSave }: EditN
   return (
     <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (next) {
-          setName(initialName)
-          setError(null)
-        }
-        onOpenChange(next)
-      }}
+      onOpenChange={onOpenChange}
       title="Display name"
     >
       <form onSubmit={submit} className="space-y-3 px-3 pb-2">

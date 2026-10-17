@@ -8,16 +8,17 @@ interface AvatarProps {
 
 /** Google avatar when there is one, otherwise a pebble with the first letter. */
 export function Avatar({ name, url, className = 'size-10' }: AvatarProps) {
-  const [broken, setBroken] = useState(false)
+  // Remember which URL failed, so a new URL gets its own chance to load.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
   const initial = (name.trim()[0] ?? '?').toUpperCase()
 
-  if (url && !broken) {
+  if (url && url !== brokenUrl) {
     return (
       <img
         src={url}
         alt=""
         referrerPolicy="no-referrer"
-        onError={() => setBroken(true)}
+        onError={() => setBrokenUrl(url)}
         className={`${className} shrink-0 rounded-full object-cover`}
       />
     )

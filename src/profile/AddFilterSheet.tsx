@@ -1,12 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { Sheet } from '../components/Sheet'
 import type { FilterRow, NewFilter } from '../data/types'
+import { useOnOpen } from '../hooks/useOnOpen'
+import { CatalogueStatus } from './CatalogueStatus'
 import { filterName, filterNote } from './gearLabels'
 
 interface AddFilterSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  catalogue: FilterRow[]
+  /** Undefined while the catalogue loads or after it failed. */
+  catalogue: FilterRow[] | undefined
+  catalogueFailed: boolean
+  onRetry: () => void
   ownedIds: Set<string>
   onAdd: (filterId: string) => void
   onCreate: (input: NewFilter) => void
@@ -14,7 +19,16 @@ interface AddFilterSheetProps {
 
 const field = 'h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent'
 
-export function AddFilterSheet({ open, onOpenChange, catalogue, ownedIds, onAdd, onCreate }: AddFilterSheetProps) {
+export function AddFilterSheet({
+  open,
+  onOpenChange,
+  catalogue,
+  catalogueFailed,
+  onRetry,
+  ownedIds,
+  onAdd,
+  onCreate,
+}: AddFilterSheetProps) {
   const [mode, setMode] = useState<'pick' | 'create'>('pick')
   const [query, setQuery] = useState('')
   const [brand, setBrand] = useState('')
@@ -24,7 +38,7 @@ export function AddFilterSheet({ open, onOpenChange, catalogue, ownedIds, onAdd,
   const [flow, setFlow] = useState<'' | 'fast' | 'medium' | 'slow'>('')
   const [error, setError] = useState<string | null>(null)
 
-  const available = catalogue.filter(
+  const available = (catalogue ?? []).filter(
     (f) => !ownedIds.has(f.id) && filterName(f).toLowerCase().includes(query.trim().toLowerCase()),
   )
 
@@ -38,6 +52,7 @@ export function AddFilterSheet({ open, onOpenChange, catalogue, ownedIds, onAdd,
     setFlow('')
     setError(null)
   }
+  useOnOpen(open, reset)
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -49,10 +64,7 @@ export function AddFilterSheet({ open, onOpenChange, catalogue, ownedIds, onAdd,
   return (
     <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (next) reset()
-        onOpenChange(next)
-      }}
+      onOpenChange={onOpenChange}
       title={mode === 'pick' ? 'Add a filter' : 'New filter'}
     >
       {mode === 'pick' ? (
@@ -67,7 +79,9 @@ export function AddFilterSheet({ open, onOpenChange, catalogue, ownedIds, onAdd,
               className={field}
             />
           </label>
-          {available.length === 0 ? (
+          {!catalogue ? (
+            <CatalogueStatus failed={catalogueFailed} onRetry={onRetry} />
+          ) : available.length === 0 ? (
             <p className="px-3 py-4 text-sm text-muted">No filter matches that search.</p>
           ) : (
             <ul className="space-y-1">

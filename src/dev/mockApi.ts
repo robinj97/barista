@@ -1,7 +1,5 @@
 import { GRINDER_SEED } from '../../engine/grinderSeed.ts'
-import type { Api, FilterRow, MyFilter, MyGrinder, Profile } from '../data/types'
-
-const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+import { byBrandModel, filterMatchKey, type Api, type FilterRow, type MyFilter, type MyGrinder, type Profile } from '../data/types'
 
 const SEED_FILTERS: FilterRow[] = [
   { id: 'f-cafec-t90', brand: 'CAFEC', model: 'T-90', size: '02', material: 'paper', flow_class: 'fast', bleached: null, created_by: null, match_key: 'cafect90' },
@@ -48,7 +46,9 @@ export function createMockApi(options: MockOptions = {}): Api {
 
     listMyGrinders: () =>
       wait<MyGrinder[]>(
-        GRINDER_SEED.filter((g) => grinderIds.has(g.id)).map((grinder) => ({ grinder, nickname: null, offsetUm: 0 })),
+        GRINDER_SEED.filter((g) => grinderIds.has(g.id))
+          .sort(byBrandModel)
+          .map((grinder) => ({ grinder, nickname: null, offsetUm: 0 })),
       ),
 
     async addMyGrinder(grinderId) {
@@ -67,17 +67,22 @@ export function createMockApi(options: MockOptions = {}): Api {
       wait<MyFilter[]>(
         filters
           .filter((f) => myFilters.has(f.id))
+          .sort(byBrandModel)
           .map((filter) => ({ filter, ...myFilters.get(filter.id)! })),
       ),
 
     async addMyFilter(filterId) {
-      myFilters.set(filterId, { nickname: null, isDefault: myFilters.size === 0 })
+      if (!myFilters.has(filterId)) {
+        const hasDefault = [...myFilters.values()].some((entry) => entry.isDefault)
+        myFilters.set(filterId, { nickname: null, isDefault: !hasDefault })
+      }
       return wait(undefined)
     },
 
     async createFilter(input) {
       const match = filters.find(
-        (f) => key(f.brand + f.model) === key(input.brand + input.model) && (f.size ?? null) === (input.size?.trim() || null),
+        (f) =>
+          f.match_key === filterMatchKey(input.brand, input.model) && (f.size ?? null) === (input.size?.trim() || null),
       )
       if (match) return wait(match)
       const row: FilterRow = {
@@ -89,7 +94,7 @@ export function createMockApi(options: MockOptions = {}): Api {
         flow_class: input.flowClass ?? null,
         bleached: null,
         created_by: profile.id,
-        match_key: key(input.brand + input.model),
+        match_key: filterMatchKey(input.brand, input.model),
       }
       filters.push(row)
       return wait(row)
@@ -103,6 +108,10 @@ export function createMockApi(options: MockOptions = {}): Api {
 
     async removeMyFilter(filterId) {
       myFilters.delete(filterId)
+      const rest = filters.filter((f) => myFilters.has(f.id)).sort(byBrandModel)
+      if (rest.length && !rest.some((f) => myFilters.get(f.id)!.isDefault)) {
+        myFilters.set(rest[0]!.id, { ...myFilters.get(rest[0]!.id)!, isDefault: true })
+      }
       return wait(undefined)
     },
   }

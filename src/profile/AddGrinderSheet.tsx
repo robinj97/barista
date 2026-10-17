@@ -1,19 +1,25 @@
 import { useState } from 'react'
 import { Sheet } from '../components/Sheet'
 import type { CatalogueGrinder } from '../data/types'
+import { useOnOpen } from '../hooks/useOnOpen'
+import { CatalogueStatus } from './CatalogueStatus'
 import { grinderName, grinderNote } from './gearLabels'
 
 interface AddGrinderSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  catalogue: CatalogueGrinder[]
+  /** Undefined while the catalogue loads or after it failed. */
+  catalogue: CatalogueGrinder[] | undefined
+  catalogueFailed: boolean
+  onRetry: () => void
   ownedIds: Set<string>
   onAdd: (grinderId: string) => void
 }
 
-export function AddGrinderSheet({ open, onOpenChange, catalogue, ownedIds, onAdd }: AddGrinderSheetProps) {
+export function AddGrinderSheet({ open, onOpenChange, catalogue, catalogueFailed, onRetry, ownedIds, onAdd }: AddGrinderSheetProps) {
   const [query, setQuery] = useState('')
-  const available = catalogue.filter(
+  useOnOpen(open, () => setQuery(''))
+  const available = (catalogue ?? []).filter(
     (g) => !ownedIds.has(g.id) && grinderName(g).toLowerCase().includes(query.trim().toLowerCase()),
   )
 
@@ -30,9 +36,11 @@ export function AddGrinderSheet({ open, onOpenChange, catalogue, ownedIds, onAdd
             className="h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
         </label>
-        {available.length === 0 ? (
+        {!catalogue ? (
+          <CatalogueStatus failed={catalogueFailed} onRetry={onRetry} />
+        ) : available.length === 0 ? (
           <p className="px-3 py-4 text-sm text-muted">
-            {catalogue.length === ownedIds.size ? 'You have added every grinder we list.' : 'No grinder matches that search.'}
+            {catalogue.every((g) => ownedIds.has(g.id)) ? 'You have added every grinder we list.' : 'No grinder matches that search.'}
           </p>
         ) : (
           <ul className="space-y-1">

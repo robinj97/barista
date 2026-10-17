@@ -1,8 +1,7 @@
-import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import type { CalibrationSource } from '../../engine/grinder.ts'
-import type { Api, CatalogueGrinder, FilterRow, MyFilter, MyGrinder, Profile } from './types'
+import { byBrandModel, filterMatchKey, type Api, type CatalogueGrinder, type FilterRow, type MyFilter, type MyGrinder, type Profile } from './types'
 
 type GrinderRow = Database['public']['Tables']['grinders']['Row']
 type CalibrationRow = Pick<Database['public']['Tables']['grinder_calibration']['Row'], 'setting' | 'microns' | 'source'>
@@ -29,13 +28,6 @@ function toGrinder(row: GrinderWithPoints): CatalogueGrinder {
 
 function fail(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(error.message)
-}
-
-async function currentUserId(): Promise<string> {
-  const { data } = await supabase.auth.getSession()
-  const session: Session | null = data.session
-  if (!session) throw new Error('Not signed in')
-  return session.user.id
 }
 
 export const supabaseApi: Api = {
@@ -66,13 +58,16 @@ export const supabaseApi: Api = {
       .from('user_grinders')
       .select(`nickname, offset_um, grinders(${GRINDER_SELECT})`)
     fail(error)
-    return (data as unknown as { nickname: string | null; offset_um: number; grinders: GrinderWithPoints }[]).map(
-      (row) => ({ grinder: toGrinder(row.grinders), nickname: row.nickname, offsetUm: row.offset_um }),
-    )
+    return (data as unknown as { nickname: string | null; offset_um: number; grinders: GrinderWithPoints }[])
+      .map((row) => ({ grinder: toGrinder(row.grinders), nickname: row.nickname, offsetUm: row.offset_um }))
+      .sort((a, b) => byBrandModel(a.grinder, b.grinder))
   },
 
   async addMyGrinder(grinderId) {
-    const { error } = await supabase.from('user_grinders').insert({ grinder_id: grinderId })
+    // Already in the list (a double tap, or a picker that has not refetched yet): nothing to do.
+    const { error } = await supabase
+      .from('user_grinders')
+      .upsert({ grinder_id: grinderId }, { onConflict: 'user_id,grinder_id', ignoreDuplicates: true })
     fail(error)
   },
 
@@ -90,45 +85,36 @@ export const supabaseApi: Api = {
   async listMyFilters(): Promise<MyFilter[]> {
     const { data, error } = await supabase.from('user_filters').select('nickname, is_default, filters(*)')
     fail(error)
-    return (data as unknown as { nickname: string | null; is_default: boolean; filters: FilterRow }[]).map((row) => ({
-      filter: row.filters,
-      nickname: row.nickname,
-      isDefault: row.is_default,
-    }))
+    return (data as unknown as { nickname: string | null; is_default: boolean; filters: FilterRow }[])
+      .map((row) => ({ filter: row.filters, nickname: row.nickname, isDefault: row.is_default }))
+      .sort((a, b) => byBrandModel(a.filter, b.filter))
   },
 
   async addMyFilter(filterId) {
-    const { count, error: countError } = await supabase
-      .from('user_filters')
-      .select('filter_id', { count: 'exact', head: true })
-    fail(countError)
-    const { error } = await supabase
-      .from('user_filters')
-      .insert({ filter_id: filterId, is_default: (count ?? 0) === 0 })
+    // The database picks the default under a per-user lock, so quick adds cannot race.
+    const { error } = await supabase.rpc('add_my_filter', { target: filterId })
     fail(error)
   },
 
   async createFilter(input) {
-    const userId = await currentUserId()
     const row = {
       brand: input.brand.trim(),
       model: input.model.trim(),
       size: input.size?.trim() || null,
       material: input.material,
       flow_class: input.flowClass ?? null,
-      created_by: userId,
     }
     const { data, error } = await supabase.from('filters').insert(row).select('*').single()
     if (!error) return data
 
     // Unique violation: the same filter is already in the catalogue under another spelling.
     if (error.code === '23505') {
-      const { data: all, error: listError } = await supabase.from('filters').select('*')
-      fail(listError)
-      const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
-      const match = all.find(
-        (f) => key(f.brand + f.model) === key(row.brand + row.model) && (f.size ?? null) === row.size,
-      )
+      const query = supabase.from('filters').select('*').eq('match_key', filterMatchKey(row.brand, row.model))
+      const { data: match, error: matchError } = await (row.size === null
+        ? query.is('size', null)
+        : query.eq('size', row.size)
+      ).maybeSingle()
+      fail(matchError)
       if (match) return match
     }
     throw new Error(error.message)
@@ -140,7 +126,7 @@ export const supabaseApi: Api = {
   },
 
   async removeMyFilter(filterId) {
-    const { error } = await supabase.from('user_filters').delete().eq('filter_id', filterId)
+    const { error } = await supabase.rpc('remove_my_filter', { target: filterId })
     fail(error)
   },
 }

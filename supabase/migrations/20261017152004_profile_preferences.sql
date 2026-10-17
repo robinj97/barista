@@ -6,6 +6,12 @@ alter table public.profiles
   add column default_method text not null default 'v60'
     check (default_method in ('v60', 'aeropress', 'espresso'));
 
+-- Names stored by the old sign-up trigger were neither trimmed nor capped; fit them first so
+-- the check below can be added to a database that already has users.
+update public.profiles
+set display_name = coalesce(nullif(left(btrim(display_name), 60), ''), 'Barista user')
+where char_length(btrim(display_name)) not between 1 and 60;
+
 alter table public.profiles
   add constraint profiles_display_name_length
   check (char_length(btrim(display_name)) between 1 and 60);

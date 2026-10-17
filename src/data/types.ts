@@ -9,6 +9,7 @@ export const METHOD_LABELS: Record<Method, string> = {
   aeropress: 'AeroPress',
   espresso: 'Espresso',
 }
+export const METHOD_OPTIONS = METHODS.map((value) => ({ value, label: METHOD_LABELS[value] }))
 
 type Tables = Database['public']['Tables']
 
@@ -29,6 +30,20 @@ export interface MyGrinder {
 }
 
 export type FilterRow = Tables['filters']['Row']
+
+/** Same normalisation as the generated `filters.match_key` column, so 'T-90' and 'T90' collide. */
+export const filterMatchKey = (brand: string, model: string) =>
+  (brand + model).replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+
+/** Stable display order for gear lists: brand, then model, then size. */
+export function byBrandModel(
+  a: { brand: string; model: string; size?: string | null },
+  b: { brand: string; model: string; size?: string | null },
+): number {
+  return (
+    a.brand.localeCompare(b.brand) || a.model.localeCompare(b.model) || (a.size ?? '').localeCompare(b.size ?? '')
+  )
+}
 
 export interface MyFilter {
   filter: FilterRow
@@ -56,10 +71,14 @@ export interface Api {
 
   listFilterCatalogue(): Promise<FilterRow[]>
   listMyFilters(): Promise<MyFilter[]>
-  /** Adds a catalogue filter to the user's list. The first one becomes the default. */
+  /**
+   * Adds a catalogue filter to the user's list; it becomes the default when the list has none.
+   * Adding one that is already in the list does nothing.
+   */
   addMyFilter(filterId: string): Promise<void>
   /** Adds a new filter to the shared catalogue, or returns the existing match. */
   createFilter(input: NewFilter): Promise<FilterRow>
   setDefaultFilter(filterId: string): Promise<void>
+  /** Removes a filter from the user's list. Removing the default promotes another one. */
   removeMyFilter(filterId: string): Promise<void>
 }

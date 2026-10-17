@@ -205,7 +205,7 @@ The schema above is implemented in `supabase/migrations/` and applied to the Sup
 
 - `profiles` also holds `temp_unit` (`c` or `f`) and `default_method`. Temperatures are always stored in degrees C; the unit is only how they are shown (`engine/units.ts`).
 - Clients can update only `display_name`, `avatar_url`, `temp_unit` and `default_method`. Display names are 1 to 60 characters, and the sign-up trigger truncates long Google names so sign-in cannot fail on it.
-- `public.set_default_filter(target)` makes one of the caller's filters the default in a single transaction. It runs as the caller, so RLS still applies.
+- `public.set_default_filter(target)` makes one of the caller's filters the default in a single transaction. It runs as the caller, so RLS still applies. `add_my_filter` and `remove_my_filter` keep exactly one default in a non-empty list (the first filter added becomes it; removing it promotes the next by name), serialised per user with an advisory lock.
 - The profile screen (`/profile`, opened from the avatar button) edits all of this plus the user's grinder and filter lists. Water preferences are deferred.
 - Data access goes through an `Api` interface (`src/data/types.ts`) so the UI can run against Supabase, an in-memory fake in tests, or the dev-only `?mock` preview.
 

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../components/Avatar'
 import { ChoiceSheet } from '../components/ChoiceSheet'
@@ -18,7 +18,7 @@ import {
   useSetDefaultFilter,
   useUpdateProfile,
 } from '../data/hooks'
-import { METHODS, METHOD_LABELS, type Method } from '../data/types'
+import { METHOD_OPTIONS, type Method } from '../data/types'
 import type { TempUnit } from '../../engine/units.ts'
 import { AddFilterSheet } from '../profile/AddFilterSheet'
 import { AddGrinderSheet } from '../profile/AddGrinderSheet'
@@ -71,15 +71,24 @@ export function ProfilePage() {
   const [addingGrinder, setAddingGrinder] = useState(false)
   const [addingFilter, setAddingFilter] = useState(false)
 
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const meta = session?.user.user_metadata as { avatar_url?: string; picture?: string } | undefined
   const data = profile.data
 
   return (
     <>
       <div className="flex items-center gap-3">
-        <Link to="/beans" aria-label="Back" className="grid size-11 place-items-center rounded-full bg-soft text-lg">
+        <button
+          type="button"
+          aria-label="Back"
+          // Back to the tab that opened the profile; Beans when it was opened directly.
+          onClick={() => (location.key === 'default' ? navigate('/beans') : navigate(-1))}
+          className="grid size-11 place-items-center rounded-full bg-soft text-lg"
+        >
           ←
-        </Link>
+        </button>
         <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Profile</h1>
       </div>
 
@@ -105,7 +114,7 @@ export function ProfilePage() {
                 Edit name
               </button>
             </Row>
-            <ErrorNote show={update.isError} />
+            <ErrorNote show={update.isError && update.variables?.display_name !== undefined} />
           </Card>
 
           <Card title="Defaults">
@@ -122,17 +131,15 @@ export function ProfilePage() {
               />
             </Row>
             <div className="px-1 pb-1">
-              <ChoiceSheet
+              <ChoiceSheet<Method>
                 tone="bg"
                 title="Default method"
-                options={METHODS.map((m) => METHOD_LABELS[m])}
-                value={METHOD_LABELS[data.default_method]}
-                onChange={(label) => {
-                  const method = METHODS.find((m) => METHOD_LABELS[m] === label) as Method
-                  update.mutate({ default_method: method })
-                }}
+                options={METHOD_OPTIONS}
+                value={data.default_method}
+                onChange={(default_method) => update.mutate({ default_method })}
               />
             </div>
+            <ErrorNote show={update.isError && update.variables?.display_name === undefined} />
           </Card>
         </>
       )}
@@ -236,14 +243,18 @@ export function ProfilePage() {
       <AddGrinderSheet
         open={addingGrinder}
         onOpenChange={setAddingGrinder}
-        catalogue={grinderCatalogue.data ?? []}
+        catalogue={grinderCatalogue.data}
+        catalogueFailed={grinderCatalogue.isError}
+        onRetry={() => void grinderCatalogue.refetch()}
         ownedIds={new Set(myGrinders.data?.map((g) => g.grinder.id))}
         onAdd={(id) => addGrinder.mutate(id)}
       />
       <AddFilterSheet
         open={addingFilter}
         onOpenChange={setAddingFilter}
-        catalogue={filterCatalogue.data ?? []}
+        catalogue={filterCatalogue.data}
+        catalogueFailed={filterCatalogue.isError}
+        onRetry={() => void filterCatalogue.refetch()}
         ownedIds={new Set(myFilters.data?.map((f) => f.filter.id))}
         onAdd={(id) => addFilter.mutate(id)}
         onCreate={(input) => createFilter.mutate(input)}

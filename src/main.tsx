@@ -7,10 +7,16 @@ import { AuthGate } from './auth/AuthGate'
 import { AuthProvider } from './auth/AuthProvider'
 import { ApiContext } from './data/ApiContext'
 import { supabaseApi } from './data/supabaseApi'
+import { supabase } from './lib/supabase'
 import { router } from './router'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+})
+
+// Cached data belongs to whoever was signed in; drop it so the next account starts clean.
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') queryClient.clear()
 })
 
 const root = createRoot(document.getElementById('root')!)

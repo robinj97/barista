@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Session } from '@supabase/supabase-js'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
@@ -67,7 +67,9 @@ describe('Profile: account and defaults', () => {
     }))
     await userEvent.click(await screen.findByRole('radio', { name: '°F' }))
     expect(await screen.findByRole('radio', { name: '°C', checked: true })).toBeInTheDocument()
-    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't save")
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent("Couldn't save")
+    expect(screen.getByRole('region', { name: 'Defaults' })).toContainElement(alert)
   })
 
   it('changes the default method', async () => {
@@ -102,8 +104,17 @@ describe('Profile: grinders', () => {
     expect(await within(card).findByText('Comandante C40')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Add grinder' }))
-    await userEvent.type(await screen.findByLabelText('Search grinders'), 'comandante')
+    const search = await screen.findByLabelText('Search grinders')
+    expect(search).toHaveValue('')
+    expect(await screen.findByRole('button', { name: /Turin DF54/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Comandante C40/ })).not.toBeInTheDocument()
+  })
+
+  it('shows a retry when the catalogue fails to load', async () => {
+    setup({}, (api) => ({ ...api, listGrinderCatalogue: () => Promise.reject(new Error('offline')) }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add grinder' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load the list")
+    expect(screen.queryByText(/every grinder we list/)).not.toBeInTheDocument()
   })
 
   it('removes a grinder', async () => {
@@ -136,6 +147,19 @@ describe('Profile: filters', () => {
     expect(within(rows[0]!).queryByText('Default')).not.toBeInTheDocument()
   })
 
+  it('promotes another filter when the default is removed', async () => {
+    setup()
+    for (const name of [/CAFEC T-90/, /Hario V60 paper/]) {
+      await userEvent.click(await screen.findByRole('button', { name: 'Add filter' }))
+      await userEvent.click(await screen.findByRole('button', { name }))
+      await screen.findByRole('button', { name: /^Remove / })
+    }
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove CAFEC T-90 · 02' }))
+    const card = await screen.findByRole('region', { name: 'My filters' })
+    await within(card).findByText(/^Hario V60 paper/)
+    expect(await within(card).findByText('Default')).toBeInTheDocument()
+  })
+
   it('creates a missing filter and adds it to your list', async () => {
     setup()
     await userEvent.click(await screen.findByRole('button', { name: 'Add filter' }))
@@ -161,5 +185,35 @@ describe('Profile: filters', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add filter' }))
     await screen.findByRole('button', { name: /^Remove / })
     expect((await api.listFilterCatalogue()).length).toBe(before)
+  })
+
+  it('keeps the default when a filter you own is entered again as new', async () => {
+    const api = setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Add filter' }))
+    await userEvent.click(await screen.findByRole('button', { name: /CAFEC T-90/ }))
+    await screen.findByRole('button', { name: /^Remove / })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add filter' }))
+    await userEvent.click(await screen.findByRole('button', { name: /Can't find yours/ }))
+    await userEvent.type(screen.getByLabelText('Brand'), 'cafec')
+    await userEvent.type(screen.getByLabelText('Model'), 'T90')
+    await userEvent.type(screen.getByLabelText('Size'), '02')
+    await userEvent.click(screen.getByRole('button', { name: 'Add filter' }))
+    await waitFor(async () => expect(await api.listMyFilters()).toEqual([expect.objectContaining({ isDefault: true })]))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('starts the add-filter sheet fresh after creating a filter', async () => {
+    setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Add filter' }))
+    await userEvent.click(await screen.findByRole('button', { name: /Can't find yours/ }))
+    await userEvent.type(screen.getByLabelText('Brand'), 'Sibarist')
+    await userEvent.type(screen.getByLabelText('Model'), 'Fast')
+    await userEvent.click(screen.getByRole('button', { name: 'Add filter' }))
+    await screen.findByRole('button', { name: /^Remove / })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add filter' }))
+    expect(await screen.findByLabelText('Search filters')).toHaveValue('')
+    expect(screen.queryByLabelText('Brand')).not.toBeInTheDocument()
   })
 })

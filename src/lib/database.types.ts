@@ -573,7 +573,9 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { token: string }; Returns: Json }
+      add_my_filter: { Args: { target: string }; Returns: undefined }
       create_invite: { Args: never; Returns: string }
+      remove_my_filter: { Args: { target: string }; Returns: undefined }
       set_default_filter: { Args: { target: string }; Returns: undefined }
     }
     Enums: {
