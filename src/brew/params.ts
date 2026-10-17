@@ -1,14 +1,24 @@
 import type { Strength } from '../../engine/types.ts'
 
 /** The choices on the set-up screen, kept in the URL so the recipe screen, back button and links all agree. */
+/**
+ * 'brighter' is the internal name (balance +1). The app calls it "more acidity" because that is
+ * what the 4:6 sources say, and "acidity" in coffee means the pleasant, lively tang, not sour.
+ */
 export type Goal = 'sweeter' | 'balanced' | 'brighter'
+
+export const GOAL_LABELS: Record<Goal, string> = {
+  sweeter: 'Sweeter',
+  balanced: 'Balanced',
+  brighter: 'More acidity',
+}
 
 export const GOAL_BALANCE: Record<Goal, number> = { sweeter: -0.6, balanced: 0, brighter: 0.6 }
 export const STRENGTHS: Strength[] = ['light', 'medium', 'strong']
 
 export interface BrewChoices {
   bagId: string | null
-  /** -1 sweeter ... +1 brighter. The goal chips are presets of this. */
+  /** -1 sweeter ... +1 more acidity. The goal chips are presets of this. */
   balance: number
   strength: Strength
   grinderId: string | null

@@ -42,16 +42,31 @@ describe('Brew: set up', () => {
   it('picks a goal with chips, and a custom balance with the fine-tune slider', async () => {
     const user = userEvent.setup()
     renderApp('/brew', { mock: { bags: [geisha] } })
-    const goal = await screen.findByRole('radiogroup', { name: 'Sweeter or brighter' })
+    const goal = await screen.findByRole('radiogroup', { name: 'Sweeter or more acidity' })
     expect(within(goal).getByRole('radio', { name: 'Balanced' })).toBeChecked()
 
-    await user.click(within(goal).getByRole('radio', { name: 'Brighter' }))
-    expect(within(goal).getByRole('radio', { name: 'Brighter' })).toBeChecked()
-    expect(screen.getByText('60% brighter')).toBeInTheDocument()
+    await user.click(within(goal).getByRole('radio', { name: 'More acidity' }))
+    expect(within(goal).getByRole('radio', { name: 'More acidity' })).toBeChecked()
+    expect(screen.getByText('60% more acidity')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Fine-tune balance'), { target: { value: '-0.3' } })
     expect(await screen.findByText('30% sweeter')).toBeInTheDocument()
     expect(within(goal).queryByRole('radio', { checked: true })).not.toBeInTheDocument()
+  })
+
+  it('explains the goal in plain taste words, and says acidity is not sour', async () => {
+    const user = userEvent.setup()
+    renderApp('/brew', { mock: { bags: [geisha] } })
+    await user.click(await screen.findByRole('button', { name: "What's the difference?" }))
+    expect(await screen.findByText('Acidity is not sour')).toBeInTheDocument()
+    expect(screen.getByText(/like orange juice/)).toBeInTheDocument()
+    expect(screen.getByText(/squeezed lime/)).toBeInTheDocument()
+  })
+
+  it('never calls the goal "brighter" on screen', async () => {
+    renderApp('/brew', { mock: { bags: [geisha] } })
+    await screen.findByRole('radiogroup', { name: 'Sweeter or more acidity' })
+    expect(screen.queryByText(/brighter/i)).not.toBeInTheDocument()
   })
 
   it('picks a strength', async () => {
@@ -89,10 +104,10 @@ describe('Brew: set up', () => {
   it('goes to the recipe for what you chose', async () => {
     const user = userEvent.setup()
     renderApp('/brew', { mock: { bags: [geisha] } })
-    await user.click(await screen.findByRole('radio', { name: 'Brighter' }))
+    await user.click(await screen.findByRole('radio', { name: 'More acidity' }))
     await user.click(screen.getByRole('link', { name: 'Suggest a recipe' }))
     expect(await screen.findByRole('heading', { name: 'Tanzania Geisha' })).toBeInTheDocument()
-    expect(screen.getByText(/V60 · brighter, medium/)).toBeInTheDocument()
+    expect(screen.getByText(/V60 · more acidity, medium/)).toBeInTheDocument()
   })
 })
 
@@ -200,6 +215,6 @@ describe('Brew: the recipe', () => {
     await user.click(screen.getByRole('link', { name: 'Back to set up' }))
     const strength = await screen.findByRole('radiogroup', { name: 'Strength' })
     expect(within(strength).getByRole('radio', { name: 'Strong' })).toBeChecked()
-    expect(within(await screen.findByRole('radiogroup', { name: 'Sweeter or brighter' })).getByRole('radio', { name: 'Brighter' })).toBeChecked()
+    expect(within(await screen.findByRole('radiogroup', { name: 'Sweeter or more acidity' })).getByRole('radio', { name: 'More acidity' })).toBeChecked()
   })
 })

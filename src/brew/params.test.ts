@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CHOICES, goalOf, parseChoices, toSearchParams, type BrewChoices } from './params'
+import { DEFAULT_CHOICES, GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices } from './params'
 
 const parse = (query: string) => parseChoices(new URLSearchParams(query))
 
@@ -61,5 +61,11 @@ describe('goalOf', () => {
     expect(goalOf(0)).toBe('balanced')
     expect(goalOf(0.6)).toBe('brighter')
     expect(goalOf(0.3)).toBeNull()
+  })
+})
+
+describe('goal labels', () => {
+  it('call the high-acidity goal "More acidity", never sour or harsh', () => {
+    expect(GOAL_LABELS).toEqual({ sweeter: 'Sweeter', balanced: 'Balanced', brighter: 'More acidity' })
   })
 })

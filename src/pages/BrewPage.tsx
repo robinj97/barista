@@ -4,23 +4,20 @@ import { eyebrow } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
 import { BagPickerSheet } from '../brew/BagPickerSheet'
 import { GearCard } from '../brew/GearCard'
-import { GOAL_BALANCE, STRENGTHS, goalOf, parseChoices, toSearchParams, type BrewChoices, type Goal } from '../brew/params'
+import { GoalHelpSheet } from '../brew/GoalHelpSheet'
+import { GOAL_BALANCE, GOAL_LABELS, STRENGTHS, goalOf, parseChoices, toSearchParams, type BrewChoices, type Goal } from '../brew/params'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
 import { METHOD_LABELS } from '../data/types'
 import { PageHeader } from '../layout/PageHeader'
 
-const GOALS: { value: Goal; label: string }[] = [
-  { value: 'sweeter', label: 'Sweeter' },
-  { value: 'balanced', label: 'Balanced' },
-  { value: 'brighter', label: 'Brighter' },
-]
+const GOALS = (Object.keys(GOAL_LABELS) as Goal[]).map((value) => ({ value, label: GOAL_LABELS[value] }))
 
 const label = 'px-2 text-xs font-medium text-muted'
 
 function balanceLabel(balance: number): string {
   if (balance === 0) return 'Balanced'
-  return `${Math.round(Math.abs(balance) * 100)}% ${balance < 0 ? 'sweeter' : 'brighter'}`
+  return `${Math.round(Math.abs(balance) * 100)}% ${balance < 0 ? 'sweeter' : 'more acidity'}`
 }
 
 /** Set up the cup: bean, goal and gear. The recipe is on the next screen. */
@@ -29,6 +26,7 @@ export function BrewPage() {
   const choices = parseChoices(params)
   const selection = useBrewSelection(choices)
   const [picking, setPicking] = useState(false)
+  const [goalHelp, setGoalHelp] = useState(false)
   const { bag, bags } = selection
 
   const update = (patch: Partial<BrewChoices>) =>
@@ -127,7 +125,7 @@ export function BrewPage() {
         <h2 className={label}>What do you want from this cup?</h2>
         <div className="mt-2 space-y-2">
           <ChipGroup<Goal>
-            label="Sweeter or brighter"
+            label="Sweeter or more acidity"
             options={GOALS}
             value={goal}
             clearable={false}
@@ -141,6 +139,9 @@ export function BrewPage() {
             onChange={(next) => next && update({ strength: next })}
           />
         </div>
+        <button type="button" onClick={() => setGoalHelp(true)} className="mt-2 px-2 text-sm text-accent underline">
+          What's the difference?
+        </button>
         <details className="squircle mt-3 rounded-4xl bg-soft px-5 py-2">
           <summary className="flex min-h-10 cursor-pointer items-center justify-between text-sm text-muted">
             <span>Fine-tune</span>
@@ -159,7 +160,7 @@ export function BrewPage() {
             />
             <span className="flex justify-between text-xs text-muted">
               <span>Sweeter</span>
-              <span>Brighter</span>
+              <span>More acidity</span>
             </span>
           </div>
         </details>
@@ -180,6 +181,8 @@ export function BrewPage() {
       >
         Suggest a recipe
       </Link>
+
+      <GoalHelpSheet open={goalHelp} onOpenChange={setGoalHelp} />
 
       <BagPickerSheet
         open={picking}

@@ -7,7 +7,7 @@ import type { Confidence } from '../../engine/grinder.ts'
 import { beanCover } from '../beans/cover'
 import { toISODate } from '../beans/dates'
 import { buildSuggestInput, clock } from '../brew/buildInput'
-import { goalOf, parseChoices, toSearchParams } from '../brew/params'
+import { GOAL_LABELS, goalOf, parseChoices, toSearchParams } from '../brew/params'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { WhySheet } from '../brew/WhySheet'
 import { PourRing } from '../components/PourRing'
@@ -72,7 +72,7 @@ export function RecipePage() {
   const { recipe } = out
   const cover = beanCover(bag.bean.id)
   const goal = goalOf(choices.balance)
-  const goalText = goal ?? 'custom balance'
+  const goalText = goal ? GOAL_LABELS[goal].toLowerCase() : 'custom balance'
 
   const myGrinder = selection.grinder
   const converted = myGrinder && isCalibrated(myGrinder.grinder) ? micronsToSetting(myGrinder.grinder, recipe.grindUm, myGrinder.offsetUm) : null
