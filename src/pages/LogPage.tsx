@@ -192,7 +192,7 @@ export function LogPage() {
         <div className="flex items-center justify-between gap-4">
           <span>
             <span className="block font-medium">Lock this as my recipe</span>
-            <span className="block text-xs text-muted">Keeps these exact numbers, and friends can see them.</span>
+            <span className="block text-xs text-muted">Rate it and keep these exact numbers. Friends can see them.</span>
           </span>
           <Switch label="Lock this as my recipe" checked={lock} onChange={setLock} />
         </div>
