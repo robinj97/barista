@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthContext'
 import { uniqueRoasters } from '../beans/roasters'
 import { useToast } from '../components/toastContext'
 import { useApi } from './ApiContext'
-import type { AddBagInput, Bag, NewFilter, Profile, ProfilePatch } from './types'
+import { draftKey, enqueue, flushOutbox, isNetworkError } from './outbox'
+import type { AddBagInput, Bag, Draft, LockRecipeInput, NewFilter, Profile, ProfilePatch, SaveDraftInput } from './types'
 
 export const keys = {
   profile: (userId: string) => ['profile', userId] as const,
@@ -208,4 +210,92 @@ export function useRemoveBag() {
     onError: () => toast.show("Couldn't remove that bag. Bags with brews can't be removed yet."),
     onSettled: () => client.invalidateQueries({ queryKey: bagKeys.mine }),
   })
+}
+
+const draftsKey = ['drafts'] as const
+const recipesKey = ['recipes'] as const
+
+export function useMyDrafts() {
+  const api = useApi()
+  return useQuery({ queryKey: draftsKey, queryFn: () => api.listMyDrafts() })
+}
+
+export function useMyRecipes() {
+  const api = useApi()
+  return useQuery({ queryKey: recipesKey, queryFn: () => api.listMyRecipes() })
+}
+
+export type SaveOutcome = 'saved' | 'queued'
+
+/**
+ * Overwrites your working recipe for a bean. The screen sees the new draft at once. If the
+ * connection is down it waits on the phone and is sent later.
+ */
+export function useSaveDraft() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: SaveDraftInput): Promise<SaveOutcome> => {
+      try {
+        await api.saveDraft(input)
+        return 'saved'
+      } catch (error) {
+        if (!isNetworkError(error)) throw error
+        enqueue({ key: draftKey(input), kind: 'draft', input })
+        return 'queued'
+      }
+    },
+    onMutate: (input) => {
+      client.setQueryData<Draft[]>(draftsKey, (drafts = []) => {
+        const rest = drafts.filter((d) => !(d.beanId === input.beanId && d.method === input.method))
+        const old = drafts.find((d) => d.beanId === input.beanId && d.method === input.method)
+        return [...rest, { beanId: input.beanId, method: input.method, choices: input.choices, lastBrew: input.lastBrew ?? old?.lastBrew ?? null, updatedAt: new Date().toISOString() }]
+      })
+    },
+    onSettled: (outcome) => {
+      if (outcome === 'saved') void client.invalidateQueries({ queryKey: draftsKey })
+    },
+  })
+}
+
+/** Locks a brew in as your recipe; queued on the phone when offline, like drafts. */
+export function useLockRecipe() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: LockRecipeInput): Promise<SaveOutcome> => {
+      try {
+        await api.lockRecipe(input)
+        return 'saved'
+      } catch (error) {
+        if (!isNetworkError(error)) throw error
+        enqueue({ key: `lock:${input.brewId}`, kind: 'lock', input })
+        return 'queued'
+      }
+    },
+    onSuccess: (outcome) => {
+      if (outcome === 'saved') void client.invalidateQueries({ queryKey: recipesKey })
+    },
+  })
+}
+
+/** Sends anything saved on the phone while offline: when the app opens and whenever the connection returns. */
+export function useFlushOutbox() {
+  const api = useApi()
+  const client = useQueryClient()
+  useEffect(() => {
+    let active = true
+    const flush = () =>
+      void flushOutbox(api).then((sent) => {
+        if (!active || sent === 0) return
+        void client.invalidateQueries({ queryKey: draftsKey })
+        void client.invalidateQueries({ queryKey: recipesKey })
+      })
+    flush()
+    window.addEventListener('online', flush)
+    return () => {
+      active = false
+      window.removeEventListener('online', flush)
+    }
+  }, [api, client])
 }

@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import type { CalibrationSource } from '../../engine/grinder.ts'
+import type { BrewChoices } from '../brew/params'
+import type { Json } from '../lib/database.types'
 import {
   byBrandModel,
   filterMatchKey,
@@ -8,6 +10,11 @@ import {
   type Bag,
   type BagStatus,
   type Bean,
+  type BrewResult,
+  type Draft,
+  type LockedRecipe,
+  type Method,
+  type RecipeSnapshot,
   type BeanMatch,
   type CatalogueGrinder,
   type FilterRow,
@@ -241,6 +248,82 @@ export const supabaseApi: Api = {
 
   async removeBag(bagId) {
     const { error } = await supabase.from('user_beans').delete().eq('id', bagId)
+    fail(error)
+  },
+  async listMyDrafts(): Promise<Draft[]> {
+    const { data, error } = await supabase.from('recipe_drafts').select('bean_id, method, choices, last_brew, updated_at')
+    fail(error)
+    return data.map((row) => ({
+      beanId: row.bean_id,
+      method: row.method as Method,
+      choices: row.choices as unknown as BrewChoices,
+      lastBrew: row.last_brew as unknown as BrewResult | null,
+      updatedAt: row.updated_at,
+    }))
+  },
+
+  async saveDraft(input) {
+    const row = {
+      bean_id: input.beanId,
+      method: input.method,
+      choices: input.choices as unknown as Json,
+      updated_at: new Date().toISOString(),
+      ...(input.lastBrew ? { last_brew: input.lastBrew as unknown as Json } : {}),
+    }
+    const { error } = await supabase.from('recipe_drafts').upsert(row, { onConflict: 'user_id,bean_id,method' })
+    fail(error)
+  },
+
+  async listMyRecipes(): Promise<LockedRecipe[]> {
+    const { data: recipes, error } = await supabase
+      .from('recipes')
+      .select('id, bean_id, method, name, locked_version_id')
+      .not('locked_version_id', 'is', null)
+      .is('archived_at', null)
+    fail(error)
+    const versionIds = recipes.map((r) => r.locked_version_id!).filter(Boolean)
+    if (versionIds.length === 0) return []
+    const [versions, brews] = await Promise.all([
+      supabase.from('recipe_versions').select('id, params, created_at').in('id', versionIds),
+      supabase.from('brews').select('recipe_version_id, feedback').in('recipe_version_id', versionIds),
+    ])
+    fail(versions.error)
+    fail(brews.error)
+    return recipes.flatMap((recipe) => {
+      const version = versions.data.find((v) => v.id === recipe.locked_version_id)
+      if (!version) return []
+      const feedback = brews.data.find((b) => b.recipe_version_id === version.id)?.feedback as { rating?: number } | null
+      return [
+        {
+          id: recipe.id,
+          beanId: recipe.bean_id,
+          method: recipe.method as Method,
+          name: recipe.name,
+          versionId: version.id,
+          snapshot: version.params as unknown as RecipeSnapshot,
+          rating: feedback?.rating ?? null,
+          lockedAt: version.created_at,
+        },
+      ]
+    })
+  },
+
+  async lockRecipe(input) {
+    const { error } = await supabase.rpc('lock_recipe', {
+      p_recipe_id: input.recipeId,
+      p_version_id: input.versionId,
+      p_brew_id: input.brewId,
+      p_user_bean_id: input.bagId,
+      p_method: input.method,
+      p_name: input.name,
+      p_params: input.snapshot as unknown as Json,
+      p_grind_um: input.snapshot.recipe.grindUm,
+      p_brew_params: input.snapshot as unknown as Json,
+      p_actual_time_s: input.result.totalTimeS,
+      p_yield_ml: input.result.yieldG,
+      p_feedback: { rating: input.rating, taste: input.result.taste, compared: input.result.compared, notes: input.result.notes, pourTicksS: input.result.pourTicksS } as Json,
+      p_brewed_at: input.result.brewedAt,
+    })
     fail(error)
   },
 }

@@ -392,6 +392,41 @@ export type Database = {
           },
         ]
       }
+      recipe_drafts: {
+        Row: {
+          bean_id: string
+          choices: Json
+          last_brew: Json | null
+          method: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bean_id: string
+          choices: Json
+          last_brew?: Json | null
+          method: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          bean_id?: string
+          choices?: Json
+          last_brew?: Json | null
+          method?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'recipe_drafts_bean_id_fkey'
+            columns: ['bean_id']
+            isOneToOne: false
+            referencedRelation: 'beans'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       recipes: {
         Row: {
           archived_at: string | null
@@ -575,6 +610,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      lock_recipe: {
+        Args: {
+          p_actual_time_s: number | null
+          p_brew_id: string
+          p_brew_params: Json
+          p_brewed_at?: string
+          p_feedback: Json
+          p_grind_um: number
+          p_method: string
+          p_name: string
+          p_params: Json
+          p_recipe_id: string
+          p_user_bean_id: string
+          p_version_id: string
+          p_yield_ml: number | null
+        }
+        Returns: string
+      }
       accept_invite: { Args: { token: string }; Returns: Json }
       add_bag: {
         Args: {

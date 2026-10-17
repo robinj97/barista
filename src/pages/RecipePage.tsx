@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { micronsToSetting, settingToMicrons } from '../../engine/grinder.ts'
 import { suggest } from '../../engine/suggest.ts'
 import { LIMITS } from '../../engine/overrides.ts'
@@ -8,16 +8,24 @@ import type { Confidence } from '../../engine/grinder.ts'
 import { beanCover } from '../beans/cover'
 import { toISODate } from '../beans/dates'
 import { buildSuggestInput, clock } from '../brew/buildInput'
+import { BrewingPanel } from '../brew/BrewingPanel'
+import { primeSound } from '../brew/cues'
 import { EditSheet } from '../brew/EditSheet'
 import { clearEdits, doseFor, hasEdits, resetEdit, setCups, setDose, setGrind, setPours, setRatio, setTemp, setTime, setWater } from '../brew/edits'
 import { GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices, type RecipeEdits } from '../brew/params'
 import { PoursSheet } from '../brew/PoursSheet'
+import { finishSession, readSession, clearSession, startSession, tickPour, writeSession, type BrewSession } from '../brew/session'
+import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
+import { useSaveDraft } from '../data/hooks'
 import { WhySheet } from '../brew/WhySheet'
 import { PourRing } from '../components/PourRing'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { isCalibrated } from '../../engine/grinder.ts'
 import { grinderName } from '../profile/gearLabels'
+
+/** The time of a tap; kept out of the component so it is clearly not read while rendering. */
+const clockNow = () => Date.now()
 
 const CONFIDENCE_TEXT: Record<Confidence, string> = {
   low: 'Starting point · expect 2–3 brews',
@@ -62,7 +70,14 @@ export function RecipePage() {
   const [keepWater, setKeepWater] = useState(false)
   const [waterKeeps, setWaterKeeps] = useState<'coffee' | 'ratio'>('coffee')
   const [ratioKeeps, setRatioKeeps] = useState<'coffee' | 'water'>('coffee')
-  const [view, setView] = useState<'recipe' | 'pours'>('recipe')
+  const navigate = useNavigate()
+  const saveDraft = useSaveDraft()
+  // A brew in progress survives closing the app: it is kept on the phone.
+  const [session, setSession] = useState<BrewSession | null>(readSession)
+  const brewing = session !== null && session.finishedS === null && session.bagId === (choices.bagId ?? selection.bag?.id)
+  const now = useNow(brewing)
+  useWakeLock(brewing)
+  const [view, setView] = useState<'recipe' | 'pours'>(brewing ? 'pours' : 'recipe')
   // Fixed when the screen opens, so the recipe does not change under you at midnight.
   const [today] = useState(() => toISODate(new Date()))
 
@@ -114,6 +129,35 @@ export function RecipePage() {
     apply(setDose(choices, doseG, 'ratio', shown))
   }
   const unitLabel = myGrinder?.grinder.unitLabel ?? 'µm'
+  const unfinished = session !== null && session.finishedS !== null && session.bagId === bag.id
+
+  const startBrewing = () => {
+    // Your working recipe for this bean is overwritten with what you are about to brew.
+    saveDraft.mutate({ beanId: bag.bean.id, method: 'v60', choices: { ...choices, bagId: bag.id } })
+    setView('pours')
+  }
+  const startTimer = () => {
+    primeSound()
+    const next = startSession(bag.id, toSearchParams({ ...choices, bagId: bag.id }).toString(), today, clockNow())
+    writeSession(next)
+    setSession(next)
+  }
+  const tick = () => {
+    if (!session) return
+    const next = tickPour(session, clockNow(), recipe.pours.length)
+    writeSession(next)
+    setSession(next)
+  }
+  const finish = () => {
+    if (!session) return
+    writeSession(finishSession(session, clockNow(), recipe.pours.length))
+    void navigate('/brew/log')
+  }
+  const cancel = () => {
+    clearSession()
+    setSession(null)
+    setView('recipe')
+  }
 
   return (
     <>
@@ -137,9 +181,20 @@ export function RecipePage() {
       </button>
 
       <div className="mt-4">
-        <PourRing pours={recipe.pours} caption={`${recipe.pours.length} pours`} />
+        {brewing && session ? (
+          <PourRing pours={recipe.pours} current={Math.min(session.ticksS.length, recipe.pours.length - 1)} />
+        ) : (
+          <PourRing pours={recipe.pours} caption={`${recipe.pours.length} pours`} />
+        )}
       </div>
 
+      {unfinished && (
+        <Link to="/brew/log" className="mt-4 grid h-12 place-items-center rounded-full bg-accent-soft text-sm text-accent">
+          Finish logging your last brew ›
+        </Link>
+      )}
+
+      {!brewing && (
       <div className="mt-4 flex justify-center">
         <SegmentedControl
           label="Recipe view"
@@ -151,8 +206,11 @@ export function RecipePage() {
           onChange={setView}
         />
       </div>
+      )}
 
-      {view === 'recipe' ? (
+      {brewing && session ? (
+        <BrewingPanel pours={recipe.pours} session={session} now={now} onTick={tick} onFinish={finish} onCancel={cancel} />
+      ) : view === 'recipe' ? (
         <>
       <dl className="mt-4 grid grid-cols-3 gap-2" aria-label="Recipe">
         <Spec label="Coffee" value={`${recipe.doseG} g`} edited={isOverridden('doseG')} onEdit={() => setEditing('dose')} />
@@ -222,6 +280,9 @@ export function RecipePage() {
         </div>
       </div>
 
+      <button type="button" onClick={startBrewing} className="mt-5 h-12 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
+        Start brewing
+      </button>
         </>
       ) : (
       <section aria-label="Pours" className="mt-4">
@@ -242,14 +303,20 @@ export function RecipePage() {
           ))}
         </ol>
         <p className="mt-2 px-2 text-xs text-muted">Pour again once the bed has mostly drained. Times are a guide, not a clock.</p>
+        <button type="button" onClick={startTimer} className="mt-4 h-14 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
+          Start timer
+        </button>
+        <p className="mt-2 text-center text-xs text-muted">Tap as the first pour begins.</p>
       </section>
       )}
 
-      <button type="button" onClick={() => setWhy(true)} className="mt-5 h-12 w-full rounded-full bg-soft active:scale-[0.98]">
-        Why these numbers
-      </button>
+      {!brewing && (
+        <button type="button" onClick={() => setWhy(true)} className="mt-3 h-12 w-full rounded-full bg-soft active:scale-[0.98]">
+          Why these numbers
+        </button>
+      )}
 
-      {hasEdits(choices) && (
+      {hasEdits(choices) && !brewing && (
         <button type="button" onClick={() => apply(clearEdits(choices))} className="mt-2 h-11 w-full rounded-full text-sm text-muted">
           Reset all to the suggestion
         </button>

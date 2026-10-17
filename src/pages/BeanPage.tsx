@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Sheet } from '../components/Sheet'
 import { beanCover } from '../beans/cover'
-import { roastAge } from '../beans/dates'
+import { BrewHistory } from '../beans/BrewHistory'
+import { roastAge, toISODate } from '../beans/dates'
 import { ROAST_LABELS, STATUS_LABELS } from '../beans/labels'
 import { useMyBags, useRemoveBag } from '../data/hooks'
 
@@ -22,6 +23,7 @@ export function BeanPage() {
   const bags = useMyBags()
   const removeBag = useRemoveBag()
   const [confirming, setConfirming] = useState(false)
+  const [today] = useState(() => toISODate(new Date()))
 
   const bag = bags.data?.find((item) => item.id === id)
   const back = (
@@ -106,9 +108,7 @@ export function BeanPage() {
 
       <section aria-label="Recipes" className="mt-6">
         <h2 className="px-2 text-xs font-medium text-muted">Recipes</h2>
-        <p className="squircle mt-2 rounded-4xl bg-soft px-5 py-4 text-sm text-muted">
-          No recipes yet. Start dialing in to get a first one.
-        </p>
+        <BrewHistory bag={bag} today={today} />
       </section>
 
       <Link
