@@ -262,6 +262,45 @@ describe('Brew: editing the recipe', () => {
     expect(spec('Coffee')).toHaveTextContent('20 g')
   })
 
+  it('calculates the coffee from a target water amount and the ratio you see', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: /^Water: 300 g/ }))
+    await user.click(await screen.findByRole('radio', { name: 'Ratio' }))
+    const input = screen.getByRole('spinbutton', { name: /^Water/ })
+    await user.clear(input)
+    await user.type(input, '450')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(spec('Water')).toHaveTextContent('450 g')
+    expect(spec('Coffee')).toHaveTextContent('30 g')
+    expect(spec('Ratio')).toHaveTextContent('1:15')
+  })
+
+  it('calculates the coffee from a ratio with the water kept', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: /^Ratio: 1:15/ }))
+    await user.click(await screen.findByRole('radio', { name: 'Water' }))
+    const input = screen.getByRole('spinbutton', { name: /^Ratio/ })
+    await user.clear(input)
+    await user.type(input, '16')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(spec('Water')).toHaveTextContent('300 g')
+    expect(spec('Coffee')).toHaveTextContent('18.8 g')
+  })
+
+  it('refuses a target that would need an impossible amount of coffee', async () => {
+    const user = userEvent.setup()
+    renderApp(at(), { mock })
+    await user.click(await screen.findByRole('button', { name: /^Water: 300 g/ }))
+    await user.click(await screen.findByRole('radio', { name: 'Ratio' }))
+    const input = screen.getByRole('spinbutton', { name: /^Water/ })
+    await user.clear(input)
+    await user.type(input, '1200')
+    expect(screen.getByRole('alert')).toHaveTextContent('That needs 80 g of coffee')
+    expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled()
+  })
+
   it('edits temperature, and puts one value back', async () => {
     const user = userEvent.setup()
     renderApp(at(), { mock })

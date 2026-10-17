@@ -7,8 +7,8 @@ import type { BrewChoices, RecipeEdits } from './params'
  * as it is shown right now, so "keep the ratio" keeps the ratio you can see.
  *
  *  - coffee, keep ratio (default): water follows. Coffee, keep water: the ratio changes.
- *  - water: your coffee stays, the ratio changes.
- *  - ratio: your coffee stays, the water changes.
+ *  - water: your coffee stays, the ratio changes; or keep the ratio and the coffee is calculated.
+ *  - ratio: your coffee stays, the water changes; or keep the water and the coffee is calculated.
  *  - custom pours always have the last word on water, so changing the water or ratio rescales them.
  */
 export interface Shown {
@@ -32,12 +32,20 @@ export function setDose(choices: BrewChoices, doseG: number, keep: 'ratio' | 'wa
   return withEdits(choices, { ...without(edits, 'waterG'), doseG, ...(needsWater ? { waterG: Math.round(doseG * shown.ratio) } : {}) })
 }
 
-export function setWater(choices: BrewChoices, waterG: number): BrewChoices {
-  return withEdits(choices, { ...without(choices.edits, 'ratio'), waterG })
+/** Coffee that gives `waterG` at 1:`ratio`, to a tenth of a gram. */
+export const doseFor = (waterG: number, ratio: number): number => Math.round((waterG / ratio) * 10) / 10
+
+/** Water: by default your coffee stays and the ratio changes. Keeping the ratio instead calculates the coffee. */
+export function setWater(choices: BrewChoices, waterG: number, keep: 'coffee' | 'ratio', shown: Shown): BrewChoices {
+  const { edits } = choices
+  if (keep === 'ratio') return withEdits(choices, { ...without(edits, 'ratio'), waterG, doseG: doseFor(waterG, shown.ratio) })
+  return withEdits(choices, { ...without(edits, 'ratio'), waterG })
 }
 
-export function setRatio(choices: BrewChoices, ratio: number, doseG: number): BrewChoices {
+/** Ratio: by default your coffee stays and the water changes. Keeping the water instead calculates the coffee. */
+export function setRatio(choices: BrewChoices, ratio: number, doseG: number, keep: 'coffee' | 'water', shown: Shown): BrewChoices {
   const { edits } = choices
+  if (keep === 'water') return withEdits(choices, { ...without(edits, 'ratio'), waterG: shown.waterG, doseG: doseFor(shown.waterG, ratio) })
   // Custom pours cannot be told a ratio, only a water amount.
   if (edits.pours) return withEdits(choices, { ...without(edits, 'ratio'), waterG: Math.round(doseG * ratio) })
   return withEdits(choices, { ...without(edits, 'waterG'), ratio })

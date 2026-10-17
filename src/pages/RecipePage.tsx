@@ -9,7 +9,7 @@ import { beanCover } from '../beans/cover'
 import { toISODate } from '../beans/dates'
 import { buildSuggestInput, clock } from '../brew/buildInput'
 import { EditSheet } from '../brew/EditSheet'
-import { clearEdits, hasEdits, resetEdit, setCups, setDose, setGrind, setPours, setRatio, setTemp, setTime, setWater } from '../brew/edits'
+import { clearEdits, doseFor, hasEdits, resetEdit, setCups, setDose, setGrind, setPours, setRatio, setTemp, setTime, setWater } from '../brew/edits'
 import { GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices, type RecipeEdits } from '../brew/params'
 import { PoursSheet } from '../brew/PoursSheet'
 import { useBrewSelection } from '../brew/useBrewSelection'
@@ -35,6 +35,21 @@ function Spec({ label, value, edited, onEdit }: { label: string; value: string; 
   )
 }
 
+const doseProblem = (doseG: number): string | null =>
+  doseG < LIMITS.doseG[0] || doseG > LIMITS.doseG[1] ? `That needs ${doseG} g of coffee; use ${LIMITS.doseG[0]} to ${LIMITS.doseG[1]} g.` : null
+
+function KeepSwitch<T extends string>({ label, options, value, onChange, note }: { label: string; options: { value: T; label: string }[]; value: T; onChange: (value: T) => void; note: string }) {
+  return (
+    <div className="mt-2 px-1">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted">{label}</span>
+        <SegmentedControl label={label} options={options} value={value} onChange={onChange} />
+      </div>
+      <p className="mt-1 text-right text-xs text-muted">{note}</p>
+    </div>
+  )
+}
+
 type Editing = 'dose' | 'water' | 'ratio' | 'temp' | 'time' | 'grind' | 'pours' | null
 
 /** The suggested recipe for the choices on the set-up screen. Nothing is saved yet. */
@@ -45,6 +60,8 @@ export function RecipePage() {
   const [why, setWhy] = useState(false)
   const [editing, setEditing] = useState<Editing>(null)
   const [keepWater, setKeepWater] = useState(false)
+  const [waterKeeps, setWaterKeeps] = useState<'coffee' | 'ratio'>('coffee')
+  const [ratioKeeps, setRatioKeeps] = useState<'coffee' | 'water'>('coffee')
   const [view, setView] = useState<'recipe' | 'pours'>('recipe')
   // Fixed when the screen opens, so the recipe does not change under you at midnight.
   const [today] = useState(() => toISODate(new Date()))
@@ -273,9 +290,21 @@ export function RecipePage() {
         step={10}
         min={LIMITS.waterG[0]}
         max={LIMITS.waterG[1]}
-        onSave={(value) => apply(setWater(choices, value))}
+        check={(value) => (waterKeeps === 'ratio' ? doseProblem(doseFor(value, shown.ratio)) : null)}
+        onSave={(value) => apply(setWater(choices, value, waterKeeps, shown))}
         onReset={has('waterG', 'ratio', 'pours') ? () => apply(resetEdit(choices, 'waterG', 'ratio', 'pours')) : undefined}
-      />
+      >
+        <KeepSwitch
+          label="Keep"
+          options={[
+            { value: 'coffee', label: 'Coffee' },
+            { value: 'ratio', label: 'Ratio' },
+          ]}
+          value={waterKeeps}
+          onChange={setWaterKeeps}
+          note={waterKeeps === 'ratio' ? 'The coffee is calculated from the water.' : 'The ratio changes.'}
+        />
+      </EditSheet>
       <EditSheet
         open={editing === 'ratio'}
         onOpenChange={(open) => !open && close()}
@@ -286,9 +315,21 @@ export function RecipePage() {
         places={1}
         min={LIMITS.ratio[0]}
         max={LIMITS.ratio[1]}
-        onSave={(value) => apply(setRatio(choices, value, recipe.doseG))}
+        check={(value) => (ratioKeeps === 'water' ? doseProblem(doseFor(recipe.waterG, value)) : null)}
+        onSave={(value) => apply(setRatio(choices, value, recipe.doseG, ratioKeeps, shown))}
         onReset={has('ratio', 'waterG', 'pours') ? () => apply(resetEdit(choices, 'ratio', 'waterG', 'pours')) : undefined}
-      />
+      >
+        <KeepSwitch
+          label="Keep"
+          options={[
+            { value: 'coffee', label: 'Coffee' },
+            { value: 'water', label: 'Water' },
+          ]}
+          value={ratioKeeps}
+          onChange={setRatioKeeps}
+          note={ratioKeeps === 'water' ? 'The coffee is calculated from the ratio.' : 'The water changes.'}
+        />
+      </EditSheet>
       <EditSheet
         open={editing === 'temp'}
         onOpenChange={(open) => !open && close()}
