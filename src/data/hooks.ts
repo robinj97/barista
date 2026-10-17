@@ -142,6 +142,7 @@ export function useRemoveFilter() {
 export const bagKeys = {
   mine: ['bags', 'mine'] as const,
   search: (query: string) => ['beans', 'search', query] as const,
+  catalogue: ['beans', 'catalogue'] as const,
 }
 
 /** Distinct roasters already in the catalogue. Small today; paginate or search server-side if it grows. */
@@ -157,6 +158,16 @@ export function useRoasters() {
 export function useMyBags() {
   const api = useApi()
   return useQuery({ queryKey: bagKeys.mine, queryFn: () => api.listMyBags() })
+}
+
+/** The whole catalogue, alphabetical, for browsing and narrowing on the device as you type. */
+export function useBeanCatalogue() {
+  const api = useApi()
+  return useQuery({
+    queryKey: bagKeys.catalogue,
+    queryFn: () => api.browseBeans(),
+    staleTime: 5 * 60_000,
+  })
 }
 
 /** Searches the shared catalogue once there are at least two characters. */
