@@ -215,7 +215,7 @@ export function RecipePage() {
           <button type="button" aria-label="Less coffee" onClick={() => nudgeDose(-1)} className="size-10 rounded-full bg-soft active:scale-95">
             −
           </button>
-          <span className="num w-14 text-center">{recipe.doseG} g</span>
+          <span className="num min-w-[4.5rem] text-center whitespace-nowrap">{recipe.doseG} g</span>
           <button type="button" aria-label="More coffee" onClick={() => nudgeDose(1)} className="size-10 rounded-full bg-soft active:scale-95">
             +
           </button>
