@@ -37,3 +37,31 @@ export function roastedLabel(iso: string | null, from: Date = new Date()): strin
   const age = roastAge(iso, from)
   return age ? `Roasted ${age}` : null
 }
+
+/**
+ * dd/mm/yyyy text entry. The browser's own date input follows the device locale and cannot be
+ * forced to day-first, so the roast date is typed (or tapped in) as plain digits instead.
+ */
+
+/** Keeps digits only and inserts the slashes as you type: "05102026" -> "05/10/2026". */
+export function maskDMY(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 8)
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean)
+  return parts.join('/')
+}
+
+/** "05/10/2026" -> "2026-10-05", or null unless it is a real calendar date (leap years included). */
+export function parseDMY(text: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim())
+  if (!match) return null
+  const [day, month, year] = [Number(match[1]), Number(match[2]), Number(match[3])]
+  const date = new Date(year, month - 1, day)
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null
+  return toISODate(date)
+}
+
+/** "2026-10-05" -> "05/10/2026". */
+export function formatDMY(iso: string): string {
+  const [year, month, day] = iso.split('-')
+  return `${day}/${month}/${year}`
+}

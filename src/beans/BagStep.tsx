@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChipGroup } from '../components/ChipGroup'
 import { beanCover } from './cover'
-import { daysAgo } from './dates'
+import { daysAgo, maskDMY, parseDMY } from './dates'
 
 export interface BagDetails {
   roastDate: string | null
@@ -50,9 +50,11 @@ export function BagStep({ beanId, name, roaster, onBack, onSubmit }: BagStepProp
     const chip = ROAST_CHIPS.find((c) => c.value === roast)
     if (chip && 'days' in chip) roastDate = daysAgo(chip.days)
     if (roast === 'pick') {
-      if (!pickedDate) return setError('Pick a date, or choose another option')
-      if (pickedDate > today || pickedDate < oldest) return setError('Choose a date in the last two years')
-      roastDate = pickedDate
+      if (!pickedDate.trim()) return setError('Enter a date, or choose another option')
+      const parsed = parseDMY(pickedDate)
+      if (!parsed) return setError('Enter the date as dd/mm/yyyy')
+      if (parsed > today || parsed < oldest) return setError('Choose a date in the last two years')
+      roastDate = parsed
     }
 
     let grams: number | null = null
@@ -100,15 +102,16 @@ export function BagStep({ beanId, name, roaster, onBack, onSubmit }: BagStepProp
           <label className="mt-2 block">
             <span className="sr-only">Roast date</span>
             <input
-              type="date"
               value={pickedDate}
-              min={oldest}
-              max={today}
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={10}
+              placeholder="dd/mm/yyyy"
               onChange={(event) => {
-                setPickedDate(event.target.value)
+                setPickedDate(maskDMY(event.target.value))
                 setError(null)
               }}
-              className="h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="num h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
             />
           </label>
         )}

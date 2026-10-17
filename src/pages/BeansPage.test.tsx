@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { daysAgo, formatDMY } from '../beans/dates'
 import { makeBag, renderApp } from '../test/renderApp'
 
 /** Searching something that matches no known roaster asks what it is; pick "Bean name". */
@@ -151,6 +152,56 @@ describe('Adding a bag', () => {
     await user.click(screen.getByRole('button', { name: 'Add to my beans' }))
     expect(await screen.findByText(/Couldn't add Pink Bourbon/)).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Bag not found' })).toBeInTheDocument()
+  })
+})
+
+describe('Roast date entry', () => {
+  async function toBagStep(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(await openSheet(user), 'pink')
+    await user.click(await screen.findByRole('button', { name: /Pink Bourbon/ }))
+    await user.click(screen.getByRole('radio', { name: 'Pick date' }))
+    return screen.getByPlaceholderText('dd/mm/yyyy')
+  }
+
+  it('is typed day first, with the slashes added for you', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    const field = await toBagStep(user)
+    const tenDaysAgo = daysAgo(10)
+    await user.type(field, formatDMY(tenDaysAgo).replaceAll('/', ''))
+    expect(field).toHaveValue(formatDMY(tenDaysAgo))
+    await user.click(screen.getByRole('button', { name: 'Add to my beans' }))
+    const bag = await screen.findByRole('region', { name: 'Your bag' })
+    expect(within(bag).getByText('10 days ago')).toBeInTheDocument()
+  })
+
+  it('rejects a month-first date, an impossible date and a future date', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    const field = await toBagStep(user)
+    const submit = screen.getByRole('button', { name: 'Add to my beans' })
+
+    await user.type(field, '10132026') // 10/13/2026 read day first has no month 13
+    await user.click(submit)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter the date as dd/mm/yyyy')
+
+    await user.clear(field)
+    await user.type(field, '31042026')
+    await user.click(submit)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter the date as dd/mm/yyyy')
+
+    await user.clear(field)
+    await user.type(field, formatDMY(daysAgo(-3)).replaceAll('/', ''))
+    await user.click(submit)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Choose a date in the last two years')
+  })
+
+  it('asks for a date when "Pick date" is chosen but left empty', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    await toBagStep(user)
+    await user.click(screen.getByRole('button', { name: 'Add to my beans' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter a date, or choose another option')
   })
 })
 

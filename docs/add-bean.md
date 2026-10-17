@@ -67,7 +67,7 @@ While the roaster and name are typed, a "Did you mean…?" strip shows near matc
 ### 4.4 Your bag
 
 - Summary row: cover, name, roaster.
-- **Roast date** chips: Today, 3 days ago, 1 week ago, 2 weeks ago, Pick date, Not sure. Chips store an actual date; "Not sure" stores nothing. Date picker uses the native control, no future dates, nothing older than two years.
+- **Roast date** chips: Today, 3 days ago, 1 week ago, 2 weeks ago, Pick date, Not sure. Chips store an actual date; "Not sure" stores nothing. Pick date is a typed **dd/mm/yyyy** field (slashes added as you type, numeric keypad on phones), because the browser's native date input follows the device locale and cannot be forced day first. It must be a real date, not in the future, and not older than two years.
 - **Bag size** chips: 100 g, 250 g, 340 g, 500 g, 1 kg, Other (numeric keypad, 1 to 5000 g).
 - Primary button **"Add to my beans"** (enabled at once; both fields are optional).
 
