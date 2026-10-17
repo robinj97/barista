@@ -77,7 +77,7 @@ export function createMockApi(options: MockOptions = {}): Api {
   )
   const filters = [...SEED_FILTERS]
   const catalogue = [...SEED_BEANS]
-  const bags = [...(options.bags ?? [])]
+  const bags = (options.bags ?? []).map((bag) => structuredClone(bag))
   for (const bag of bags) if (!catalogue.some((b) => b.id === bag.bean.id)) catalogue.push(bag.bean)
   const friendRecipes = options.friendRecipes ?? { 'b-elto': 1 }
   const drafts = new Map<string, Draft>((options.drafts ?? []).map((d) => [`${d.beanId}:${d.method}`, d]))
@@ -226,6 +226,15 @@ export function createMockApi(options: MockOptions = {}): Api {
         status: 'new',
         createdAt: new Date().toISOString(),
       })
+    },
+
+    async updateBag(bagId, patch) {
+      needNetwork()
+      const bag = bags.find((b) => b.id === bagId)
+      if (!bag) throw new Error('bag_not_found')
+      if (patch.gramsRemaining !== undefined) bag.gramsRemaining = patch.gramsRemaining
+      if (patch.status !== undefined) bag.status = patch.status
+      return wait(undefined)
     },
 
     async removeBag(bagId) {

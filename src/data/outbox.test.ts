@@ -4,7 +4,7 @@ import { enqueue, flushOutbox, isNetworkError, pendingCount, readOutbox } from '
 import type { BrewResult, SaveDraftInput } from './types'
 
 const choices = { bagId: 'bag-b-geisha', balance: 0, strength: 'medium', grinderId: null, filterId: null, cups: 2, edits: {} } as const
-const result: BrewResult = { brewedAt: '2026-10-17T08:00:00Z', pourTicksS: [30], totalTimeS: 170, taste: 'good', compared: null, yieldG: null, notes: '', firstPourG: 60 }
+const result: BrewResult = { brewedAt: '2026-10-17T08:00:00Z', totalTimeS: 170, taste: 'good', compared: null, yieldG: null, notes: '', firstPourG: 60 }
 const draft = (extra: Partial<SaveDraftInput> = {}): SaveDraftInput => ({ beanId: 'b-geisha', method: 'v60', choices, ...extra })
 
 describe('outbox', () => {
@@ -15,6 +15,13 @@ describe('outbox', () => {
     expect(readOutbox()).toHaveLength(1)
     expect(entry?.kind === 'draft' && entry.input.choices.cups).toBe(3)
     expect(entry?.kind === 'draft' && entry.input.lastBrew).toEqual(result)
+  })
+
+  it('adds up waiting changes to one bag, and never moves a locked bag back to dialing in', () => {
+    enqueue({ key: 'bag:x', kind: 'bag', bagId: 'x', patch: { gramsRemaining: 230, status: 'locked' } })
+    enqueue({ key: 'bag:x', kind: 'bag', bagId: 'x', patch: { gramsRemaining: 210, status: 'dialing_in' } })
+    expect(readOutbox()).toHaveLength(1)
+    expect(readOutbox()[0]).toMatchObject({ kind: 'bag', patch: { gramsRemaining: 210, status: 'locked' } })
   })
 
   it('recognises a dropped connection', () => {

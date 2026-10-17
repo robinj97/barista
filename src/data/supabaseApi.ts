@@ -246,6 +246,15 @@ export const supabaseApi: Api = {
     fail(error)
   },
 
+  async updateBag(bagId, patch) {
+    const row = {
+      ...(patch.gramsRemaining !== undefined ? { grams_remaining: patch.gramsRemaining } : {}),
+      ...(patch.status !== undefined ? { status: patch.status } : {}),
+    }
+    const { error } = await supabase.from('user_beans').update(row).eq('id', bagId)
+    fail(error)
+  },
+
   async removeBag(bagId) {
     const { error } = await supabase.from('user_beans').delete().eq('id', bagId)
     fail(error)
@@ -321,7 +330,7 @@ export const supabaseApi: Api = {
       p_brew_params: input.snapshot as unknown as Json,
       p_actual_time_s: input.result.totalTimeS,
       p_yield_ml: input.result.yieldG,
-      p_feedback: { rating: input.rating, taste: input.result.taste, compared: input.result.compared, notes: input.result.notes, pourTicksS: input.result.pourTicksS } as Json,
+      p_feedback: { rating: input.rating, taste: input.result.taste, compared: input.result.compared, notes: input.result.notes } as Json,
       p_brewed_at: input.result.brewedAt,
     })
     fail(error)

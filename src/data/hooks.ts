@@ -4,8 +4,8 @@ import { useAuth } from '../auth/AuthContext'
 import { uniqueRoasters } from '../beans/roasters'
 import { useToast } from '../components/toastContext'
 import { useApi } from './ApiContext'
-import { draftKey, enqueue, flushOutbox, isNetworkError } from './outbox'
-import type { AddBagInput, Bag, Draft, LockRecipeInput, NewFilter, Profile, ProfilePatch, SaveDraftInput } from './types'
+import { bagKey, draftKey, enqueue, flushOutbox, isNetworkError } from './outbox'
+import type { AddBagInput, Bag, BagPatch, Draft, LockRecipeInput, NewFilter, Profile, ProfilePatch, SaveDraftInput } from './types'
 
 export const keys = {
   profile: (userId: string) => ['profile', userId] as const,
@@ -212,6 +212,33 @@ export function useRemoveBag() {
   })
 }
 
+/**
+ * Changes how much is left in a bag or where you are with it. The bag updates on screen at once;
+ * with no connection the change waits on the phone and is sent later.
+ */
+export function useUpdateBag() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ bagId, patch }: { bagId: string; patch: BagPatch }): Promise<SaveOutcome> => {
+      try {
+        await api.updateBag(bagId, patch)
+        return 'saved'
+      } catch (error) {
+        if (!isNetworkError(error)) throw error
+        enqueue({ key: bagKey(bagId), kind: 'bag', bagId, patch })
+        return 'queued'
+      }
+    },
+    onMutate: ({ bagId, patch }) => {
+      client.setQueryData<Bag[]>(bagKeys.mine, (bags = []) => bags.map((bag) => (bag.id === bagId ? { ...bag, ...patch } : bag)))
+    },
+    onSettled: (outcome) => {
+      if (outcome === 'saved') void client.invalidateQueries({ queryKey: bagKeys.mine })
+    },
+  })
+}
+
 const draftsKey = ['drafts'] as const
 const recipesKey = ['recipes'] as const
 
@@ -290,6 +317,7 @@ export function useFlushOutbox() {
         if (!active || sent === 0) return
         void client.invalidateQueries({ queryKey: draftsKey })
         void client.invalidateQueries({ queryKey: recipesKey })
+        void client.invalidateQueries({ queryKey: bagKeys.mine })
       })
     flush()
     window.addEventListener('online', flush)

@@ -1,11 +1,14 @@
-import type { Api, LockRecipeInput, SaveDraftInput } from './types'
+import type { Api, BagPatch, LockRecipeInput, SaveDraftInput } from './types'
 
 /**
  * Writes that could not reach the server wait here, on the phone, and are sent when the
  * connection is back. Both writes are safe to repeat: a draft overwrites itself and a lock is
  * keyed by its brew id.
  */
-export type OutboxEntry = { key: string; kind: 'draft'; input: SaveDraftInput } | { key: string; kind: 'lock'; input: LockRecipeInput }
+export type OutboxEntry =
+  | { key: string; kind: 'draft'; input: SaveDraftInput }
+  | { key: string; kind: 'lock'; input: LockRecipeInput }
+  | { key: string; kind: 'bag'; bagId: string; patch: BagPatch }
 
 const STORAGE_KEY = 'barista.outbox'
 
@@ -33,6 +36,7 @@ export function isNetworkError(error: unknown): boolean {
   return /failed to fetch|networkerror|load failed|network request failed|typeerror/i.test(message)
 }
 
+export const bagKey = (bagId: string) => `bag:${bagId}`
 export const draftKey = (input: SaveDraftInput) => `draft:${input.beanId}:${input.method}`
 
 export function enqueue(entry: OutboxEntry): void {
@@ -43,6 +47,11 @@ export function enqueue(entry: OutboxEntry): void {
   // A newer draft replaces an older one but keeps the last brew result if it has none of its own.
   if (old.kind === 'draft' && entry.kind === 'draft' && !entry.input.lastBrew && old.input.lastBrew) {
     entry = { ...entry, input: { ...entry.input, lastBrew: old.input.lastBrew } }
+  }
+  // Changes to the same bag add up: the newest amount wins, and a locked bag is never moved back to dialing in.
+  if (old.kind === 'bag' && entry.kind === 'bag') {
+    const status = old.patch.status === 'locked' ? 'locked' : entry.patch.status
+    entry = { ...entry, patch: { ...old.patch, ...entry.patch, ...(status ? { status } : {}) } }
   }
   entries[at] = entry
   writeOutbox(entries)
@@ -56,7 +65,8 @@ export async function flushOutbox(api: Api): Promise<number> {
   for (const entry of readOutbox()) {
     try {
       if (entry.kind === 'draft') await api.saveDraft(entry.input)
-      else await api.lockRecipe(entry.input)
+      else if (entry.kind === 'lock') await api.lockRecipe(entry.input)
+      else await api.updateBag(entry.bagId, entry.patch)
     } catch (error) {
       if (isNetworkError(error)) break
       // The server refused it for good (for example the bag was removed): drop it, it will never work.

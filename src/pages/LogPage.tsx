@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { suggest } from '../../engine/suggest.ts'
 import { beanCover } from '../beans/cover'
+import { afterLock, isEmpty } from '../brew/bagUsage'
 import { buildSuggestInput, clock } from '../brew/buildInput'
 import { parseChoices } from '../brew/params'
 import { clearSession, readSession } from '../brew/session'
@@ -9,7 +10,7 @@ import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
 import { Switch } from '../components/Switch'
 import { useToast } from '../components/toastContext'
-import { useLockRecipe, useMyDrafts, useSaveDraft } from '../data/hooks'
+import { useLockRecipe, useMyDrafts, useSaveDraft, useUpdateBag } from '../data/hooks'
 import { TASTE_LABELS, type BrewResult, type Compared, type Taste } from '../data/types'
 
 const TASTES = (Object.keys(TASTE_LABELS) as Taste[]).map((value) => ({ value, label: TASTE_LABELS[value] }))
@@ -29,6 +30,7 @@ export function LogPage() {
   const drafts = useMyDrafts()
   const saveDraft = useSaveDraft()
   const lockRecipe = useLockRecipe()
+  const updateBag = useUpdateBag()
   // Minted once so a retry after a dropped connection cannot save the brew twice.
   const [ids] = useState(() => ({ recipe: crypto.randomUUID(), version: crypto.randomUUID(), brew: crypto.randomUUID() }))
 
@@ -87,7 +89,6 @@ export function LogPage() {
     setSaving(true)
     const result: BrewResult = {
       brewedAt: new Date(session.startedAt).toISOString(),
-      pourTicksS: session.ticksS,
       totalTimeS: session.finishedS!,
       taste,
       compared: previous ? compared : null,
@@ -115,6 +116,8 @@ export function LogPage() {
             rating,
           }),
         )
+        const patch = afterLock(bag)
+        if (!isEmpty(patch)) outcomes.push(await updateBag.mutateAsync({ bagId: bag.id, patch }))
       }
       clearSession()
       if (outcomes.includes('queued')) toast.show("Saved on this phone. It will sync when you're back online.")
