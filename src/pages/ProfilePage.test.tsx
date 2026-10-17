@@ -217,3 +217,16 @@ describe('Profile: filters', () => {
     expect(screen.queryByLabelText('Brand')).not.toBeInTheDocument()
   })
 })
+
+describe('Profile: brewing', () => {
+  it('turns pour sounds on and off for this device, off by default', async () => {
+    setup()
+    const toggle = await screen.findByRole('switch', { name: 'Pour sounds' })
+    expect(toggle).not.toBeChecked()
+    await userEvent.click(toggle)
+    expect(toggle).toBeChecked()
+    expect(localStorage.getItem('barista.pour-sounds')).toBe('on')
+    await userEvent.click(toggle)
+    expect(localStorage.getItem('barista.pour-sounds')).toBe('off')
+  })
+})

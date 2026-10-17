@@ -2,7 +2,10 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  localStorage.clear()
+})
 
 // jsdom lacks a few browser APIs that the bottom-sheet library (Vaul) and pointer events use.
 if (!window.matchMedia) {

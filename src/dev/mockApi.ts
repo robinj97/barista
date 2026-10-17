@@ -5,6 +5,8 @@ import {
   type Api,
   type Bag,
   type Bean,
+  type Draft,
+  type LockedRecipe,
   type FilterRow,
   type MyFilter,
   type MyGrinder,
@@ -51,6 +53,10 @@ export interface MockOptions {
   friendRecipes?: Record<string, number>
   /** Make addBag fail, to test rollback. */
   failAddBag?: boolean
+  /** While this returns true, saving a draft or locking a recipe fails like a dropped connection. */
+  isOffline?: () => boolean
+  drafts?: Draft[]
+  recipes?: LockedRecipe[]
 }
 
 /** In-memory Api for tests and the dev preview. Mirrors the rules the database enforces. */
@@ -74,6 +80,12 @@ export function createMockApi(options: MockOptions = {}): Api {
   const bags = [...(options.bags ?? [])]
   for (const bag of bags) if (!catalogue.some((b) => b.id === bag.bean.id)) catalogue.push(bag.bean)
   const friendRecipes = options.friendRecipes ?? { 'b-elto': 1 }
+  const drafts = new Map<string, Draft>((options.drafts ?? []).map((d) => [`${d.beanId}:${d.method}`, d]))
+  const recipes = [...(options.recipes ?? [])]
+  const lockedBrews = new Set<string>()
+  const needNetwork = () => {
+    if (options.isOffline?.()) throw new TypeError('Failed to fetch')
+  }
 
   const wait = <T,>(value: T): Promise<T> =>
     new Promise((resolve) => setTimeout(() => resolve(structuredClone(value)), latencyMs))
@@ -219,6 +231,46 @@ export function createMockApi(options: MockOptions = {}): Api {
     async removeBag(bagId) {
       const at = bags.findIndex((b) => b.id === bagId)
       if (at >= 0) bags.splice(at, 1)
+      return wait(undefined)
+    },
+
+    listMyDrafts: () => wait([...drafts.values()]),
+
+    async saveDraft(input) {
+      needNetwork()
+      const key = `${input.beanId}:${input.method}`
+      const existing = drafts.get(key)
+      drafts.set(key, {
+        beanId: input.beanId,
+        method: input.method,
+        choices: input.choices,
+        lastBrew: input.lastBrew ?? existing?.lastBrew ?? null,
+        updatedAt: new Date().toISOString(),
+      })
+      return wait(undefined)
+    },
+
+    listMyRecipes: () => wait(recipes),
+
+    async lockRecipe(input) {
+      needNetwork()
+      if (lockedBrews.has(input.brewId)) return wait(undefined)
+      const bag = bags.find((b) => b.id === input.bagId)
+      if (!bag) throw new Error('bag_not_found')
+      lockedBrews.add(input.brewId)
+      const next: LockedRecipe = {
+        id: input.recipeId,
+        beanId: bag.bean.id,
+        method: input.method,
+        name: input.name,
+        versionId: input.versionId,
+        snapshot: input.snapshot,
+        rating: input.rating,
+        lockedAt: input.result.brewedAt,
+      }
+      const at = recipes.findIndex((r) => r.beanId === next.beanId && r.method === next.method)
+      if (at >= 0) recipes[at] = { ...next, id: recipes[at]!.id, name: recipes[at]!.name }
+      else recipes.push(next)
       return wait(undefined)
     },
   }

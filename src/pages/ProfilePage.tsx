@@ -3,7 +3,9 @@ import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
 import { Avatar } from '../components/Avatar'
 import { ChoiceSheet } from '../components/ChoiceSheet'
+import { setSoundsOn, soundsOn } from '../brew/cues'
 import { SegmentedControl } from '../components/SegmentedControl'
+import { Switch } from '../components/Switch'
 import {
   useAddFilter,
   useAddGrinder,
@@ -54,6 +56,7 @@ export function ProfilePage() {
   const { session, signOut } = useAuth()
   const profile = useProfile()
   const update = useUpdateProfile()
+  const [sounds, setSounds] = useState(soundsOn)
 
   const grinderCatalogue = useGrinderCatalogue()
   const myGrinders = useMyGrinders()
@@ -140,6 +143,23 @@ export function ProfilePage() {
               />
             </div>
             <ErrorNote show={update.isError && update.variables?.display_name === undefined} />
+          </Card>
+
+          <Card title="Brewing">
+            <Row>
+              <span className="min-w-0 flex-1">
+                <span className="block">Pour sounds</span>
+                <span className="block text-xs text-muted">A short beep when the next pour is due. Set on this device.</span>
+              </span>
+              <Switch
+                label="Pour sounds"
+                checked={sounds}
+                onChange={(on) => {
+                  setSounds(on)
+                  setSoundsOn(on)
+                }}
+              />
+            </Row>
           </Card>
         </>
       )}

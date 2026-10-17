@@ -1,5 +1,7 @@
 import type { GrinderModel } from '../../engine/grinder.ts'
 import type { TempUnit } from '../../engine/units.ts'
+import type { Pour } from '../../engine/types.ts'
+import type { BrewChoices } from '../brew/params'
 import type { Database } from '../lib/database.types'
 
 export type Method = 'v60' | 'aeropress' | 'espresso'
@@ -93,6 +95,90 @@ export interface Api {
    */
   addBag(input: AddBagInput): Promise<void>
   removeBag(bagId: string): Promise<void>
+
+  /** Your working recipes: one per bean and method, overwritten as you brew. */
+  listMyDrafts(): Promise<Draft[]>
+  /** Creates or overwrites the working recipe. Leaving `lastBrew` out keeps the stored one. */
+  saveDraft(input: SaveDraftInput): Promise<void>
+  /** The recipes you have locked in, with their current locked version. */
+  listMyRecipes(): Promise<LockedRecipe[]>
+  /** Locks a brew in as your recipe. Idempotent for the same `brewId`. */
+  lockRecipe(input: LockRecipeInput): Promise<void>
+}
+
+export type Taste = 'good' | 'sour' | 'bitter' | 'weak' | 'heavy'
+export const TASTE_LABELS: Record<Taste, string> = { good: 'Good', sour: 'Sour', bitter: 'Bitter', weak: 'Weak', heavy: 'Heavy' }
+export type Compared = 'sweeter' | 'more_acidity' | 'same'
+
+/** What happened in a brew, as logged. */
+export interface BrewResult {
+  brewedAt: string
+  /** Seconds from the start of the timer to each pour being ticked off. */
+  pourTicksS: number[]
+  /** Seconds from the start of the timer to the end of the drawdown. */
+  totalTimeS: number
+  taste: Taste | null
+  /** Against the previous brew of this bean. Null when there was none or it was skipped. */
+  compared: Compared | null
+  yieldG: number | null
+  notes: string
+  /** Water in the first pour, so "sweeter or more acidity" can be checked against what changed. */
+  firstPourG: number
+}
+
+/** The numbers a recipe resolved to, kept next to the choices that produced them. */
+export interface RecipeNumbers {
+  doseG: number
+  waterG: number
+  ratio: number
+  tempC: number
+  grindUm: number
+  targetTimeS: number
+  pours: Pour[]
+}
+
+export interface RecipeSnapshot {
+  choices: BrewChoices
+  recipe: RecipeNumbers
+}
+
+export interface Draft {
+  beanId: string
+  method: Method
+  choices: BrewChoices
+  lastBrew: BrewResult | null
+  updatedAt: string
+}
+
+export interface SaveDraftInput {
+  beanId: string
+  method: Method
+  choices: BrewChoices
+  lastBrew?: BrewResult
+}
+
+export interface LockedRecipe {
+  id: string
+  beanId: string
+  method: Method
+  name: string
+  versionId: string
+  snapshot: RecipeSnapshot
+  rating: number | null
+  lockedAt: string
+}
+
+export interface LockRecipeInput {
+  /** All minted on the device, so a retry after a dropped connection cannot double-save. */
+  recipeId: string
+  versionId: string
+  brewId: string
+  bagId: string
+  method: Method
+  name: string
+  snapshot: RecipeSnapshot
+  result: BrewResult
+  rating: number
 }
 
 export type RoastLevel = 'light' | 'medium' | 'dark'

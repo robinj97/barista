@@ -1,13 +1,13 @@
 # Barista: the Brew tab
 
-Status: **set-up and recipe built** (this doc). Brewing mode, logging and saving are the next PR.
+Status: **set-up, recipe, brewing and logging built.** Feeding saved recipes back into the suggestion is the next piece.
 
 ## The loop
 
 1. **Set up** (`/brew`): bean, method, goal, gear.
 2. **Recipe** (`/brew/recipe`): the engine's suggestion with the grind in your grinder's units.
-3. **Brewing** (next): the pour list with tick-offs, screen kept awake, no live timer.
-4. **Log it** (next): drawdown time, yield, a rating. Saving creates your first recipe for the bean and the brew, which is the data assisted tuning learns from.
+3. **Brewing** (the Pours view of the recipe screen): the timer, the next pour, tick-offs, screen kept awake.
+4. **Log it** (`/brew/log`): how it tasted, compared with last time, yield, notes; optionally lock the recipe in with a rating.
 
 ## Decisions
 
@@ -62,10 +62,27 @@ Be honest about what the goal chips and slider do. They move one thing: how the 
 
 **How we will find out:** the logging screen (next PR) asks, after any brew with a previous brew of the same bean, "Compared with last time, was it sweeter, did it have more acidity, or about the same?", and stores it next to the first-pour change. That is the data to check whether the slider works for you and your friends.
 
-## Still to do (next PR)
+## Brewing and logging
 
-- Brewing mode (pour tick-offs, wake lock) and the log screen, including the "sweeter, more acidity or the same as last time?" question and the first-pour change it should be compared against.
-- Saving a recipe, its first version and the brew in one transaction, with the offline queue from `architecture.md` section 6.
-- Opening on the last brewed bean once brews exist.
-- Feeding your locked and friends' recipes into the engine's `context`.
-- Remembering the last grinder and filter used.
+**Start.** "Start brewing" sits under the coffee stepper on the Recipe view. It saves your working recipe and opens the Pours view, which has a **Start timer** button: tap as the first pour begins. While brewing the recipe cannot be edited and the toggle is hidden.
+
+**While brewing.** A big timer, what to pour next ("Pour 2: up to 120 g", or "Next: pour 2 at 0:45" until it is due), and one button: **Pour N done**, then **Drawdown finished** after the last pour. Taps are timed from the wall clock, not counted, and the session lives in `localStorage` (`barista.brew-session`), so closing the app or locking the phone loses nothing; reopening the recipe picks the timer up. The screen is kept awake with the Wake Lock API where the browser has it (iOS Safari does, from 16.4). Cancel asks twice. An optional beep sounds when the next pour comes due; it is off by default, switched in Profile > Brewing, and stored on the device (browsers only allow sound after a tap, so the timer's start tap enables it).
+
+**Log.** Taste (good, sour, bitter, weak, heavy), "compared with last time: sweeter, more acidity, about the same" (only when there is a previous brew of this bean; this is the data that tests whether the goal slider does anything, stored with the first-pour size), yield in the cup, notes. Rating is **only** asked when locking.
+
+**What is stored.**
+
+- **Working recipe** (`recipe_drafts`): ONE row per user, bean and method, overwritten every time (when you start brewing, and again with the brew result). It holds the Brew screen's choices and edits and the latest brew's result. No history, so the table cannot grow with half-tuned attempts.
+- **Locked recipe**: toggling "Lock this as my recipe" and rating calls the `lock_recipe` function: one transaction that creates the recipe (the first time), a new **immutable** version (parent = the previous locked version), the brew with its rating, and moves the lock to it. Only locked versions are visible to friends, and locked brews are what the Library will list.
+- Offline: both writes go to a queue on the phone (`barista.outbox`) and are sent on the next app start or when the connection returns. Drafts overwrite each other in the queue; locks are keyed by their brew id, so a retry cannot save twice. The screen says "Saved on this phone".
+
+**Starting from last time.** The bean page lists "Where you left off" (the working recipe, with the last brew's taste) and any locked recipes with their stars. Tapping one opens the recipe with those settings filled in, ready to brew or tweak.
+
+Yield is stored in the database's `yield_ml` column; 1 g of coffee is taken as 1 ml.
+
+## Still to do
+
+- Feeding your locked and friends' recipes into the engine's `context`, so the confidence pill can say "Based on your own recipe".
+- The Library tab listing locked recipes and brews.
+- Opening Brew on the last brewed bean, and remembering the last grinder and filter.
+- Checking "sweeter or more acidity" answers against the first-pour change, once there are enough brews.
