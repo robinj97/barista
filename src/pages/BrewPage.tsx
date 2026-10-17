@@ -1,13 +1,10 @@
 import { useState } from 'react'
-import { suggest } from '../../engine/suggest.ts'
-import { toISODate } from '../beans/dates'
 import { Link, useSearchParams } from 'react-router'
 import { eyebrow } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
 import { BagPickerSheet } from '../brew/BagPickerSheet'
 import { GearCard } from '../brew/GearCard'
 import { GoalSlider } from '../brew/GoalSlider'
-import { buildSuggestInput } from '../brew/buildInput'
 import { STRENGTHS, parseChoices, toSearchParams, type BrewChoices } from '../brew/params'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
@@ -22,7 +19,6 @@ export function BrewPage() {
   const choices = parseChoices(params)
   const selection = useBrewSelection(choices)
   const [picking, setPicking] = useState(false)
-  const [today] = useState(() => toISODate(new Date()))
   const { bag, bags } = selection
 
   const update = (patch: Partial<BrewChoices>) =>
@@ -74,8 +70,6 @@ export function BrewPage() {
   const cover = beanCover(bag.bean.id)
   const line = eyebrow(bag.bean)
   const defaultMethod = selection.profile.data?.default_method
-  const pours = suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, today)).recipe.pours
-  const firstPours = { first: pours[0]?.toG ?? 0, second: (pours[1]?.toG ?? 0) - (pours[0]?.toG ?? 0) }
 
   const recipeSearch = toSearchParams({ ...choices, bagId: bag.id }).toString()
 
@@ -122,7 +116,7 @@ export function BrewPage() {
       <section aria-label="Goal" className="mt-6">
         <h2 className={label}>What do you want from this cup?</h2>
         <div className="mt-2 space-y-2">
-          <GoalSlider balance={choices.balance} onChange={(balance) => update({ balance })} pours={firstPours} />
+          <GoalSlider balance={choices.balance} onChange={(balance) => update({ balance })} />
           <ChipGroup
             label="Strength"
             options={STRENGTHS.map((s) => ({ value: s, label: s[0]!.toUpperCase() + s.slice(1) }))}

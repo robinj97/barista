@@ -1,47 +1,36 @@
-import { GOAL_BALANCE, GOAL_LABELS, type Goal } from './params'
-
-const STOPS = (Object.keys(GOAL_LABELS) as Goal[]).map((goal) => ({ goal, label: GOAL_LABELS[goal], balance: GOAL_BALANCE[goal] }))
-
 interface GoalSliderProps {
   balance: number
   onChange: (balance: number) => void
-  /** Water in the first two pours, which is all the goal moves. */
-  pours: { first: number; second: number }
 }
 
-/** Sweeter ↔ more acidity on one slider. Tap a label or drag; the two pours it changes update live. */
-export function GoalSlider({ balance, onChange, pours }: GoalSliderProps) {
+/** "Balanced", "40% sweeter" or "60% more acidity": what the slider is set to. */
+export function balanceLabel(balance: number): string {
+  if (balance === 0) return 'Balanced'
+  return `${Math.round(Math.abs(balance) * 100)}% ${balance < 0 ? 'sweeter' : 'more acidity'}`
+}
+
+/** Sweeter ↔ more acidity. Drag the handle; the readout says what it is set to. */
+export function GoalSlider({ balance, onChange }: GoalSliderProps) {
   return (
-    <div className="squircle rounded-4xl bg-soft px-5 pt-4 pb-3">
+    <div className="squircle rounded-4xl bg-soft px-6 py-5">
+      <p className="num text-center text-lg" aria-live="polite">
+        {balanceLabel(balance)}
+      </p>
       <input
         type="range"
         aria-label="Sweeter or more acidity"
+        aria-valuetext={balanceLabel(balance)}
         min={-1}
         max={1}
         step={0.1}
         value={balance}
         onChange={(event) => onChange(Math.round(Number(event.target.value) * 10) / 10)}
-        className="block w-full accent-[var(--accent)]"
+        className="mt-4 block h-6 w-full accent-[var(--accent)]"
       />
-      <div className="relative mt-1 h-8">
-        {STOPS.map((stop) => (
-          <button
-            key={stop.goal}
-            type="button"
-            aria-pressed={balance === stop.balance}
-            onClick={() => onChange(stop.balance)}
-            style={{ left: `${((stop.balance + 1) / 2) * 100}%` }}
-            className={`absolute h-8 -translate-x-1/2 rounded-full px-3 text-sm whitespace-nowrap ${
-              balance === stop.balance ? 'bg-ink text-bg' : 'text-muted'
-            }`}
-          >
-            {stop.label}
-          </button>
-        ))}
+      <div className="mt-3 flex justify-between text-xs text-muted" aria-hidden>
+        <span>Sweeter</span>
+        <span>More acidity</span>
       </div>
-      <p className="num mt-2 text-center text-xs text-muted" aria-live="polite">
-        First pour {pours.first} g · second pour {pours.second} g
-      </p>
     </div>
   )
 }

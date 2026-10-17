@@ -39,24 +39,16 @@ describe('Brew: set up', () => {
     expect(await screen.findByText(/Your default method \(Espresso\) isn't available yet/)).toBeInTheDocument()
   })
 
-  it('always shows the goal slider, and its stops and live pour numbers follow it', async () => {
-    const user = userEvent.setup()
+  it('always shows the goal slider with what it is set to', async () => {
     renderApp('/brew', { mock: { bags: [geisha] } })
     const slider = await screen.findByRole('slider', { name: 'Sweeter or more acidity' })
     expect(slider).toHaveValue('0')
-    expect(screen.getByRole('button', { name: 'Balanced' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText(/First pour 60 g · second pour 60 g/)).toBeInTheDocument()
+    expect(screen.getByText('Balanced')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'More acidity' }))
-    expect(slider).toHaveValue('0.6')
-    expect(screen.getByRole('button', { name: 'More acidity' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.queryByText(/First pour 60 g · second pour 60 g/)).not.toBeInTheDocument()
-
+    fireEvent.change(slider, { target: { value: '0.6' } })
+    expect(await screen.findByText('60% more acidity')).toBeInTheDocument()
     fireEvent.change(slider, { target: { value: '-0.3' } })
-    expect(slider).toHaveValue('-0.3')
-    for (const name of ['Sweeter', 'Balanced', 'More acidity']) {
-      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false')
-    }
+    expect(await screen.findByText('30% sweeter')).toBeInTheDocument()
   })
 
   it('never calls the goal "brighter" on screen', async () => {
@@ -100,7 +92,7 @@ describe('Brew: set up', () => {
   it('goes to the recipe for what you chose', async () => {
     const user = userEvent.setup()
     renderApp('/brew', { mock: { bags: [geisha] } })
-    await user.click(await screen.findByRole('button', { name: 'More acidity' }))
+    fireEvent.change(await screen.findByRole('slider', { name: 'Sweeter or more acidity' }), { target: { value: '0.6' } })
     await user.click(screen.getByRole('link', { name: 'Suggest a recipe' }))
     expect(await screen.findByRole('heading', { name: 'Tanzania Geisha' })).toBeInTheDocument()
     expect(screen.getByText(/V60 · more acidity, medium/)).toBeInTheDocument()
