@@ -17,7 +17,7 @@ Settled in planning sessions with Robin.
 | Beans | Shared catalogue (no duplicates) plus a personal library layered on top. If a friend has a bean dialed, you are told. |
 | Engine | Server-side, pure TypeScript module, no LLM. See `engine.md`. |
 | Server language | **TypeScript** (Supabase Edge Functions run on Deno; there is no Python/Java option there, and a TS engine can be shared with the client). |
-| Equipment | Users keep a personal list of **grinders** and **filters** in their profile. Recipe screens pick from those lists in a bottom sheet (with "add" at the end). Same pattern for both. |
+| Equipment | Users keep a personal list of **grinders** and **filters** (drippers deferred) in their profile. Recipe screens pick from those lists in a bottom sheet (with "add" at the end). Same pattern for both. |
 | Tuning | Two modes on any brew: **manual** (full control, effect hints) and **assisted** (the app asks plain-language questions, diagnoses the likely cause, suggests one change). See `tuning.md`. |
 | Offline | Brewing and logging must work offline and sync later. |
 | Training data | Every brew stores the exact recipe parameters used plus feedback answers, never a reference to something editable. |
@@ -268,7 +268,7 @@ Unchanged from the kickoff plan: shell (2), Supabase + auth + schema + RLS (3), 
 
 ## 9. Open questions
 
-- Should the dripper (V60 plastic, ceramic, glass, Neo and so on) get the same treatment as grinders and filters? The 4:6 fixtures record it, and it affects flow too. A generic `equipment` table with a `kind` column would avoid a third copy of the same pattern. Decide before the schema is built.
+- **Decided: grinders and filters only for now.** The dripper (V60 plastic, ceramic, glass, Neo and so on) is deferred. It also affects flow and the fixtures record it, so revisit it later, preferably as a generic `equipment` table with a `kind` column rather than a third copy of the same pattern.
 - The fixture data spells one filter two ways (`CAFEC T-90` and `CAFEC T90`); importing it should go through `filters.match_key`.
 - Assisted tuning questions need testing with real novices (see `tuning.md` section 9).
 - Should a friend be able to see which of their friends' locked recipes I've saved? Default: no.
