@@ -292,16 +292,20 @@ export const supabaseApi: Api = {
     fail(error)
     const versionIds = recipes.map((r) => r.locked_version_id!).filter(Boolean)
     if (versionIds.length === 0) return []
-    const [versions, brews] = await Promise.all([
+    const recipeIds = recipes.map((r) => r.id)
+    const [versions, allVersions, brews] = await Promise.all([
       supabase.from('recipe_versions').select('id, params, created_at').in('id', versionIds),
-      supabase.from('brews').select('recipe_version_id, feedback').in('recipe_version_id', versionIds),
+      supabase.from('recipe_versions').select('id, recipe_id').in('recipe_id', recipeIds),
+      supabase.from('brews').select('recipe_version_id, feedback'),
     ])
     fail(versions.error)
+    fail(allVersions.error)
     fail(brews.error)
     return recipes.flatMap((recipe) => {
       const version = versions.data.find((v) => v.id === recipe.locked_version_id)
       if (!version) return []
       const feedback = brews.data.find((b) => b.recipe_version_id === version.id)?.feedback as { rating?: number } | null
+      const mine = new Set(allVersions.data.filter((v) => v.recipe_id === recipe.id).map((v) => v.id))
       return [
         {
           id: recipe.id,
@@ -312,9 +316,15 @@ export const supabaseApi: Api = {
           snapshot: version.params as unknown as RecipeSnapshot,
           rating: feedback?.rating ?? null,
           lockedAt: version.created_at,
+          brewCount: brews.data.filter((b) => mine.has(b.recipe_version_id)).length,
         },
       ]
     })
+  },
+
+  async archiveRecipe(recipeId) {
+    const { error } = await supabase.from('recipes').update({ archived_at: new Date().toISOString() }).eq('id', recipeId)
+    fail(error)
   },
 
   async lockRecipe(input) {

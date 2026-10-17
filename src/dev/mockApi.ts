@@ -261,6 +261,13 @@ export function createMockApi(options: MockOptions = {}): Api {
 
     listMyRecipes: () => wait(recipes),
 
+    async archiveRecipe(recipeId) {
+      needNetwork()
+      const at = recipes.findIndex((r) => r.id === recipeId)
+      if (at >= 0) recipes.splice(at, 1)
+      return wait(undefined)
+    },
+
     async lockRecipe(input) {
       needNetwork()
       if (lockedBrews.has(input.brewId)) return wait(undefined)
@@ -276,9 +283,10 @@ export function createMockApi(options: MockOptions = {}): Api {
         snapshot: input.snapshot,
         rating: input.rating,
         lockedAt: input.result.brewedAt,
+        brewCount: 1,
       }
       const at = recipes.findIndex((r) => r.beanId === next.beanId && r.method === next.method)
-      if (at >= 0) recipes[at] = { ...next, id: recipes[at]!.id, name: recipes[at]!.name }
+      if (at >= 0) recipes[at] = { ...next, id: recipes[at]!.id, name: recipes[at]!.name, brewCount: recipes[at]!.brewCount + 1 }
       else recipes.push(next)
       return wait(undefined)
     },

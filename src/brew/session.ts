@@ -1,3 +1,5 @@
+import type { RecipeNumbers } from '../data/types'
+
 /**
  * A brew in progress, kept on the phone so closing the app or locking the screen does not lose
  * the timer. Times are measured from `startedAt` (wall clock), never counted, so they stay right.
@@ -11,6 +13,8 @@ export interface BrewSession {
   startedAt: number
   /** Seconds from the start to the end of the drawdown; set when the brew is finished. */
   finishedS: number | null
+  /** The numbers brewed, fixed when the brew starts so the log shows exactly them. */
+  recipe?: RecipeNumbers
   /** The brew was finished without running the timer, so there is no total time. */
   untimed?: boolean
 }
@@ -42,7 +46,8 @@ export function clearSession(): void {
   }
 }
 
-export const startSession = (bagId: string, search: string, asOf: string, nowMs: number): BrewSession => ({
+export const startSession = (bagId: string, search: string, asOf: string, nowMs: number, recipe?: RecipeNumbers): BrewSession => ({
+  recipe,
   bagId,
   search,
   asOf,

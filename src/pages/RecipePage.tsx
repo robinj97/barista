@@ -19,6 +19,7 @@ import { currentIndex, phaseAt } from '../brew/progress'
 import { finishSession, readSession, clearSession, elapsedS, startSession, untimedSession, writeSession, type BrewSession } from '../brew/session'
 import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
+import { useOwnPriors } from '../brew/useOwnPriors'
 import { useSaveDraft, useUpdateBag } from '../data/hooks'
 import { WhySheet } from '../brew/WhySheet'
 import { PourRing } from '../components/PourRing'
@@ -83,6 +84,7 @@ export function RecipePage() {
   const [view, setView] = useState<'recipe' | 'pours'>(brewing ? 'pours' : 'recipe')
   // Fixed when the screen opens, so the recipe does not change under you at midnight.
   const [today] = useState(() => toISODate(new Date()))
+  const own = useOwnPriors(today)
 
   const back = (
     <Link to={{ pathname: '/brew', search: params.toString() }} aria-label="Back to set up" className="grid size-11 place-items-center rounded-full bg-soft text-lg">
@@ -90,7 +92,7 @@ export function RecipePage() {
     </Link>
   )
 
-  if (selection.bags.isPending) {
+  if (selection.bags.isPending || own.pending) {
     return (
       <>
         {back}
@@ -113,7 +115,7 @@ export function RecipePage() {
   }
 
   const unit = selection.profile.data?.temp_unit ?? 'c'
-  const out = suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, today))
+  const out = suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, today, own.priors))
   const { recipe } = out
   const cover = beanCover(bag.bean.id)
   const goal = goalOf(choices.balance)
@@ -141,7 +143,7 @@ export function RecipePage() {
   }
   const startTimer = () => {
     primeSound()
-    const next = startSession(bag.id, toSearchParams({ ...choices, bagId: bag.id }).toString(), today, clockNow())
+    const next = startSession(bag.id, toSearchParams({ ...choices, bagId: bag.id }).toString(), today, clockNow(), recipe)
     writeSession(next)
     setSession(next)
   }

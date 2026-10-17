@@ -106,6 +106,8 @@ export interface Api {
   listMyRecipes(): Promise<LockedRecipe[]>
   /** Locks a brew in as your recipe. Idempotent for the same `brewId`. */
   lockRecipe(input: LockRecipeInput): Promise<void>
+  /** Stops friends seeing a locked recipe and removes it from your lists. Your brews are kept. */
+  archiveRecipe(recipeId: string): Promise<void>
 }
 
 export type Taste = 'good' | 'sour' | 'bitter' | 'weak' | 'heavy'
@@ -166,6 +168,8 @@ export interface LockedRecipe {
   snapshot: RecipeSnapshot
   rating: number | null
   lockedAt: string
+  /** How many times you brewed it, across all its versions. */
+  brewCount: number
 }
 
 export interface LockRecipeInput {

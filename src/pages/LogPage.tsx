@@ -78,7 +78,8 @@ export function LogPage() {
     )
   }
 
-  const { recipe } = suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, session.asOf))
+  // The numbers that were brewed. Older sessions did not keep them, so work them out again.
+  const recipe = session.recipe ?? suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, session.asOf)).recipe
   const cover = beanCover(bag.bean.id)
   const previous = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')?.lastBrew ?? null
   const yieldG = Number(yieldText)
