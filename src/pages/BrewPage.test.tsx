@@ -39,16 +39,22 @@ describe('Brew: set up', () => {
     expect(await screen.findByText(/Your default method \(Espresso\) isn't available yet/)).toBeInTheDocument()
   })
 
-  it('always shows the goal slider with what it is set to', async () => {
+  it('always shows the goal slider with presets and what it is set to', async () => {
+    const user = userEvent.setup()
     renderApp('/brew', { mock: { bags: [geisha] } })
     const slider = await screen.findByRole('slider', { name: 'Sweeter or more acidity' })
     expect(slider).toHaveValue('0')
-    expect(screen.getByText('Balanced')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Balanced' })).toBeChecked()
+
+    await user.click(screen.getByRole('radio', { name: 'More acidity' }))
+    expect(slider).toHaveValue('0.6')
+    expect(screen.getByText('60% more acidity')).toBeInTheDocument()
 
     fireEvent.change(slider, { target: { value: '0.6' } })
     expect(await screen.findByText('60% more acidity')).toBeInTheDocument()
     fireEvent.change(slider, { target: { value: '-0.3' } })
     expect(await screen.findByText('30% sweeter')).toBeInTheDocument()
+    expect(within(screen.getByRole('radiogroup', { name: 'Goal' })).queryByRole('radio', { checked: true })).not.toBeInTheDocument()
   })
 
   it('never calls the goal "brighter" on screen', async () => {
@@ -92,7 +98,7 @@ describe('Brew: set up', () => {
   it('goes to the recipe for what you chose', async () => {
     const user = userEvent.setup()
     renderApp('/brew', { mock: { bags: [geisha] } })
-    fireEvent.change(await screen.findByRole('slider', { name: 'Sweeter or more acidity' }), { target: { value: '0.6' } })
+    await user.click(await screen.findByRole('radio', { name: 'More acidity' }))
     await user.click(screen.getByRole('link', { name: 'Suggest a recipe' }))
     expect(await screen.findByRole('heading', { name: 'Tanzania Geisha' })).toBeInTheDocument()
     expect(screen.getByText(/V60 · more acidity, medium/)).toBeInTheDocument()
