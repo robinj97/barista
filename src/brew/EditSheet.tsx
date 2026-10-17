@@ -13,6 +13,8 @@ interface EditSheetProps {
   /** Decimal places kept. */
   places?: number
   onSave: (value: number) => void
+  /** Extra rule on the typed value; a message blocks Done. */
+  check?: (value: number) => string | null
   /** Shown when this value was set by hand; puts it back to the suggestion. */
   onReset?: () => void
   children?: ReactNode
@@ -20,10 +22,12 @@ interface EditSheetProps {
 
 const round = (value: number, places: number) => Math.round(value * 10 ** places) / 10 ** places
 
-function Editor({ title, value, unit, step, min, max, places = 0, onSave, onReset, children, close }: Omit<EditSheetProps, 'open' | 'onOpenChange'> & { close: () => void }) {
+function Editor({ title, value, unit, step, min, max, places = 0, onSave, onReset, check, children, close }: Omit<EditSheetProps, 'open' | 'onOpenChange'> & { close: () => void }) {
   const [text, setText] = useState(String(value))
   const parsed = Number(text)
-  const valid = text.trim() !== '' && Number.isFinite(parsed) && parsed >= min && parsed <= max
+  const inRange = text.trim() !== '' && Number.isFinite(parsed) && parsed >= min && parsed <= max
+  const problem = inRange ? (check?.(parsed) ?? null) : null
+  const valid = inRange && !problem
   const nudge = (direction: 1 | -1) => setText(String(round(Math.min(max, Math.max(min, (valid ? parsed : value) + direction * step)), places)))
 
   return (
@@ -59,7 +63,7 @@ function Editor({ title, value, unit, step, min, max, places = 0, onSave, onRese
       </div>
       {!valid && (
         <p role="alert" className="text-center text-xs text-muted">
-          Use a number from {min} to {max}.
+          {problem ?? `Use a number from ${min} to ${max}.`}
         </p>
       )}
       {children}

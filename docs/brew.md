@@ -38,7 +38,7 @@ Tap a value to edit it in a sheet (steppers or type; applies on Done; "Back to t
 How the numbers link (`src/brew/edits.ts`):
 
 - **Coffee:** water follows the ratio you see. A switch in the sheet keeps the water instead, so the ratio changes.
-- **Water:** your coffee stays; the ratio changes. **Ratio:** your coffee stays; the water changes.
+- **Water:** your coffee stays and the ratio changes; or switch to **Keep: Ratio** and the coffee is calculated, so you can brew for a target amount of water (400 g at 1:16 is 25 g of coffee). **Ratio:** your coffee stays and the water changes; or **Keep: Water** and the coffee is calculated. Calculated coffee is rounded to 0.1 g, and a target needing less than 5 g or more than 60 g is refused. The switch is per edit and resets each time you open a sheet. Water is what you pour; the amount in the cup is smaller (coffee holds back about twice its weight), and there is no cup-yield input yet.
 - **Pours:** the last pour is the water. Editing water or ratio afterwards rescales your pours, keeping their times.
 - **Cups** clears your coffee and water edits. Picking a different bean on the set-up screen clears them. Edits are not saved until logging exists.
 - **Grind** is edited in your grinder's own units when it is calibrated, otherwise in µm.

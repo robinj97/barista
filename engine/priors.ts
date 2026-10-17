@@ -1,7 +1,7 @@
 import { around, type Range } from './math.ts'
 import { BLOOM_GAP_S } from './pours.ts'
 import { processGroup } from './traits.ts'
-import type { BeanTraits, FilterRef, FlowClass, Reason, RoastLevel, Strength } from './types.ts'
+import type { BeanTraits, FilterRef, FlowClass, Reason, RoastLevel } from './types.ts'
 import { formatTemp } from './units.ts'
 
 /**
@@ -115,16 +115,18 @@ export function grindPrior(bean: BeanTraits, filter: FilterRef | null | undefine
   return { value, range: around(value, GRIND_SPREAD_UM), reasons: [reason, ...paper.reasons] }
 }
 
-const RATIO: Record<Strength, { value: number; range: Range; why: string }> = {
-  light: { value: 16, range: [15.5, 16.7], why: 'loosened towards 1:16' },
-  medium: { value: 15, range: [14.5, 15.8], why: 'kept at 1:15' },
-  strong: { value: 14, range: [13.5, 14.8], why: 'tightened towards 1:14' },
-}
+/** 1:15 whatever the strength: in the 4:6 method strength comes from the number of pours, not the ratio. */
+const RATIO = 15
+const RATIO_RANGE: Range = [14.5, 15.8]
 
-export function ratioPrior(strength: Strength): Estimate {
-  const { value, range, why } = RATIO[strength]
-  const reason: Reason = { param: 'ratio', what: `1:${value}`, why: `The 4:6 reference is 1:15; a ${strength} cup is ${why}.`, source: 'method' }
-  return { value, range, reasons: [reason] }
+export function ratioPrior(): Estimate {
+  const reason: Reason = {
+    param: 'ratio',
+    what: `1:${RATIO}`,
+    why: 'The 4:6 reference is 1:15. Strength is set by how many pours the last 60% of the water is split into, not by the ratio.',
+    source: 'method',
+  }
+  return { value: RATIO, range: RATIO_RANGE, reasons: [reason] }
 }
 
 /** The 4:6 reference brew: 300 g of water, draining for about 55 s after the last pour starts. */

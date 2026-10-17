@@ -109,7 +109,7 @@ describe('similarity', () => {
 describe('priors', () => {
   it('gives each prior a value inside its own range and at least one reason', () => {
     const bean: BeanTraits = { roastLevel: 'medium', process: 'Honey', notes: [] }
-    for (const est of [tempPrior(bean), grindPrior(bean, null), ratioPrior('medium'), targetTime(155, 300)]) {
+    for (const est of [tempPrior(bean), grindPrior(bean, null), ratioPrior(), targetTime(155, 300)]) {
       expect(est.value).toBeGreaterThanOrEqual(est.range[0])
       expect(est.value).toBeLessThanOrEqual(est.range[1])
       expect(est.reasons.length).toBeGreaterThan(0)

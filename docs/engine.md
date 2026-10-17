@@ -75,7 +75,7 @@ Everything below is **encoded guidance, not validated science**. Each carries a 
 
 | Parameter | Prior (v1) | Source / status |
 |---|---|---|
-| Dose / water / ratio | 1:15 default; stronger target tightens towards 1:14, light loosens towards 1:16 | 4:6 reference and dataset (1:15, 1:16.7) |
+| Dose / water / ratio | 1:15 always; strength changes the number of pours, not the ratio (you can still edit it) | 4:6 reference and dataset (1:15, 1:16.7) |
 | Temperature | Light 94 °C (92 to 96), medium 90 (88 to 92), dark 85 (83 to 88). Unknown roast level is assumed light, and the reasons say so. | Pull & Pour table (93, 88, 83) and Kasuya's ~92 °C, nudged up to match the dataset's light washed coffees (93 to 96 °C). |
 | Process nudges | Natural or anaerobic: 1 °C cooler. Washed light roast: 1 °C hotter. A cooler nudge moves the range down; a hotter one keeps it (light stays 92 to 96, the dataset's light washed range). Processes are grouped in `engine/traits.ts` ("pulped natural" counts as honey). | Common guidance, **unverified**, kept small |
 | Grind | About 820 µm (range 100 µm either side), 30 µm coarser for medium roasts and 60 µm for dark. | The 4:6 sources say coarse; 820 µm matches the DF54 dataset. The grinder converter turns it into clicks. |
@@ -84,7 +84,7 @@ Everything below is **encoded guidance, not validated science**. Each carries a 
 | Agitation | None by default | Method reference |
 | Filter paper | Fast papers start 30 µm finer, slow papers 30 µm coarser. Medium papers and an unknown flow class mean no adjustment, and the reasons say which. Metal and cloth are not treated separately yet. Small and **unverified**. | One source notes some third-party V60 papers are thinner and faster than Hario's |
 
-(Not used by the UI at the moment: the effect of notes on the cup is unproven, see `brew.md`.) Tasting notes you want to bring out nudge the balance by at most 0.35 (bright notes such as bergamot, citrus and florals lean brighter; chocolate, caramel and nuts lean sweeter; mixed notes cancel). Compound and plural forms count ("blueberry", "nutty"). The mapping is a hand-written lookup in `engine/notes.ts`, and your own balance setting still leads. Ratio follows strength: 1:16 light, 1:15 medium, 1:14 strong.
+(Not used by the UI at the moment: the effect of notes on the cup is unproven, see `brew.md`.) Tasting notes you want to bring out nudge the balance by at most 0.35 (bright notes such as bergamot, citrus and florals lean brighter; chocolate, caramel and nuts lean sweeter; mixed notes cancel). Compound and plural forms count ("blueberry", "nutty"). The mapping is a hand-written lookup in `engine/notes.ts`, and your own balance setting still leads. 
 
 ## 5. Using data
 
