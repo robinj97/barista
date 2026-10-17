@@ -6,6 +6,12 @@ import { makeBag, renderApp } from '../test/renderApp'
 const elto = makeBag('b-elto', { createdAt: '2026-10-10T10:00:00Z' })
 const geisha = makeBag('b-geisha', { createdAt: '2026-10-14T10:00:00Z' })
 
+/** The pours are on their own view of the recipe screen. */
+async function showPours() {
+  await userEvent.click(await screen.findByRole('radio', { name: 'Pours' }))
+  return screen.getByRole('region', { name: 'Pours' })
+}
+
 describe('Brew: set up', () => {
   it('asks for a bean first when you have none', async () => {
     renderApp('/brew')
@@ -123,7 +129,7 @@ describe('Brew: the recipe', () => {
 
   it('lists the pours with their amounts and the running total', async () => {
     renderApp(at(), { mock })
-    const pours = await screen.findByRole('region', { name: 'Pours' })
+    const pours = await showPours()
     const rows = within(pours).getAllByRole('listitem')
     expect(rows).toHaveLength(5)
     expect(rows[0]).toHaveTextContent('0:00')
@@ -178,13 +184,13 @@ describe('Brew: the recipe', () => {
 
   it('ignores tasting notes in older links, so the pours do not move', async () => {
     renderApp(at('&notes=vanilla'), { mock })
-    const pours = await screen.findByRole('region', { name: 'Pours' })
+    const pours = await showPours()
     expect(within(pours).getAllByRole('listitem')[0]).toHaveTextContent('+60 g')
   })
 
   it('leans the first pour with the goal: brighter is bigger, sweeter is smaller', async () => {
     renderApp('/brew/recipe?bag=bag-b-geisha&balance=0.6&strength=medium&cups=2', { mock })
-    const brighter = await screen.findByRole('region', { name: 'Pours' })
+    const brighter = await showPours()
     expect(within(brighter).getAllByRole('listitem')[0]).toHaveTextContent('+72 g')
   })
 
@@ -284,7 +290,8 @@ describe('Brew: editing the recipe', () => {
   it('edits each pour, and the last one is the water', async () => {
     const user = userEvent.setup()
     renderApp(at(), { mock })
-    await user.click(await screen.findByRole('button', { name: 'Edit pours' }))
+    await showPours()
+    await user.click(screen.getByRole('button', { name: 'Edit pours' }))
     const last = await screen.findByLabelText('Pour 5 total water')
     await user.clear(last)
     await user.type(last, '280')
@@ -293,14 +300,16 @@ describe('Brew: editing the recipe', () => {
     const rows = within(screen.getByRole('region', { name: 'Pours' })).getAllByRole('listitem')
     expect(rows).toHaveLength(4)
     expect(rows[3]).toHaveTextContent('280 g')
-    expect(spec('Water')).toHaveTextContent('280 g')
     expect(screen.getByText('Pours · yours')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Recipe' }))
+    expect(spec('Water')).toHaveTextContent('280 g')
   })
 
   it('does not accept pours that go backwards', async () => {
     const user = userEvent.setup()
     renderApp(at(), { mock })
-    await user.click(await screen.findByRole('button', { name: 'Edit pours' }))
+    await showPours()
+    await user.click(screen.getByRole('button', { name: 'Edit pours' }))
     const second = await screen.findByLabelText('Pour 2 total water')
     await user.clear(second)
     await user.type(second, '10')

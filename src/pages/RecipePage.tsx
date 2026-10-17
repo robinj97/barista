@@ -45,6 +45,7 @@ export function RecipePage() {
   const [why, setWhy] = useState(false)
   const [editing, setEditing] = useState<Editing>(null)
   const [keepWater, setKeepWater] = useState(false)
+  const [view, setView] = useState<'recipe' | 'pours'>('recipe')
   // Fixed when the screen opens, so the recipe does not change under you at midnight.
   const [today] = useState(() => toISODate(new Date()))
 
@@ -122,6 +123,20 @@ export function RecipePage() {
         <PourRing pours={recipe.pours} caption={`${recipe.pours.length} pours`} />
       </div>
 
+      <div className="mt-4 flex justify-center">
+        <SegmentedControl
+          label="Recipe view"
+          options={[
+            { value: 'recipe', label: 'Recipe' },
+            { value: 'pours', label: 'Pours' },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+      </div>
+
+      {view === 'recipe' ? (
+        <>
       <dl className="mt-4 grid grid-cols-3 gap-2" aria-label="Recipe">
         <Spec label="Coffee" value={`${recipe.doseG} g`} edited={isOverridden('doseG')} onEdit={() => setEditing('dose')} />
         <Spec label="Water" value={`${recipe.waterG} g`} edited={isOverridden('waterG') || isOverridden('pours')} onEdit={() => setEditing('water')} />
@@ -134,12 +149,10 @@ export function RecipePage() {
         </div>
       </dl>
 
-      <section aria-label="Grind" className="squircle mt-3 rounded-4xl bg-soft px-5 py-4">
-        <button type="button" onClick={() => setEditing('grind')} aria-label="Edit grind" className="flex w-full items-center gap-1.5 text-left text-xs text-muted">
-          Grind{myGrinder ? ` · ${grinderName(myGrinder.grinder)}` : ''}
-          {isOverridden('grindUm') && <span className="size-1.5 rounded-full bg-accent" aria-hidden />}
-          <span className="ml-auto">Edit</span>
-        </button>
+      <section aria-label="Grind" className="squircle relative mt-3 rounded-4xl bg-soft px-5 py-4 active:scale-[0.99]">
+        <button type="button" onClick={() => setEditing('grind')} aria-label="Edit grind" className="absolute inset-0 rounded-4xl" />
+        <p className="text-xs text-muted">Grind{myGrinder ? ` · ${grinderName(myGrinder.grinder)}` : ''}</p>
+        {isOverridden('grindUm') && <span className="absolute top-4 right-5 size-1.5 rounded-full bg-accent" aria-hidden />}
         {converted && myGrinder ? (
           <>
             <p className="num mt-1 text-2xl">
@@ -162,7 +175,7 @@ export function RecipePage() {
             {myGrinder ? (
               <p className="mt-1 text-xs text-muted">We can't convert to {grinderName(myGrinder.grinder)} yet, so use the size as a guide.</p>
             ) : (
-              <Link to="/profile" className="mt-2 inline-block text-sm text-accent underline">
+              <Link to="/profile" className="relative mt-2 inline-block text-sm text-accent underline">
                 Add your grinder to see clicks
               </Link>
             )}
@@ -192,6 +205,8 @@ export function RecipePage() {
         </div>
       </div>
 
+        </>
+      ) : (
       <section aria-label="Pours" className="mt-4">
         <div className="flex items-center justify-between px-2">
           <h2 className="text-xs font-medium text-muted">Pours{isOverridden('pours') ? ' · yours' : ''}</h2>
@@ -211,6 +226,7 @@ export function RecipePage() {
         </ol>
         <p className="mt-2 px-2 text-xs text-muted">Pour again once the bed has mostly drained. Times are a guide, not a clock.</p>
       </section>
+      )}
 
       <button type="button" onClick={() => setWhy(true)} className="mt-5 h-12 w-full rounded-full bg-soft active:scale-[0.98]">
         Why these numbers

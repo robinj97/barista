@@ -31,6 +31,8 @@ Status: **set-up and recipe built** (this doc). Brewing mode, logging and saving
 
 ## Editing the recipe
 
+The screen has two views behind a Recipe / Pours toggle under the ring: Recipe (values, grind, cups) and Pours (the schedule and its editor). A swipe between pages was rejected: it is not discoverable, collides with the iOS back-swipe and with sheets and sliders. Every value card, including the grind card, is tappable.
+
 Tap a value to edit it in a sheet (steppers or type; applies on Done; "Back to the suggestion" puts that value back). Edited values get a dot and the pill reads "Your edits · started from a suggestion". "Reset all to the suggestion" clears every edit. The engine still builds the rest around your numbers (`engine/overrides.ts`), and "Why these numbers" lists what you set as "You set this". Limits guard against typos only (coffee 5 to 60 g, water 30 to 1500 g, ratio 1:8 to 1:30, 50 to 100 °C, up to 12 pours).
 
 How the numbers link (`src/brew/edits.ts`):
