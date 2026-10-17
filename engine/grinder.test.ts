@@ -138,6 +138,74 @@ describe('convertSetting', () => {
   })
 })
 
+describe('confidence', () => {
+  it('is medium for in-range charted curves', () => {
+    expect(convertSetting(df54, 85, byModel('C40')).confidence).toBe('medium')
+    expect(settingToMicrons(df54, 78).confidence).toBe('medium')
+  })
+
+  it('is low whenever the answer is extrapolated or clamped', () => {
+    expect(convertSetting(df54, 76, byModel('C40')).confidence).toBe('low')
+    expect(settingToMicrons(df54, 90).confidence).toBe('low')
+    const maxa = { ...byModel('MAXA'), points: [{ setting: 10, microns: 400 }, { setting: 20, microns: 800 }] }
+    expect(micronsToSetting(maxa, 5000).confidence).toBe('low')
+  })
+
+  it('is low when either grinder only has estimated points', () => {
+    const k7 = byModel('K7')
+    expect(settingToMicrons(k7, 60).confidence).toBe('low')
+    expect(convertSetting(df54, 85, k7).confidence).toBe('low')
+    expect(convertSetting(k7, 60, df54).confidence).toBe('low')
+  })
+
+  it('is high only when every point was learned', () => {
+    const learned: GrinderModel = {
+      id: 'l', brand: 'L', model: 'Learned', unitLabel: 'clicks', step: 1,
+      points: [{ setting: 10, microns: 400, source: 'learned' }, { setting: 20, microns: 800, source: 'learned' }],
+    }
+    expect(settingToMicrons(learned, 15).confidence).toBe('high')
+    expect(convertSetting(learned, 15, learned).confidence).toBe('high')
+    expect(convertSetting(learned, 18, df54).confidence).toBe('medium') // 720 um is inside the DF54 range
+  })
+})
+
+describe('Kingrinder K7 (estimated)', () => {
+  const k7 = byModel('K7')
+
+  it('follows size = 15 um * (clicks - 15)', () => {
+    expect(settingToMicrons(k7, 60).microns).toBe(675)
+    expect(settingToMicrons(k7, 80).microns).toBe(975)
+    expect(settingToMicrons(k7, 15).microns).toBe(0)
+  })
+
+  it('puts a DF54 85 (850 um) recipe at about 72 clicks, mid pour-over band', () => {
+    const result = convertSetting(df54, 85, k7)
+    expect(result.setting).toBe(72)
+    expect(result.setting).toBeGreaterThanOrEqual(60)
+    expect(result.setting).toBeLessThanOrEqual(80)
+    expect(result.extrapolated).toBe(false)
+  })
+
+  it('maps the manual\'s method bands to sensible sizes', () => {
+    const size = (clicks: number) => settingToMicrons(k7, clicks).microns
+    expect(size(30)).toBeGreaterThanOrEqual(200)   // espresso band starts
+    expect(size(40)).toBeLessThanOrEqual(400)      // espresso band ends
+    expect(size(60)).toBeGreaterThanOrEqual(600)   // pour-over band starts
+    expect(size(80)).toBeLessThanOrEqual(1000)     // pour-over band ends
+  })
+
+  it('never suggests a setting below the 15-click safety floor', () => {
+    const result = micronsToSetting(k7, 50, 100) // offset pushes the target below the burrs touching
+    expect(result.setting).toBe(15)
+    expect(result.clamped).toBe(true)
+    expect(result.confidence).toBe('low')
+  })
+
+  it('does not report negative particle sizes below the floor', () => {
+    expect(settingToMicrons(k7, 10).microns).toBe(0)
+  })
+})
+
 describe('bad calibration', () => {
   const broken = (points: GrinderModel['points']): GrinderModel => ({
     id: 'x', brand: 'X', model: 'Broken', unitLabel: 'clicks', step: 1, points,

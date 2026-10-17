@@ -198,7 +198,7 @@ The schema above is implemented in `supabase/migrations/` and applied to the Sup
 - `recipe_versions` has no client `update` or `delete` privilege and a trigger that rejects updates, so snapshots are immutable (the trigger applies to every role).
 - `brews` is insert-only for the parameters that were brewed. After insert, clients may update only `actual_time_s`, `yield_ml`, `feedback`, `tuning`, `change_applied` and `outcome_improved`. A brew can only reference the user's own bag and their own recipe versions (fork a friend's recipe first).
 - Catalogue rows (`beans`, `filters`) record `created_by` and cannot be edited or deleted by clients. `match_key` is a generated column; beans have a trigram index for "did you mean" matching, filters have a unique `(match_key, size)`.
-- Grinders and calibration data are curated by migrations. The seed (eleven grinders, six with calibration) is in `*_grinder_seed*.sql`; `grinders.setting_step` records the smallest adjustment. See `grinders.md` for provenance and caveats.
+- Grinders and calibration data are curated by migrations. The seed (eleven grinders, seven with calibration; the K7 curve is estimated) is in `*_grinder_seed*.sql`; `grinders.setting_step` records the smallest adjustment. See `grinders.md` for provenance and caveats.
 - `supabase/tests/rls.test.sql` checks the policies with three simulated users inside one rolled-back transaction.
 
 ### Invariants

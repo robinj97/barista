@@ -9,10 +9,21 @@
  * grinders only have a handful of points. Callers should surface that.
  */
 
+/**
+ * Where a calibration point came from. `estimated` means we inferred it (for example from a
+ * spec sheet plus method recommendations) and nobody has measured it.
+ */
+export type CalibrationSource = 'manufacturer' | 'chart' | 'learned' | 'estimated'
+
 export interface CalibrationPoint {
   setting: number
   microns: number
+  /** Defaults to 'chart' when omitted. */
+  source?: CalibrationSource
 }
+
+/** How much to trust a result. The UI should show 'low' as a rough estimate. */
+export type Confidence = 'low' | 'medium' | 'high'
 
 export interface GrinderModel {
   id: string
@@ -37,6 +48,7 @@ export interface MicronsResult {
   microns: number
   /** True when the setting lies outside the calibrated range and was extrapolated. */
   extrapolated: boolean
+  confidence: Confidence
 }
 
 export interface SettingResult {
@@ -47,6 +59,7 @@ export interface SettingResult {
   extrapolated: boolean
   /** True when the setting was clamped to the grinder's min/max. */
   clamped: boolean
+  confidence: Confidence
 }
 
 export function isCalibrated(grinder: GrinderModel): boolean {
@@ -72,6 +85,20 @@ function curve(grinder: GrinderModel): CalibrationPoint[] {
     }
   }
   return points
+}
+
+const RANK: Record<Confidence, number> = { low: 0, medium: 1, high: 2 }
+
+function lowest(a: Confidence, b: Confidence): Confidence {
+  return RANK[a] <= RANK[b] ? a : b
+}
+
+/** Trust in a grinder's curve: estimated points are low, all-learned points are high. */
+function curveConfidence(grinder: GrinderModel): Confidence {
+  const sources = grinder.points.map((point) => point.source ?? 'chart')
+  if (sources.includes('estimated')) return 'low'
+  if (sources.every((source) => source === 'learned')) return 'high'
+  return 'medium'
 }
 
 /** Index of the segment [i, i+1] to use for a value, using end segments to extrapolate. */
@@ -100,9 +127,12 @@ export function settingToMicrons(grinder: GrinderModel, setting: number, offsetU
   const a = points[i]!
   const b = points[i + 1]!
   const t = (setting - a.setting) / (b.setting - a.setting)
+  const extrapolated = setting < first.setting || setting > last.setting
   return {
-    microns: a.microns + t * (b.microns - a.microns) + offsetUm,
-    extrapolated: setting < first.setting || setting > last.setting,
+    // Particles cannot be smaller than nothing, even where a line is extended past the burrs touching.
+    microns: Math.max(0, a.microns + t * (b.microns - a.microns) + offsetUm),
+    extrapolated,
+    confidence: extrapolated ? 'low' : curveConfidence(grinder),
   }
 }
 
@@ -135,6 +165,7 @@ export function micronsToSetting(grinder: GrinderModel, microns: number, offsetU
     microns: settingToMicrons(grinder, setting, offsetUm).microns,
     extrapolated,
     clamped,
+    confidence: extrapolated || clamped ? 'low' : curveConfidence(grinder),
   }
 }
 
@@ -152,5 +183,9 @@ export function convertSetting(
 ): SettingResult {
   const source = settingToMicrons(from, fromSetting, fromOffsetUm)
   const result = micronsToSetting(to, source.microns, toOffsetUm)
-  return { ...result, extrapolated: result.extrapolated || source.extrapolated }
+  return {
+    ...result,
+    extrapolated: result.extrapolated || source.extrapolated,
+    confidence: lowest(result.confidence, source.confidence),
+  }
 }

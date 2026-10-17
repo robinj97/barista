@@ -83,5 +83,20 @@ export const GRINDER_SEED: GrinderModel[] = [
   { id: 'timemore-bricks-01s', brand: 'Timemore', model: 'Bricks 01S', unitLabel: 'steps', step: 1, points: [] },
   { id: 'lopder-maxa', brand: 'Lopder', model: 'MAXA', unitLabel: 'clicks', step: 1, max: 60, points: [] },
   { id: 'kingrinder-k2', brand: 'Kingrinder', model: 'K2', unitLabel: 'clicks', step: 1, points: [] },
-  { id: 'kingrinder-k7', brand: 'Kingrinder', model: 'K7', unitLabel: 'clicks', step: 1, points: [] },
+  // K7: 100 clicks per turn, counted from the finest stop; the manual says never grind below
+  // 15 clicks. Points are ESTIMATED from the ~15 um/click spec with the size scale starting at
+  // 15 clicks (size = 15 * (clicks - 15)), which matches the manual's per-method click bands.
+  // Replace with measured pairs when we have them. See docs/grinders.md.
+  {
+    id: 'kingrinder-k7',
+    brand: 'Kingrinder',
+    model: 'K7',
+    unitLabel: 'clicks',
+    step: 1,
+    min: 15,
+    points: [
+      { setting: 30, microns: 225, source: 'estimated' },
+      { setting: 80, microns: 975, source: 'estimated' },
+    ],
+  },
 ]

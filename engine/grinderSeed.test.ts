@@ -27,4 +27,12 @@ describe('grinder seed stays in sync with the migration', () => {
     const rows = [...sql.matchAll(/\('[^']+', '[^']+', \d+, \d+\)/g)].map((m) => m[0])
     expect(rows.sort()).toEqual(expected.sort())
   })
+
+  it('marks the K7 points as estimated and enforces the 15-click floor', () => {
+    const k7 = GRINDER_SEED.find((g) => g.model === 'K7')!
+    expect(k7.min).toBe(15)
+    expect(k7.points.every((p) => p.source === 'estimated')).toBe(true)
+    expect(sql).toContain("min_setting = 15 where brand = 'Kingrinder' and model = 'K7'")
+    expect(sql).toMatch(/select g\.id, v\.setting, v\.microns, 'estimated'/)
+  })
 })
