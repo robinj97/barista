@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { micronsToSetting, settingToMicrons } from '../../engine/grinder.ts'
 import { suggest } from '../../engine/suggest.ts'
@@ -15,8 +15,7 @@ import { EditSheet } from '../brew/EditSheet'
 import { clearEdits, doseFor, hasEdits, resetEdit, setCups, setDose, setGrind, setPours, setRatio, setTemp, setTime, setWater } from '../brew/edits'
 import { GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices, type RecipeEdits } from '../brew/params'
 import { PoursSheet } from '../brew/PoursSheet'
-import { currentIndex, phaseAt } from '../brew/progress'
-import { finishSession, readSession, clearSession, elapsedS, startSession, untimedSession, writeSession, type BrewSession } from '../brew/session'
+import { finishSession, readSession, clearSession, startSession, untimedSession, writeSession, type BrewSession } from '../brew/session'
 import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { useOwnPriors } from '../brew/useOwnPriors'
@@ -82,6 +81,10 @@ export function RecipePage() {
   const now = useNow(brewing)
   useWakeLock(brewing)
   const [view, setView] = useState<'recipe' | 'pours'>(brewing ? 'pours' : 'recipe')
+  // Each view starts at its top, not wherever the other one was scrolled to.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [view])
   // Fixed when the screen opens, so the recipe does not change under you at midnight.
   const [today] = useState(() => toISODate(new Date()))
   const own = useOwnPriors(today)
@@ -180,21 +183,22 @@ export function RecipePage() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setWhy(true)}
-        className="mx-auto mt-5 flex h-9 items-center rounded-full bg-accent-soft px-4 text-sm text-accent"
-      >
-        {out.overridden.length > 0 ? 'Your edits · started from a suggestion' : CONFIDENCE_TEXT[out.confidence.level]} ›
-      </button>
+      {!brewing && (
+        <button
+          type="button"
+          onClick={() => setWhy(true)}
+          className="mx-auto mt-5 flex h-9 items-center rounded-full bg-accent-soft px-4 text-sm text-accent"
+        >
+          {out.overridden.length > 0 ? 'Your edits · started from a suggestion' : CONFIDENCE_TEXT[out.confidence.level]} ›
+        </button>
+      )}
 
-      <div className="mt-4">
-        {brewing && session ? (
-          <PourRing pours={recipe.pours} current={currentIndex(phaseAt(recipe.pours, elapsedS(session, now)), recipe.pours)} />
-        ) : (
+      {/* The ring is only on the Recipe view: on the Pours view the space is for the pours and the buttons. */}
+      {view === 'recipe' && !brewing && (
+        <div className="mt-4">
           <PourRing pours={recipe.pours} caption={`${recipe.pours.length} pours`} />
-        )}
-      </div>
+        </div>
+      )}
 
       {unfinished && (
         <Link to="/brew/log" className="mt-4 grid h-12 place-items-center rounded-full bg-accent-soft text-sm text-accent">
@@ -310,25 +314,25 @@ export function RecipePage() {
             </li>
           ))}
         </ol>
-        <p className="mt-2 px-2 text-xs text-muted">Pour again once the bed has mostly drained. Times are a guide, not a clock.</p>
-        <button type="button" onClick={startTimer} className="mt-4 h-14 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
-          Start timer
-        </button>
-        <p className="mt-2 text-center text-xs text-muted">Tap as the first pour begins. The rest follows the schedule.</p>
-        <button type="button" onClick={finishUntimed} className="mt-3 h-12 w-full rounded-full bg-soft active:scale-[0.98]">
-          Finished brewing
-        </button>
-        <p className="mt-2 text-center text-xs text-muted">Not using the timer? Tap when you're done.</p>
+        <p className="mt-2 px-2 text-xs text-muted">Times are a guide, not a clock.</p>
+        <div className="mt-4 space-y-3">
+          <button type="button" onClick={startTimer} className="h-14 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
+            Start timer
+          </button>
+          <button type="button" onClick={finishUntimed} className="h-14 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
+            Finished brewing
+          </button>
+        </div>
       </section>
       )}
 
-      {!brewing && (
+      {!brewing && view === 'recipe' && (
         <button type="button" onClick={() => setWhy(true)} className="mt-3 h-12 w-full rounded-full bg-soft active:scale-[0.98]">
           Why these numbers
         </button>
       )}
 
-      {hasEdits(choices) && !brewing && (
+      {hasEdits(choices) && !brewing && view === 'recipe' && (
         <button type="button" onClick={() => apply(clearEdits(choices))} className="mt-2 h-11 w-full rounded-full text-sm text-muted">
           Reset all to the suggestion
         </button>

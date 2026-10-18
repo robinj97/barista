@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { pendingCount } from '../data/outbox'
 import { makeBag, renderApp } from '../test/renderApp'
 
@@ -19,6 +19,21 @@ async function brew(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: 'Drawdown finished' }))
   await screen.findByRole('heading', { name: 'How did it go?' })
 }
+
+describe('The Pours view', () => {
+  it('starts at the top, and leaves out the ring and the recipe-only buttons so the actions fit', async () => {
+    const user = userEvent.setup()
+    const scroll = vi.spyOn(window, 'scrollTo')
+    renderApp(at, { mock })
+    await user.click(await screen.findByRole('button', { name: 'Start brewing' }))
+    expect(await screen.findByRole('region', { name: 'Pours' })).toBeInTheDocument()
+    expect(scroll).toHaveBeenCalledWith({ top: 0 })
+    expect(screen.queryByText('5 pours')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Why these numbers' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Start timer' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Finished brewing' })).toBeInTheDocument()
+  })
+})
 
 describe('Brewing', () => {
   it('starts from the recipe, takes you to the pours and runs the timer', async () => {
