@@ -281,7 +281,7 @@ export type { ScannedBag } from '../../supabase/functions/scan-bag/label'
 
 /** Why a bag photo could not be scanned, so the app can say something useful. */
 export class ScanError extends Error {
-  readonly reason: 'unreadable' | 'busy' | 'failed'
+  readonly reason: 'unreadable' | 'busy' | 'limit' | 'failed'
   constructor(reason: ScanError['reason']) {
     super(`scan_${reason}`)
     this.reason = reason

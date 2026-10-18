@@ -91,3 +91,14 @@ describe('Scanned roast date', () => {
     expect(screen.getByDisplayValue('01/10/2026')).toBeInTheDocument()
   })
 })
+
+describe('Daily scan limit', () => {
+  it('says when today\'s scans are used up', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans', { mock: { scan: new ScanError('limit') } })
+    await scanBag(user)
+
+    expect(await screen.findByText(/That's your 10 scans for today/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Search roaster or bean')).toBeInTheDocument()
+  })
+})

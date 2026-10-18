@@ -24,6 +24,7 @@ type Step =
 const SCAN_FAILED: Record<ScanError['reason'], string> = {
   unreadable: "Couldn't read that label. Try again closer and in good light, or search instead.",
   busy: 'Scanning is busy right now. Try again in a minute, or search instead.',
+  limit: "That's your 10 scans for today. Search or add it yourself; scans reset tomorrow.",
   failed: "Couldn't scan just now. Search for it, or add it yourself.",
 }
 
@@ -140,6 +141,8 @@ export function AddBagSheet({ open, onOpenChange }: AddBagSheetProps) {
     <Sheet
       open={open}
       onOpenChange={(next) => {
+        // A scan still running when the sheet closes or reopens must not change the step.
+        scanAttempt.current++
         if (next) {
           setStep({ name: 'search' })
           setQuery('')

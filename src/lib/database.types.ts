@@ -482,6 +482,24 @@ export type Database = {
           },
         ]
       }
+      scan_usage: {
+        Row: {
+          day: string
+          scans: number
+          user_id: string
+        }
+        Insert: {
+          day: string
+          scans?: number
+          user_id: string
+        }
+        Update: {
+          day?: string
+          scans?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_beans: {
         Row: {
           bean_id: string
@@ -661,6 +679,7 @@ export type Database = {
         Returns: string
       }
       add_my_filter: { Args: { target: string }; Returns: undefined }
+      claim_scan: { Args: never; Returns: number }
       create_invite: { Args: never; Returns: string }
       remove_my_filter: { Args: { target: string }; Returns: undefined }
       search_beans: {

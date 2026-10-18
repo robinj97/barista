@@ -100,15 +100,19 @@ function isoDay(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-/** A real calendar date in the last two years, or null. Bags are never roasted in the future. */
+/**
+ * A real calendar date in the last two years, or null. Bags are never roasted in the future, but
+ * the server runs on UTC, so "today" where the person is can already be tomorrow here.
+ */
 function roastDate(value: unknown, today: Date): string | null {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
   const [year, month, day] = value.split('-').map(Number)
   const date = new Date(year, month - 1, day)
   if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null
   const oldest = new Date(today.getFullYear() - 2, today.getMonth(), today.getDate())
+  const latest = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
   const iso = isoDay(date)
-  return iso > isoDay(today) || iso < isoDay(oldest) ? null : iso
+  return iso > isoDay(latest) || iso < isoDay(oldest) ? null : iso
 }
 
 /**

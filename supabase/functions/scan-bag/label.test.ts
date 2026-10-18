@@ -60,7 +60,8 @@ describe('readScan', () => {
   })
 
   it('never accepts a roast date in the future or over two years ago', () => {
-    expect(readScan(answer({ roast_date: '2026-10-19' }), today).roastDate).toBeNull()
+    expect(readScan(answer({ roast_date: '2026-10-20' }), today).roastDate).toBeNull()
+    expect(readScan(answer({ roast_date: '2026-10-19' }), today).roastDate).toBe('2026-10-19') // ahead of UTC
     expect(readScan(answer({ roast_date: '2024-10-17' }), today).roastDate).toBeNull()
     expect(readScan(answer({ roast_date: '2026-10-18' }), today).roastDate).toBe('2026-10-18')
   })

@@ -222,8 +222,11 @@ export const supabaseApi: Api = {
   async scanBag(imageBase64): Promise<ScannedBag> {
     const { data, error } = await supabase.functions.invoke<ScannedBag>('scan-bag', { body: { image: imageBase64 } })
     if (error) {
-      const status = error instanceof FunctionsHttpError ? (error.context as Response).status : 0
-      throw new ScanError(status === 422 ? 'unreadable' : status === 429 ? 'busy' : 'failed')
+      if (!(error instanceof FunctionsHttpError)) throw new ScanError('failed')
+      const response = error.context as Response
+      const code = await response.json().then((body: { error?: string }) => body?.error, () => undefined)
+      if (code === 'daily_limit') throw new ScanError('limit')
+      throw new ScanError(response.status === 422 ? 'unreadable' : response.status === 429 ? 'busy' : 'failed')
     }
     if (!data) throw new ScanError('failed')
     return data
