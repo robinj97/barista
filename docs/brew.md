@@ -104,6 +104,10 @@ Your locked recipe for a bean is what the next suggestion starts from: its tempe
 
 The **Library** tab lists the recipes you have locked in, across all beans, newest first: bean, stars, how many times you brewed it (all versions), dose, water and temperature. It differs from the bean page in that a recipe stays here when its bag is empty or gone, and it is where archiving lives. Tap a row to start a brew from it (the same pre-fill as the bean page). **Archive** asks first; it hides the recipe from friends and your lists but keeps your brews (the row is flagged `archived_at`, never deleted). A **Mine / Friends** switch will come with the friends feature.
 
+## The gear line
+
+On the set-up screen your gear is one slim line (**Gear · Kingrinder K7 · CAFEC T-90 · 02**, or "· No filter") with a pencil, because it rarely changes and the gear of your last brew is already chosen. Tapping it opens a **Your gear** sheet: a Grinder list (with the "Rough estimate" note where it applies) and a Filter list (with **No filter**), each with the current choice marked, **Add a grinder** / **Add a filter**, and **Done**. Plain lists in one sheet, no pop-ups inside pop-ups. With no grinder yet, the line is a prompt to add one (the grind needs it to show clicks). The choice still applies to this brew and lives in the page address.
+
 ## Brew starts where you left off
 
 With nothing chosen in the link, Brew opens on the **bean you brewed most recently** (your most recently used working recipe whose bag is not finished), and uses the **grinder and filter of your last brew** instead of "first grinder, default filter". With no history it falls back to the newest bag, your first grinder and your default filter. "Start brewing" saves the gear actually in use with the working recipe so the next brew picks it up (it follows you across devices, since it lives with the recipe). Finished bags are never picked on their own and are left out of the bean picker.

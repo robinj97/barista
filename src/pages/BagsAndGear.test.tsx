@@ -106,8 +106,9 @@ describe('Brew starts where you left off', () => {
       },
     })
     const gear = await screen.findByRole('region', { name: 'Your gear' })
-    expect(await within(gear).findByRole('button', { name: /Grinder/ })).toHaveTextContent('K7')
-    expect(within(gear).getByRole('button', { name: /Filter/ })).toHaveTextContent('V60')
+    const line = await within(gear).findByRole('button', { name: /Edit your gear/ })
+    expect(line).toHaveTextContent('Kingrinder K7')
+    expect(line).toHaveTextContent('V60')
   })
 
   it('saves the gear you brewed with, so the next brew starts on it', async () => {

@@ -91,14 +91,13 @@ describe('Brew: set up', () => {
     const gear = await screen.findByRole('region', { name: 'Your gear' })
     await user.click(within(gear).getByRole('button', { name: 'Add your grinder' }))
     await user.click(await screen.findByRole('button', { name: /Turin DF54/ }))
-    expect(await within(await screen.findByRole('region', { name: 'Your gear' })).findByRole('button', { name: /Grinder/ })).toHaveTextContent('Turin DF54')
+    expect(await within(await screen.findByRole('region', { name: 'Your gear' })).findByRole('button', { name: /Edit your gear/ })).toHaveTextContent('Turin DF54')
   })
 
-  it('shows your grinder and default filter', async () => {
+  it('shows your grinder and default filter on one slim line', async () => {
     renderApp('/brew', { mock: { bags: [geisha], grinderIds: ['turin-df54'], filterIds: ['f-cafec-t90'] } })
     const gear = await screen.findByRole('region', { name: 'Your gear' })
-    expect(await within(gear).findByRole('button', { name: /Grinder/ })).toHaveTextContent('Turin DF54')
-    expect(within(gear).getByRole('button', { name: /Filter/ })).toHaveTextContent('CAFEC T-90')
+    expect(await within(gear).findByRole('button', { name: /Edit your gear/ })).toHaveTextContent('Turin DF54 · CAFEC T-90')
   })
 
   it('goes to the recipe for what you chose', async () => {
@@ -368,3 +367,59 @@ describe('Brew: editing the recipe', () => {
   })
 })
 
+
+describe('Brew: the gear line', () => {
+  const mock = { bags: [geisha], grinderIds: ['turin-df54', 'kingrinder-k7'], filterIds: ['f-cafec-t90'] }
+  const line = async () => within(await screen.findByRole('region', { name: 'Your gear' })).findByRole('button', { name: /Edit your gear/ })
+
+  it('is one short line, not two big rows', async () => {
+    renderApp('/brew', { mock })
+    expect(await line()).toHaveTextContent('Gear')
+    expect(screen.queryByRole('button', { name: /^Grinder/ })).not.toBeInTheDocument()
+  })
+
+  it('says No filter when you have none selected', async () => {
+    renderApp('/brew', { mock: { ...mock, filterIds: [] } })
+    expect(await line()).toHaveTextContent('· No filter')
+  })
+
+  it('opens the lists, shows what each grinder is good for, and picks one', async () => {
+    const user = userEvent.setup()
+    renderApp('/brew', { mock })
+    await user.click(await line())
+    const grinders = await screen.findByRole('radiogroup', { name: 'Grinder' })
+    // Your grinders are listed alphabetically; the first is chosen until you pick another.
+    expect(within(grinders).getByRole('radio', { name: /Kingrinder K7/ })).toBeChecked()
+    expect(within(grinders).getByRole('radio', { name: /Kingrinder K7/ })).toHaveTextContent('Rough estimate')
+    await user.click(within(grinders).getByRole('radio', { name: /Turin DF54/ }))
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(await line()).toHaveTextContent('Turin DF54')
+  })
+
+  it('can switch the filter off', async () => {
+    const user = userEvent.setup()
+    renderApp('/brew', { mock })
+    await user.click(await line())
+    await user.click(within(await screen.findByRole('radiogroup', { name: 'Filter' })).getByRole('radio', { name: 'No filter' }))
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(await line()).toHaveTextContent('· No filter')
+  })
+
+  it('carries what you picked to the recipe', async () => {
+    const user = userEvent.setup()
+    renderApp('/brew', { mock })
+    await user.click(await line())
+    await user.click(within(await screen.findByRole('radiogroup', { name: 'Grinder' })).getByRole('radio', { name: /Turin DF54/ }))
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await user.click(screen.getByRole('link', { name: 'Suggest a recipe' }))
+    expect(await within(await screen.findByRole('region', { name: 'Grind' })).findByText(/Turin DF54/)).toBeInTheDocument()
+  })
+
+  it('lets you add a filter from the sheet', async () => {
+    const user = userEvent.setup()
+    renderApp('/brew', { mock })
+    await user.click(await line())
+    await user.click(await screen.findByRole('button', { name: 'Add a filter' }))
+    expect(await screen.findByLabelText('Search filters')).toBeInTheDocument()
+  })
+})
