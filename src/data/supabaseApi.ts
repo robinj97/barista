@@ -199,7 +199,7 @@ export const supabaseApi: Api = {
   async listMyBags(): Promise<Bag[]> {
     const { data, error } = await supabase
       .from('user_beans')
-      .select('id, roast_date, grams_remaining, status, created_at, beans(*)')
+      .select('id, roast_date, grams_remaining, status, created_at, finished_at, beans(*)')
       .order('created_at', { ascending: false })
     fail(error)
     return (
@@ -209,6 +209,7 @@ export const supabaseApi: Api = {
         grams_remaining: number | null
         status: string
         created_at: string
+        finished_at: string | null
         beans: BeanRow
       }[]
     ).map((row) => ({
@@ -218,6 +219,7 @@ export const supabaseApi: Api = {
       gramsRemaining: row.grams_remaining,
       status: row.status as BagStatus,
       createdAt: row.created_at,
+      finishedAt: row.finished_at,
     }))
   },
 
@@ -282,6 +284,8 @@ export const supabaseApi: Api = {
     const row = {
       ...(patch.gramsRemaining !== undefined ? { grams_remaining: patch.gramsRemaining } : {}),
       ...(patch.status !== undefined ? { status: patch.status } : {}),
+      ...(patch.roastDate !== undefined ? { roast_date: patch.roastDate } : {}),
+      ...(patch.finishedAt !== undefined ? { finished_at: patch.finishedAt } : {}),
     }
     const { error } = await supabase.from('user_beans').update(row).eq('id', bagId)
     fail(error)
@@ -394,6 +398,16 @@ export const supabaseApi: Api = {
         return { id, name: profile?.display_name ?? 'Barista user', avatarUrl: profile?.avatar_url ?? null, since: row.created_at }
       })
       .sort((a, b) => a.name.localeCompare(b.name))
+  },
+
+  async removeFriend(friendId) {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    fail(userError)
+    const me = userData.user.id
+    // A friendship is one row with the smaller id first.
+    const [a, b] = me < friendId ? [me, friendId] : [friendId, me]
+    const { error } = await supabase.from('friendships').delete().eq('user_a', a).eq('user_b', b)
+    fail(error)
   },
 
   async listMyInvites(): Promise<PendingInvite[]> {

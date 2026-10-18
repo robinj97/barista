@@ -20,7 +20,7 @@ const session = {
  */
 const SAMPLE_BAGS: Bag[] = [
   { id: 'bag-1', bean: SEED_BEANS[0]!, roastDate: '2026-10-08', gramsRemaining: 142, status: 'locked', createdAt: '2026-10-09T10:00:00Z' },
-  { id: 'bag-2', bean: SEED_BEANS[1]!, roastDate: '2026-10-12', gramsRemaining: 220, status: 'dialing_in', createdAt: '2026-10-13T10:00:00Z' },
+  { id: 'bag-2', bean: SEED_BEANS[1]!, roastDate: '2026-10-12', gramsRemaining: 48, status: 'dialing_in', createdAt: '2026-10-13T10:00:00Z' },
   { id: 'bag-3', bean: SEED_BEANS[2]!, roastDate: null, gramsRemaining: 250, status: 'new', createdAt: '2026-10-14T10:00:00Z' },
 ]
 

@@ -3,7 +3,8 @@ import { Avatar } from '../components/Avatar'
 import { Sheet } from '../components/Sheet'
 import { useToast } from '../components/toastContext'
 import { formatDMY, toISODate } from '../beans/dates'
-import { useCancelInvite, useCreateInvite, useFriends, useMyInvites } from '../data/hooks'
+import { useCancelInvite, useCreateInvite, useFriends, useMyInvites, useRemoveFriend } from '../data/hooks'
+import type { Friend } from '../data/types'
 import { PageHeader } from '../layout/PageHeader'
 
 const DAY_MS = 24 * 3600 * 1000
@@ -22,7 +23,9 @@ export function FriendsPage() {
   const invites = useMyInvites()
   const createInvite = useCreateInvite()
   const cancelInvite = useCancelInvite()
+  const removeFriend = useRemoveFriend()
   const toast = useToast()
+  const [removing, setRemoving] = useState<Friend | null>(null)
   const [link, setLink] = useState<string | null>(null)
   const [now] = useState(() => Date.now())
 
@@ -109,12 +112,37 @@ export function FriendsPage() {
                     <span className="block truncate">{friend.name}</span>
                     <span className="block text-xs text-muted">Friends since {formatDMY(toISODate(new Date(friend.since)))}</span>
                   </span>
+                  <button type="button" onClick={() => setRemoving(friend)} aria-label={`Remove ${friend.name}`} className="h-10 rounded-full px-3 text-sm text-muted">
+                    Remove
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </section>
       )}
+
+      <Sheet open={removing !== null} onOpenChange={(open) => !open && setRemoving(null)} title={`Remove ${removing?.name ?? 'this friend'}?`}>
+        <div className="px-3 pb-3">
+          <p className="px-1 text-sm text-muted">
+            You'll stop seeing each other's locked recipes. Recipes you've already brewed from theirs stay yours. To be friends again, one of you sends a new invite.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              const target = removing
+              setRemoving(null)
+              if (target) removeFriend.mutate(target.id, { onError: () => toast.show("Couldn't remove them. Check your connection and try again.") })
+            }}
+            className="mt-4 h-12 w-full rounded-full bg-ink font-medium text-bg"
+          >
+            Remove
+          </button>
+          <button type="button" onClick={() => setRemoving(null)} className="mt-2 h-11 w-full rounded-full text-sm text-muted">
+            Keep
+          </button>
+        </div>
+      </Sheet>
 
       <Sheet open={link !== null} onOpenChange={(open) => !open && setLink(null)} title="Your invite link">
         <div className="px-3 pb-3">

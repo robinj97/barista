@@ -114,6 +114,8 @@ export interface Api {
   /** Locks a brew in as your recipe. Idempotent for the same `brewId`. */
   lockRecipe(input: LockRecipeInput): Promise<void>
   listFriends(): Promise<Friend[]>
+  /** Ends a friendship, for both of you. Recipes you already brewed from theirs stay yours. */
+  removeFriend(friendId: string): Promise<void>
   /** Invite links you made that nobody has used yet and that have not expired. */
   listMyInvites(): Promise<PendingInvite[]>
   /** Makes a single-use link token. It is shown once: only a hash is stored. */
@@ -328,11 +330,15 @@ export interface Bag {
   gramsRemaining: number | null
   status: BagStatus
   createdAt: string
+  /** When you marked the bag finished. Finished bags are kept (their brews and recipes stay) but left out of the way. */
+  finishedAt?: string | null
 }
 
 export interface BagPatch {
-  gramsRemaining?: number
+  gramsRemaining?: number | null
+  roastDate?: string | null
   status?: BagStatus
+  finishedAt?: string | null
 }
 
 export interface NewBean {

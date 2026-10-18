@@ -5,31 +5,44 @@ import { eyebrow, matchesSearch, visibleNotes } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
 import { EmptyBeans } from '../beans/EmptyBeans'
 import { STATUS_LABELS } from '../beans/labels'
-import { useMyBags } from '../data/hooks'
+import { stockOf, stockText, usualDoseG } from '../beans/stock'
+import { useMyBags, useMyDrafts } from '../data/hooks'
 import type { BagStatus } from '../data/types'
+import { InstallPrompt } from '../install/InstallPrompt'
 import { PageHeader } from '../layout/PageHeader'
 
-type Filter = 'all' | BagStatus
+type Filter = 'all' | BagStatus | 'finished'
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'dialing_in', label: 'Dialing in' },
   { value: 'locked', label: 'Locked' },
+  { value: 'finished', label: 'Finished' },
 ]
 
 export function BeansPage() {
   const bags = useMyBags()
+  const drafts = useMyDrafts()
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [adding, setAdding] = useState(false)
 
   const all = bags.data ?? []
-  const visible = all.filter((bag) => (filter === 'all' || bag.status === filter) && matchesSearch(bag, search))
+  // Finished bags stay out of the way: they have their own filter and are not in All.
+  const inFilter = (bag: (typeof all)[number]) =>
+    filter === 'finished' ? !!bag.finishedAt : !bag.finishedAt && (filter === 'all' || bag.status === filter)
+  const visible = all.filter((bag) => inFilter(bag) && matchesSearch(bag, search))
   const searching = search.trim().length > 0
+  const lowStock = (bag: (typeof all)[number]) => {
+    const stock = stockOf(bag, usualDoseG(bag.bean.id, drafts.data))
+    return stock ? stockText(stock) : null
+  }
 
   return (
     <>
       <PageHeader title="Beans" />
+
+      <InstallPrompt />
 
       {bags.isPending && (
         <p role="status" className="mt-10 text-center text-sm text-muted">
@@ -109,8 +122,9 @@ export function BeansPage() {
                         {line && <span className="block truncate text-xs font-medium text-accent">{line}</span>}
                         <span className="block truncate font-medium">{bean.name}</span>
                         <span className="block truncate text-xs text-muted">
-                          {bean.roaster} · {STATUS_LABELS[bag.status]}
+                          {bean.roaster} · {bag.finishedAt ? 'Finished' : STATUS_LABELS[bag.status]}
                         </span>
+                        {lowStock(bag) && <span className="block truncate text-xs text-accent">{lowStock(bag)}</span>}
                         {notes.shown.length > 0 && (
                           <span className="mt-2 flex flex-wrap gap-1.5">
                             {notes.shown.map((note) => (

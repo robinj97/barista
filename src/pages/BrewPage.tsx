@@ -25,7 +25,7 @@ export function BrewPage() {
     // Edits belong to one bean's recipe, so a different bean starts from its own suggestion.
     setParams(toSearchParams({ ...choices, ...patch, ...(patch.bagId ? { edits: {} } : {}) }), { replace: true })
 
-  if (bags.isPending) {
+  if (bags.isPending || selection.drafts.isPending) {
     return (
       <>
         <PageHeader title="Brew" />
@@ -57,7 +57,7 @@ export function BrewPage() {
         <section aria-label="No beans yet" className="mt-16 flex flex-col items-center text-center">
           <h2 className="text-xl font-medium">Add a bean first</h2>
           <p className="mt-2 max-w-64 text-sm text-balance text-muted">
-            Pick a bean from your inventory to get a starting recipe.
+            {(bags.data?.length ?? 0) > 0 ? 'All your bags are marked finished. Add a new one to get a starting recipe.' : 'Pick a bean from your inventory to get a starting recipe.'}
           </p>
           <Link to="/beans" className="mt-6 grid h-12 place-items-center rounded-full bg-ink px-8 font-medium text-bg">
             Go to Beans
@@ -146,7 +146,7 @@ export function BrewPage() {
       <BagPickerSheet
         open={picking}
         onOpenChange={setPicking}
-        bags={bags.data ?? []}
+        bags={selection.active.some((b) => b.id === bag.id) ? selection.active : [bag, ...selection.active]}
         selectedId={bag.id}
         onPick={(next) => update({ bagId: next.id })}
       />

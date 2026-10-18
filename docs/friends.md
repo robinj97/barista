@@ -29,7 +29,10 @@ Status: **built.** Friends only ever see each other's *locked* recipes. They sho
 - **Suggestions:** for a bean where you have no recipe of your own, a friend's locked recipe for the same bean is the starting point (temperature and grind), with **medium** confidence, and the pill says whose: "Based on Sam's locked recipe". Your own locked recipe always wins; several friends use the middle value; friends' recipes for *other* beans count as similar-bean evidence, as the engine already supported. The engine reports where a start came from (`confidence.source`, `confidence.who`).
 - Not built: saving a copy with "reset to original" (decided against for now: brewing from their numbers makes them yours when you brew).
 
+## Removing a friend
+
+A **Remove** button on each friend, with a confirmation: you stop seeing each other's locked recipes, recipes you already brewed from theirs stay yours, and being friends again takes a new invite. Either person can end it, and it ends for both (`friendships` allows delete for both participants; tested in `supabase/tests/bags_friends.test.sql`). Their recipes leave your Library and suggestions at once.
+
 ## Next
 
-- Removing a friend.
 - Telling you when a friend locks a recipe for a bean you have.

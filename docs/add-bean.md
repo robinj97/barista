@@ -131,3 +131,13 @@ The shared catalogue keeps a single entry per coffee, in three layers:
 
 `src/beans/dedupe.ts` mirrors the key and the similarity for the dev preview and tests. Tests: `supabase/tests/dedupe.test.sql`, `src/beans/dedupe.test.ts` and `src/pages/BeanDedupe.test.tsx`. Merging two entries that were created before this rule is not needed (none existed) and is not built.
 The search box in the add-a-bag sheet is **not** focused when the sheet opens, so the keyboard does not cover the catalogue list; tap the box to type.
+
+## Managing a bag
+
+- **Edit** (on the bean page, under "Your bag"): fix the roast date (dd/mm/yyyy, not in the future, not over two years back) and how much is left, or **Mark as finished** / **Back in use**.
+- **Finished bags** (`user_beans.finished_at`) are kept, with their brews and recipes, but leave the **All** list and the Brew picker; the Beans page has a **Finished** filter to find them. Nothing is deleted.
+- **Low stock**: when what is left is under **three doses** of what you usually brew from that bean (the coffee in your last brew of it, else your working recipe, else 20 g), the card and bean page say "Running low · about 2 brews left", and "Empty" at 0 g. Nothing shows when the amount is not set. Each brew takes its dose out of the bag (see brew.md).
+
+## Installing on iPhone
+
+iOS has no install button of its own, so on an iPhone (or iPad) that has not installed the app, the **Beans** tab shows a card on first sign-in with the steps (Share, Add to Home Screen, Add), until you tap **Got it** (remembered on the device). It never shows once the app is opened from the Home Screen or on other devices. Detection is in `src/install/ios.ts`.
