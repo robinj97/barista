@@ -108,8 +108,35 @@ export interface Api {
   listMyRecipes(): Promise<LockedRecipe[]>
   /** Locks a brew in as your recipe. Idempotent for the same `brewId`. */
   lockRecipe(input: LockRecipeInput): Promise<void>
+  listFriends(): Promise<Friend[]>
+  /** Invite links you made that nobody has used yet and that have not expired. */
+  listMyInvites(): Promise<PendingInvite[]>
+  /** Makes a single-use link token. It is shown once: only a hash is stored. */
+  createInvite(): Promise<string>
+  cancelInvite(inviteId: string): Promise<void>
+  /** Who an invite link is from. Fails the same way for every bad link. */
+  peekInvite(token: string): Promise<InviterPreview>
+  acceptInvite(token: string): Promise<InviterPreview>
+
   /** Stops friends seeing a locked recipe and removes it from your lists. Your brews are kept. */
   archiveRecipe(recipeId: string): Promise<void>
+}
+
+export interface Friend {
+  id: string
+  name: string
+  avatarUrl: string | null
+  since: string
+}
+
+export interface PendingInvite {
+  id: string
+  expiresAt: string
+}
+
+export interface InviterPreview {
+  displayName: string
+  avatarUrl: string | null
 }
 
 export type Taste = 'good' | 'sour' | 'bitter' | 'weak' | 'heavy' | 'astringent' | 'flat'

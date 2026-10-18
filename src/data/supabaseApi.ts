@@ -13,6 +13,9 @@ import {
   type Bean,
   type BrewResult,
   type Draft,
+  type Friend,
+  type InviterPreview,
+  type PendingInvite,
   type LockedRecipe,
   type Method,
   type RecipeSnapshot,
@@ -349,5 +352,59 @@ export const supabaseApi: Api = {
       p_brewed_at: input.result.brewedAt,
     })
     fail(error)
+  },
+  async listFriends(): Promise<Friend[]> {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    fail(userError)
+    const me = userData.user.id
+    const { data: rows, error } = await supabase.from('friendships').select('user_a, user_b, created_at')
+    fail(error)
+    const others = rows.map((r) => (r.user_a === me ? r.user_b : r.user_a))
+    if (others.length === 0) return []
+    const { data: profiles, error: profileError } = await supabase.from('profiles').select('id, display_name, avatar_url').in('id', others)
+    fail(profileError)
+    return rows
+      .map((row) => {
+        const id = row.user_a === me ? row.user_b : row.user_a
+        const profile = profiles.find((p) => p.id === id)
+        return { id, name: profile?.display_name ?? 'Barista user', avatarUrl: profile?.avatar_url ?? null, since: row.created_at }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  },
+
+  async listMyInvites(): Promise<PendingInvite[]> {
+    const { data, error } = await supabase
+      .from('invites')
+      .select('token_hash, expires_at')
+      .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: false })
+    fail(error)
+    return data.map((row) => ({ id: row.token_hash, expiresAt: row.expires_at }))
+  },
+
+  async createInvite() {
+    const { data, error } = await supabase.rpc('create_invite')
+    fail(error)
+    return data
+  },
+
+  async cancelInvite(inviteId) {
+    const { error } = await supabase.rpc('cancel_invite', { p_token_hash: inviteId })
+    fail(error)
+  },
+
+  async peekInvite(token): Promise<InviterPreview> {
+    const { data, error } = await supabase.rpc('peek_invite', { p_token: token })
+    fail(error)
+    const preview = data as { display_name: string; avatar_url: string | null }
+    return { displayName: preview.display_name, avatarUrl: preview.avatar_url }
+  },
+
+  async acceptInvite(token): Promise<InviterPreview> {
+    const { data, error } = await supabase.rpc('accept_invite', { token })
+    fail(error)
+    const result = data as { display_name: string }
+    return { displayName: result.display_name, avatarUrl: null }
   },
 }

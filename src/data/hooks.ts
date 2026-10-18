@@ -357,3 +357,63 @@ export function useFlushOutbox() {
     }
   }, [api, client])
 }
+
+const friendsKey = ['friends'] as const
+const invitesKey = ['invites'] as const
+
+export function useFriends() {
+  const api = useApi()
+  return useQuery({ queryKey: friendsKey, queryFn: () => api.listFriends() })
+}
+
+export function useMyInvites() {
+  const api = useApi()
+  return useQuery({ queryKey: invitesKey, queryFn: () => api.listMyInvites() })
+}
+
+/** Makes an invite link. The token comes back once, so the caller has to show it straight away. */
+export function useCreateInvite() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.createInvite(),
+    onSettled: () => client.invalidateQueries({ queryKey: invitesKey }),
+  })
+}
+
+export function useCancelInvite() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (inviteId: string) => api.cancelInvite(inviteId),
+    onMutate: async (inviteId) => {
+      await client.cancelQueries({ queryKey: invitesKey })
+      const previous = client.getQueryData<{ id: string }[]>(invitesKey)
+      client.setQueryData<{ id: string }[]>(invitesKey, (list = []) => list.filter((i) => i.id !== inviteId))
+      return { previous }
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) client.setQueryData(invitesKey, context.previous)
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: invitesKey }),
+  })
+}
+
+export function usePeekInvite(token: string) {
+  const api = useApi()
+  return useQuery({ queryKey: ['invite', token], queryFn: () => api.peekInvite(token), retry: false, staleTime: Infinity })
+}
+
+export function useAcceptInvite() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (token: string) => api.acceptInvite(token),
+    onSuccess: (_result, token) => {
+      client.removeQueries({ queryKey: ['invite', token] })
+      void client.invalidateQueries({ queryKey: friendsKey })
+      // Being friends changes which recipes you can see.
+      void client.invalidateQueries({ queryKey: ['beans', 'search'] })
+    },
+  })
+}
