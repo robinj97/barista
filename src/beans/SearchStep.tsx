@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useBeanCatalogue, useBeanSearch } from '../data/hooks'
 import { BROWSE_LIMIT, type BeanMatch } from '../data/types'
 import { groupByRoaster, refineCatalogue } from './catalogue'
@@ -12,6 +13,8 @@ interface SearchStepProps {
   /** Roasters already in the catalogue, so a typed roaster is not mistaken for a bean name. */
   roasters: string[]
   onAddNew: (prefill: Prefill) => void
+  /** A photo of the bag was taken or chosen. */
+  onScan: (photo: File) => void
 }
 
 function friendsLabel(count: number): string {
@@ -56,7 +59,8 @@ function BeanRow({ bean, showRoaster, onPick }: { bean: BeanMatch; showRoaster: 
  * Made for the keyboard being up: the search box stays at the top, rows are compact, and
  * adding something new is one row pinned at the bottom, right above the keyboard.
  */
-export function SearchStep({ query, onQueryChange, onPick, roasters, onAddNew }: SearchStepProps) {
+export function SearchStep({ query, onQueryChange, onPick, roasters, onAddNew, onScan }: SearchStepProps) {
+  const camera = useRef<HTMLInputElement>(null)
   const typed = query.trim()
   const catalogue = useBeanCatalogue()
   const all = catalogue.data ?? []
@@ -77,20 +81,46 @@ export function SearchStep({ query, onQueryChange, onPick, roasters, onAddNew }:
 
   return (
     <div className="flex min-h-full flex-col">
-      <label className="sticky top-0 z-20 block bg-bg pb-2">
-        <span className="sr-only">Search roaster or bean</span>
+      <div className="sticky top-0 z-20 flex gap-2 bg-bg pb-2">
+        <label className="block min-w-0 flex-1">
+          <span className="sr-only">Search roaster or bean</span>
+          <input
+            type="search"
+            autoFocus
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Search roaster or bean"
+            enterKeyHint="search"
+            autoComplete="off"
+            autoCorrect="off"
+            className="h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => camera.current?.click()}
+          aria-label="Scan the bag"
+          className="grid size-12 shrink-0 place-items-center rounded-full bg-soft text-ink active:scale-95"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+        </button>
         <input
-          type="search"
-          autoFocus
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search roaster or bean"
-          enterKeyHint="search"
-          autoComplete="off"
-          autoCorrect="off"
-          className="h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          ref={camera}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          data-testid="bag-photo"
+          onChange={(event) => {
+            const photo = event.target.files?.[0]
+            event.target.value = ''
+            if (photo) onScan(photo)
+          }}
         />
-      </label>
+      </div>
 
       {catalogue.isPending && (
         <p className="px-3 py-3 text-sm text-muted" role="status">

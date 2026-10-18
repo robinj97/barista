@@ -3,6 +3,7 @@ import type { TempUnit } from '../../engine/units.ts'
 import type { Pour } from '../../engine/types.ts'
 import type { BrewChoices } from '../brew/params'
 import type { Database } from '../lib/database.types'
+import type { ScannedBag } from '../../supabase/functions/scan-bag/label'
 
 export type Method = 'v60' | 'aeropress' | 'espresso'
 export const METHODS: Method[] = ['v60', 'aeropress', 'espresso']
@@ -87,6 +88,8 @@ export interface Api {
   /** Roasters that already exist in the shared catalogue, for matching and type-ahead. */
   listRoasters(): Promise<string[]>
   listMyBags(): Promise<Bag[]>
+  /** Reads a bag photo (base64 JPEG) with Claude. Throws `ScanError` when the scan cannot run. */
+  scanBag(imageBase64: string): Promise<ScannedBag>
   /** The catalogue in alphabetical order (roaster, then name), up to `BROWSE_LIMIT` beans. */
   browseBeans(): Promise<BeanMatch[]>
   /** Catalogue search: every word matches roaster + name in any order, tolerant of small typos. */
@@ -286,6 +289,17 @@ export interface Bean {
   altitudeM: number | null
   roastLevel: RoastLevel | null
   roasterNotes: string[]
+}
+
+export type { ScannedBag } from '../../supabase/functions/scan-bag/label'
+
+/** Why a bag photo could not be scanned, so the app can say something useful. */
+export class ScanError extends Error {
+  readonly reason: 'unreadable' | 'busy' | 'limit' | 'failed'
+  constructor(reason: ScanError['reason']) {
+    super(`scan_${reason}`)
+    this.reason = reason
+  }
 }
 
 /** How many beans `browseBeans` returns at most; at the cap the app searches the server instead. */

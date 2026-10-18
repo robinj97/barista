@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthContext'
+import { shrinkPhoto } from '../beans/photo'
 import { uniqueRoasters } from '../beans/roasters'
 import { useToast } from '../components/toastContext'
 import { useApi } from './ApiContext'
@@ -423,4 +424,12 @@ export function useAcceptInvite() {
 export function useFriendRecipes() {
   const api = useApi()
   return useQuery({ queryKey: ['friend-recipes'], queryFn: () => api.listFriendRecipes() })
+}
+
+/** Shrinks a bag photo on the device, then has the server read the label. */
+export function useScanBag() {
+  const api = useApi()
+  return useMutation({
+    mutationFn: async (photo: Blob) => api.scanBag(await shrinkPhoto(photo)),
+  })
 }

@@ -2,6 +2,7 @@ import { GRINDER_SEED } from '../../engine/grinderSeed.ts'
 import {
   byBrandModel,
   filterMatchKey,
+  ScanError,
   type Api,
   type Bag,
   type Bean,
@@ -15,6 +16,7 @@ import {
   type MyFilter,
   type MyGrinder,
   type Profile,
+  type ScannedBag,
 } from '../data/types'
 
 const bean = (b: Partial<Bean> & Pick<Bean, 'id' | 'roaster' | 'name'>): Bean => ({
@@ -66,6 +68,25 @@ export interface MockOptions {
   /** Invite links that others sent you, by token. Anything else is invalid. */
   incomingInvites?: Record<string, InviterPreview>
   recipes?: LockedRecipe[]
+  /** What a bag photo scan returns, or the error it fails with. Defaults to a readable new bean. */
+  scan?: ScannedBag | ScanError
+}
+
+/** A label the dev preview "reads" from any photo: a bean that is not in the seed catalogue. */
+export const MOCK_SCAN: ScannedBag = {
+  readable: true,
+  roaster: 'Sey',
+  name: 'Gatomboya AA',
+  origin: 'Kenya',
+  region: 'Nyeri',
+  producer: 'Gatomboya Cooperative',
+  variety: 'SL28, SL34',
+  process: 'Washed',
+  altitudeM: 1800,
+  roastLevel: 'light',
+  tastingNotes: ['blackcurrant', 'grapefruit'],
+  roastDate: null,
+  weightG: 250,
 }
 
 /** In-memory Api for tests and the dev preview. Mirrors the rules the database enforces. */
@@ -187,6 +208,16 @@ export function createMockApi(options: MockOptions = {}): Api {
     listRoasters: () => wait(catalogue.map((b) => b.roaster)),
 
     listMyBags: () => wait([...bags].sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+
+    async scanBag() {
+      needNetwork()
+      const scan = options.scan ?? MOCK_SCAN
+      if (scan instanceof ScanError) {
+        await wait(undefined)
+        throw scan
+      }
+      return wait(scan)
+    },
 
     async browseBeans() {
       const owned = new Set(bags.map((b) => b.bean.id))

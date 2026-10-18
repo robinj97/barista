@@ -14,6 +14,8 @@ interface NewBeanStepProps {
   initialName: string
   /** Known roasters, offered as type-ahead on the roaster field. */
   roasters: string[]
+  /** The draft was read from a bag photo, so say so and ask for a check. */
+  fromPhoto?: boolean
   onBack: () => void
   onContinue: (bean: NewBean) => void
   onPickExisting: (bean: BeanMatch) => void
@@ -22,7 +24,7 @@ interface NewBeanStepProps {
 const field = 'h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent'
 const label = 'px-2 text-xs text-muted'
 
-export function NewBeanStep({ draft, initialRoaster, initialName, roasters, onBack, onContinue, onPickExisting }: NewBeanStepProps) {
+export function NewBeanStep({ draft, initialRoaster, initialName, roasters, fromPhoto = false, onBack, onContinue, onPickExisting }: NewBeanStepProps) {
   const [roaster, setRoaster] = useState(draft?.roaster ?? initialRoaster)
   const [name, setName] = useState(draft?.name ?? initialName)
   const [origin, setOrigin] = useState(draft?.origin ?? '')
@@ -73,6 +75,12 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, onBa
       <button type="button" onClick={onBack} className="h-9 rounded-full bg-soft px-4 text-sm">
         ← Back to search
       </button>
+
+      {fromPhoto && (
+        <p className="rounded-2xl bg-accent-soft px-3 py-2 text-sm text-accent">
+          Filled in from your photo. Check it, and add anything the label didn't say.
+        </p>
+      )}
 
       <div className="space-y-3">
         <label className="block">
