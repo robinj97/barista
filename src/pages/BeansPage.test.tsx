@@ -16,6 +16,16 @@ async function openSheet(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByLabelText('Search roaster or bean')
 }
 
+describe('Adding a bag', () => {
+  it('opens without the keyboard: the search box is not focused', async () => {
+    const user = userEvent.setup()
+    renderApp('/beans')
+    const search = await openSheet(user)
+    expect(search).toBeInTheDocument()
+    expect(search).not.toHaveFocus()
+  })
+})
+
 describe('Beans: empty state', () => {
   it('invites you to add your first bag, with no floating button yet', async () => {
     renderApp('/beans')

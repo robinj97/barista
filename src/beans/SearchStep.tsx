@@ -86,7 +86,6 @@ export function SearchStep({ query, onQueryChange, onPick, roasters, onAddNew, o
           <span className="sr-only">Search roaster or bean</span>
           <input
             type="search"
-            autoFocus
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search roaster or bean"

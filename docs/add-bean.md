@@ -130,3 +130,4 @@ The shared catalogue keeps a single entry per coffee, in three layers:
    - if the check cannot run (offline), it carries on, and layers 1 and 2 still apply.
 
 `src/beans/dedupe.ts` mirrors the key and the similarity for the dev preview and tests. Tests: `supabase/tests/dedupe.test.sql`, `src/beans/dedupe.test.ts` and `src/pages/BeanDedupe.test.tsx`. Merging two entries that were created before this rule is not needed (none existed) and is not built.
+The search box in the add-a-bag sheet is **not** focused when the sheet opens, so the keyboard does not cover the catalogue list; tap the box to type.
