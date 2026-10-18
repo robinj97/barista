@@ -4,6 +4,7 @@ import { eyebrow } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
 import { BagPickerSheet } from '../brew/BagPickerSheet'
 import { GearCard } from '../brew/GearCard'
+import { StrengthInfo } from '../brew/StrengthInfo'
 import { GoalSlider } from '../brew/GoalSlider'
 import { STRENGTHS, parseChoices, toSearchParams, type BrewChoices } from '../brew/params'
 import { useBrewSelection } from '../brew/useBrewSelection'
@@ -117,13 +118,16 @@ export function BrewPage() {
         <h2 className={label}>What do you want from this cup?</h2>
         <div className="mt-2 space-y-2">
           <GoalSlider balance={choices.balance} onChange={(balance) => update({ balance })} />
-          <ChipGroup
-            label="Strength"
-            options={STRENGTHS.map((s) => ({ value: s, label: s[0]!.toUpperCase() + s.slice(1) }))}
-            value={choices.strength}
-            clearable={false}
-            onChange={(next) => next && update({ strength: next })}
-          />
+          <div className="flex items-center gap-1">
+            <ChipGroup
+              label="Strength"
+              options={STRENGTHS.map((s) => ({ value: s, label: s[0]!.toUpperCase() + s.slice(1) }))}
+              value={choices.strength}
+              clearable={false}
+              onChange={(next) => next && update({ strength: next })}
+            />
+            <StrengthInfo />
+          </div>
         </div>
       </section>
 

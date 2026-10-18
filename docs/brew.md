@@ -52,6 +52,10 @@ The third goal is called **More acidity**, which is the 4:6 method's own wording
 - Assisted tuning (`tuning.md`) keeps using **sour** for the defect, which is fixed with grind, temperature or technique, never with this goal. The internal name for +1 balance in the code is still `brighter`.
 - "Sweetness against acidity" is a simplification: in a cup they are not strict opposites. The method's claim is only that the first pour trades one for the other.
 
+## What Light / Medium / Strong mean
+
+An (i) next to the strength chips opens a sheet saying what the choice changes: the **number of pours**, as in the 4:6 method (the first 40% of the water in two pours, the last 60% split into 2, 3 or 4 equal pours, so 4, 5 or 6 pours in all), with the ratio fixed at 1:15. The counts come from the engine (`laterPoursFor`), so the text cannot drift from the recipe. It says plainly that this is the method's guidance, not something we have measured, and that grind and ratio also change strength.
+
 ## Does the goal change the taste?
 
 Be honest about what the goal chips and slider do. They move one thing: how the first 40% of the water is split between pour 1 and pour 2 (on 300 g: 40 g / 80 g at full sweeter, 60 / 60 balanced, 80 / 40 at full more acidity; the chips are 48 / 72 and 72 / 48). Temperature, grind, ratio, total water and the later pours do not change.
