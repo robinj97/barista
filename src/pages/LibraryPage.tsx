@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { beanCover } from '../beans/cover'
 import { toSearchParams } from '../brew/params'
+import { FriendRecipes } from '../library/FriendRecipes'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { Sheet } from '../components/Sheet'
 import { useToast } from '../components/toastContext'
 import { useArchiveRecipe, useMyBags, useMyRecipes } from '../data/hooks'
@@ -17,8 +19,33 @@ export function LibraryPage() {
   const archive = useArchiveRecipe()
   const toast = useToast()
   const [archiving, setArchiving] = useState<LockedRecipe | null>(null)
+  const [tab, setTab] = useState<'mine' | 'friends'>('mine')
 
-  const header = <PageHeader title="Library" subtitle="The recipes you've locked in." />
+  const header = (
+    <>
+      <PageHeader title="Library" subtitle={tab === 'mine' ? "The recipes you've locked in." : "Recipes your friends have locked in."} />
+      <div className="mt-4 flex justify-center">
+        <SegmentedControl
+          label="Whose recipes"
+          options={[
+            { value: 'mine', label: 'Mine' },
+            { value: 'friends', label: 'Friends' },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
+    </>
+  )
+
+  if (tab === 'friends') {
+    return (
+      <>
+        {header}
+        <FriendRecipes />
+      </>
+    )
+  }
 
   if (recipes.isPending || bags.isPending) {
     return (

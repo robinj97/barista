@@ -1,6 +1,6 @@
 # Barista: friends and invites
 
-Status: **built (first version).** Friends only ever see each other's *locked* recipes; using them in suggestions and the Library's Friends switch come next.
+Status: **built.** Friends only ever see each other's *locked* recipes. They show in the Library's Friends switch and feed your suggestions.
 
 ## How it works
 
@@ -22,7 +22,14 @@ Status: **built (first version).** Friends only ever see each other's *locked* r
 
 `20261018123557_peek_and_cancel_invite.sql` adds two functions (tests in `supabase/tests/friends.test.sql`): `peek_invite(token)` returns only the inviter's name and photo with the same generic failure as `accept_invite`; `cancel_invite(token_hash)` lets the inviter withdraw an unused link. Everything else (create and accept, friendships, the profile and recipe policies) existed from the first schema.
 
+## Friends' recipes
+
+- **Library > Friends** lists every recipe a friend has locked (newest first): their photo, the bean, their name, the date, and the numbers (coffee, water, temperature, and the grind **in your grinder's units**: the recipe stores microns, so it converts like your own). Rating, brews and notes are never visible.
+- **Tap one for a bean you have a bag of** and the recipe screen opens with their numbers filled in as edits (coffee, temperature, grind, pours, time) on *your* grinder and filter, ready to brew or tweak. Nothing is copied into your library until you brew it, when it becomes your working recipe for that bean like any other. For a bean you do not have, the row just shows the recipe with "Add this bean to brew it".
+- **Suggestions:** for a bean where you have no recipe of your own, a friend's locked recipe for the same bean is the starting point (temperature and grind), with **medium** confidence, and the pill says whose: "Based on Sam's locked recipe". Your own locked recipe always wins; several friends use the middle value; friends' recipes for *other* beans count as similar-bean evidence, as the engine already supported. The engine reports where a start came from (`confidence.source`, `confidence.who`).
+- Not built: saving a copy with "reset to original" (decided against for now: brewing from their numbers makes them yours when you brew).
+
 ## Next
 
-- Friends' locked recipes in the Library (a Mine / Friends switch) and in the suggestion, with their grind converted to your grinder.
 - Removing a friend.
+- Telling you when a friend locks a recipe for a bean you have.

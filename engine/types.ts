@@ -44,6 +44,17 @@ export interface PriorRecipe {
   tempC: number
   /** Microns, already converted from the other person's grinder. */
   grindUm: number
+  /** Whose it is, for a friend's recipe, so the reasons can name them. */
+  from?: string
+}
+
+/** Where the starting point came from, for a short label next to the recipe. */
+export interface ConfidenceInfo {
+  level: Confidence
+  basis: string
+  source: 'own' | 'friend' | 'similar' | 'guidance'
+  /** For a recipe of someone's: whose, e.g. "Sam's locked recipe". */
+  who?: string
 }
 
 export interface SuggestInput {
@@ -114,7 +125,7 @@ export interface SuggestOutput {
   structure: { balance: number; laterPours: number }
   ranges: Partial<Record<'tempC' | 'grindUm' | 'ratio' | 'targetTimeS', [number, number]>>
   reasons: Reason[]
-  confidence: { level: Confidence; basis: string }
+  confidence: ConfidenceInfo
   /** The values that came from the person, in a fixed order. Empty when this is the pure suggestion. */
   overridden: OverrideKey[]
 }

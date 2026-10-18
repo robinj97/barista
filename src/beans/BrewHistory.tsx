@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { suggest } from '../../engine/suggest.ts'
 import { buildSuggestInput } from '../brew/buildInput'
 import { toSearchParams, type BrewChoices } from '../brew/params'
-import { useOwnPriors } from '../brew/useOwnPriors'
+import { usePriors } from '../brew/usePriors'
 import { useMyDrafts, useMyFilters, useMyRecipes } from '../data/hooks'
 import { tastesOf, TASTE_LABELS, type Bag, type RecipeNumbers } from '../data/types'
 import { formatDMY, toISODate } from './dates'
@@ -28,7 +28,7 @@ export function BrewHistory({ bag, today }: { bag: Bag; today: string }) {
   const drafts = useMyDrafts()
   const recipes = useMyRecipes()
   const filters = useMyFilters()
-  const own = useOwnPriors(today)
+  const own = usePriors(today)
 
   const draft = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')
   const locked = recipes.data?.filter((r) => r.beanId === bag.bean.id) ?? []
@@ -37,7 +37,7 @@ export function BrewHistory({ bag, today }: { bag: Bag; today: string }) {
   let working: { to: string; summary: string; detail: string; meta: string } | null = null
   if (draft) {
     const filter = filters.data?.find((f) => f.filter.id === draft.choices.filterId)?.filter ?? filters.data?.find((f) => f.isDefault)?.filter ?? null
-    const { recipe } = suggest(buildSuggestInput(bag, draft.choices, filter, today, own.priors))
+    const { recipe } = suggest(buildSuggestInput(bag, draft.choices, filter, today, own.context))
     const brewed = draft.lastBrew
     working = {
       to: open(draft.choices),

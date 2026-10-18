@@ -415,8 +415,15 @@ export function useAcceptInvite() {
       void client.invalidateQueries({ queryKey: friendsKey })
       // Being friends changes which recipes you can see.
       void client.invalidateQueries({ queryKey: ['beans', 'search'] })
+      void client.invalidateQueries({ queryKey: ['friend-recipes'] })
     },
   })
+}
+
+/** Locked recipes your friends have made. */
+export function useFriendRecipes() {
+  const api = useApi()
+  return useQuery({ queryKey: ['friend-recipes'], queryFn: () => api.listFriendRecipes() })
 }
 
 /** Shrinks a bag photo on the device, then has the server read the label. */

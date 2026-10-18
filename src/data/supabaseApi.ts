@@ -17,6 +17,7 @@ import {
   type BrewResult,
   type Draft,
   type Friend,
+  type FriendRecipe,
   type InviterPreview,
   type PendingInvite,
   type LockedRecipe,
@@ -422,5 +423,45 @@ export const supabaseApi: Api = {
     fail(error)
     const result = data as { display_name: string }
     return { displayName: result.display_name, avatarUrl: null }
+  },
+  async listFriendRecipes(): Promise<FriendRecipe[]> {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    fail(userError)
+    // Row-level security already limits this to friends' recipes that are currently locked.
+    const { data: recipes, error } = await supabase
+      .from('recipes')
+      .select('id, owner_id, bean_id, method, name, locked_version_id')
+      .neq('owner_id', userData.user.id)
+      .not('locked_version_id', 'is', null)
+      .is('archived_at', null)
+    fail(error)
+    if (recipes.length === 0) return []
+    const [versions, profiles, beans] = await Promise.all([
+      supabase.from('recipe_versions').select('id, params, created_at').in('id', recipes.map((r) => r.locked_version_id!)),
+      supabase.from('profiles').select('id, display_name, avatar_url').in('id', [...new Set(recipes.map((r) => r.owner_id))]),
+      supabase.from('beans').select('*').in('id', [...new Set(recipes.map((r) => r.bean_id))]),
+    ])
+    fail(versions.error)
+    fail(profiles.error)
+    fail(beans.error)
+    return recipes
+      .flatMap((recipe) => {
+        const version = versions.data.find((v) => v.id === recipe.locked_version_id)
+        const bean = beans.data.find((b) => b.id === recipe.bean_id)
+        if (!version || !bean) return []
+        const owner = profiles.data.find((p) => p.id === recipe.owner_id)
+        return [
+          {
+            id: recipe.id,
+            friend: { id: recipe.owner_id, name: owner?.display_name ?? 'A friend', avatarUrl: owner?.avatar_url ?? null },
+            bean: toBean(bean),
+            method: recipe.method as Method,
+            name: recipe.name,
+            lockedAt: version.created_at,
+            snapshot: version.params as unknown as RecipeSnapshot,
+          },
+        ]
+      })
+      .sort((a, b) => b.lockedAt.localeCompare(a.lockedAt))
   },
 }
