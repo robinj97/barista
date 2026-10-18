@@ -102,10 +102,12 @@ describe('Brewing', () => {
     expect(screen.getByText(/Pour 2 in/)).toBeInTheDocument()
   })
 
-  it('offers to finish logging a brew that was never saved', async () => {
+  it('holds you on the log until a finished brew is logged: no tab bar, and every route comes back to it', async () => {
     localStorage.setItem('barista.brew-session', session(200, { finishedS: 190 }))
-    renderApp(at, { mock })
-    expect(await screen.findByRole('link', { name: /Finish logging your last brew/ })).toHaveAttribute('href', '/brew/log')
+    renderApp('/beans', { mock })
+    expect(await screen.findByRole('heading', { name: 'How did it go?' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Back to Brew' })).not.toBeInTheDocument()
   })
 })
 
@@ -115,14 +117,14 @@ describe('Logging', () => {
     const user = userEvent.setup()
     renderApp(at, { mock })
     await brew(user)
-    await user.click(screen.getByRole('radio', { name: 'Sour' }))
+    await user.click(screen.getByRole('button', { name: 'Sour' }))
     await user.type(screen.getByLabelText(/Yield in the cup/), '255')
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(await screen.findByRole('heading', { name: 'Tanzania Geisha' })).toBeInTheDocument()
     const recipes = await screen.findByRole('region', { name: 'Recipes' })
     const card = await within(recipes).findByRole('link', { name: /Where you left off/ })
     expect(card).toHaveTextContent('20 g · 300 g')
-    expect(card).toHaveTextContent('Sour')
+    expect(card).toHaveTextContent('sour')
     expect(localStorage.getItem('barista.brew-session')).toBeNull()
   })
 
@@ -132,6 +134,7 @@ describe('Logging', () => {
     renderApp(at, { mock })
     await user.click(await screen.findByRole('button', { name: 'Drawdown finished' }))
     await screen.findByRole('heading', { name: 'How did it go?' })
+    await user.click(screen.getByRole('button', { name: 'Good' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await screen.findByRole('heading', { name: 'Tanzania Geisha' })
     const bag = await screen.findByRole('region', { name: 'Your bag' })
@@ -149,6 +152,7 @@ describe('Logging', () => {
     const [bag] = await api.listMyBags()
     expect(bag?.gramsRemaining).toBe(230)
     expect(bag?.status).toBe('dialing_in')
+    await user.click(screen.getByRole('button', { name: 'Good' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(await screen.findByRole('heading', { name: 'Tanzania Geisha' })).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /Where you left off/ })).toBeInTheDocument()
@@ -185,7 +189,7 @@ describe('Logging', () => {
             beanId: 'b-geisha',
             method: 'v60',
             choices: { bagId: 'bag-b-geisha', balance: 0, strength: 'medium', grinderId: null, filterId: null, cups: 2, edits: {} },
-            lastBrew: { brewedAt: '2026-10-16T08:00:00Z', totalTimeS: 170, taste: 'sour', compared: null, yieldG: null, notes: '', firstPourG: 60 },
+            lastBrew: { brewedAt: '2026-10-16T08:00:00Z', totalTimeS: 170, tastes: ['sour'], improve: [], compared: null, yieldG: null, notes: '', firstPourG: 60 },
             updatedAt: '2026-10-16T08:00:00Z',
           },
         ],
@@ -203,6 +207,7 @@ describe('Logging', () => {
     renderApp(at, { mock })
     await brew(user)
     expect(screen.queryByRole('radiogroup', { name: 'Rating' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Good' }))
     await user.click(screen.getByRole('switch', { name: /Lock this as my recipe/ }))
     expect(screen.getByRole('button', { name: 'Lock in and save' })).toBeDisabled()
     await user.click(screen.getByRole('radio', { name: '4 stars' }))
@@ -232,13 +237,157 @@ describe('Logging', () => {
     let offline = true
     renderApp(at, { mock: { ...mock, isOffline: () => offline } })
     await brew(user)
-    await user.click(screen.getByRole('radio', { name: 'Good' }))
+    await user.click(screen.getByRole('button', { name: 'Good' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument()
     expect(pendingCount()).toBeGreaterThan(0)
     offline = false
     fireEvent(window, new Event('online'))
     await waitFor(() => expect(pendingCount()).toBe(0))
+  })
+})
+
+describe('The log: taste, what to improve, skip', () => {
+  const chip = (name: string) => screen.getByRole('button', { name })
+
+  it('takes several tastes and several things to improve, with Good and Nothing standing alone', async () => {
+    const user = userEvent.setup()
+    drawdown()
+    renderApp(at, { mock })
+    await brew(user)
+    await user.click(chip('Sour'))
+    await user.click(chip('Weak'))
+    expect(chip('Sour')).toHaveAttribute('aria-pressed', 'true')
+    expect(chip('Weak')).toHaveAttribute('aria-pressed', 'true')
+    await user.click(chip('Good'))
+    expect(chip('Good')).toHaveAttribute('aria-pressed', 'true')
+    expect(chip('Sour')).toHaveAttribute('aria-pressed', 'false')
+    await user.click(chip('Bitter'))
+    expect(chip('Good')).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(chip('More acidity'))
+    await user.click(chip('More body'))
+    expect(chip('More acidity')).toHaveAttribute('aria-pressed', 'true')
+    expect(chip('More body')).toHaveAttribute('aria-pressed', 'true')
+    await user.click(chip("Nothing, it's good"))
+    expect(chip('More acidity')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('needs a taste to save, but not what to improve', async () => {
+    const user = userEvent.setup()
+    drawdown()
+    renderApp(at, { mock })
+    await brew(user)
+    expect(chip('Save')).toBeDisabled()
+    await user.click(chip('Flat'))
+    expect(chip('Save')).toBeEnabled()
+  })
+
+  it('shows what you recorded as a reminder on the next brew of that bean', async () => {
+    const user = userEvent.setup()
+    drawdown()
+    renderApp(at, { mock })
+    await brew(user)
+    await user.click(chip('Sour'))
+    await user.click(chip('Weak'))
+    await user.click(chip('More sweetness'))
+    await user.type(screen.getByLabelText('Notes'), 'finished fast')
+    await user.click(chip('Save'))
+    await screen.findByRole('heading', { name: 'Tanzania Geisha' })
+    await user.click(await screen.findByRole('link', { name: /Where you left off/ }))
+    const card = await screen.findByRole('region', { name: 'Last brew' })
+    expect(card).toHaveTextContent('It was sour, weak')
+    expect(card).toHaveTextContent('You wanted more sweetness')
+    expect(card).toHaveTextContent('finished fast')
+    expect(card).toHaveTextContent('20 g · 300 g')
+  })
+
+  it('skipping records the brew, no taste, and lets you on', async () => {
+    const user = userEvent.setup()
+    drawdown()
+    const { api } = renderApp(at, { mock })
+    await brew(user)
+    await user.click(chip('Sour'))
+    await user.click(chip("Skip, I didn't taste it"))
+    expect(await screen.findByRole('heading', { name: 'Tanzania Geisha' })).toBeInTheDocument()
+    expect(localStorage.getItem('barista.brew-session')).toBeNull()
+    const [draft] = await api.listMyDrafts()
+    expect(draft?.lastBrew?.tastes).toEqual([])
+    expect(draft?.lastBrew?.recipe?.doseG).toBe(20)
+    expect(screen.getByRole('navigation')).toBeInTheDocument()
+  })
+
+  it('does not show a reminder for a skipped brew', async () => {
+    renderApp(at, {
+      mock: {
+        ...mock,
+        drafts: [
+          {
+            beanId: 'b-geisha',
+            method: 'v60',
+            choices: { bagId: 'bag-b-geisha', balance: 0, strength: 'medium', grinderId: null, filterId: null, cups: 2, edits: {} },
+            lastBrew: { brewedAt: '2026-10-16T08:00:00Z', totalTimeS: 170, tastes: [], improve: [], compared: null, yieldG: null, notes: '', firstPourG: 60 },
+            updatedAt: '2026-10-16T08:00:00Z',
+          },
+        ],
+      },
+    })
+    await screen.findByLabelText('Recipe')
+    expect(screen.queryByRole('region', { name: 'Last brew' })).not.toBeInTheDocument()
+  })
+
+  it('reads a brew saved with a single taste, and lists what changed since the brew before', async () => {
+    const user = userEvent.setup()
+    drawdown()
+    renderApp(at, {
+      mock: {
+        ...mock,
+        drafts: [
+          {
+            beanId: 'b-geisha',
+            method: 'v60',
+            choices: { bagId: 'bag-b-geisha', balance: 0, strength: 'medium', grinderId: null, filterId: null, cups: 2, edits: {} },
+            lastBrew: {
+              brewedAt: '2026-10-16T08:00:00Z', totalTimeS: 170, taste: 'bitter', tastes: undefined as never, improve: [], compared: null, yieldG: null, notes: '', firstPourG: 60,
+              recipe: { doseG: 18, waterG: 300, ratio: 16.7, tempC: 93, grindUm: 800, targetTimeS: 180, pours: [{ atS: 0, toG: 300 }] },
+            },
+            updatedAt: '2026-10-16T08:00:00Z',
+          },
+        ],
+      },
+    })
+    await brew(user)
+    await user.click(chip('Good'))
+    await user.click(chip('Save'))
+    await screen.findByRole('heading', { name: 'Tanzania Geisha' })
+    await user.click(await screen.findByRole('link', { name: /Where you left off/ }))
+    const card = await screen.findByRole('region', { name: 'Last brew' })
+    expect(card).toHaveTextContent('Changed from the brew before')
+    expect(card).toHaveTextContent('Coffee 18 → 20 g')
+  })
+
+  it('stays on the log when the data behind it refreshes or the connection drops, with what you typed', async () => {
+    const user = userEvent.setup()
+    drawdown()
+    let offline = false
+    const { client } = renderApp(at, { mock: { ...mock, isOffline: () => offline } })
+    await brew(user)
+    await user.click(chip('Sour'))
+    await user.type(screen.getByLabelText('Notes'), 'still here')
+    offline = true
+    await client.invalidateQueries()
+    expect(screen.getByRole('heading', { name: 'How did it go?' })).toBeInTheDocument()
+    expect(chip('Sour')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Notes')).toHaveValue('still here')
+  })
+
+  it('lets you discard a brew whose bean is gone, so you are never stuck', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem('barista.brew-session', JSON.stringify({ bagId: 'gone', search: 'bag=gone', asOf: '2026-10-17', startedAt: Date.now() - 200_000, finishedS: 190 }))
+    renderApp('/brew/log', { mock })
+    await user.click(await screen.findByRole('button', { name: 'Discard this brew' }))
+    expect(localStorage.getItem('barista.brew-session')).toBeNull()
+    expect(await screen.findByRole('region', { name: 'Bean' })).toBeInTheDocument()
   })
 })
 

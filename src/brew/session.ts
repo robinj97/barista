@@ -20,6 +20,10 @@ export interface BrewSession {
 }
 
 const STORAGE_KEY = 'barista.brew-session'
+const CHANGED = 'barista:brew-session'
+
+/** Tells the app the session changed, so screens that depend on it (the log gate) update at once. */
+const announce = () => window.dispatchEvent(new Event(CHANGED))
 
 export function readSession(): BrewSession | null {
   try {
@@ -36,6 +40,7 @@ export function writeSession(session: BrewSession): void {
   } catch {
     // Without storage the brew still runs; it just cannot be resumed after a reload.
   }
+  announce()
 }
 
 export function clearSession(): void {
@@ -44,6 +49,7 @@ export function clearSession(): void {
   } catch {
     // Nothing stored, nothing to clear.
   }
+  announce()
 }
 
 export const startSession = (bagId: string, search: string, asOf: string, nowMs: number, recipe?: RecipeNumbers): BrewSession => ({
@@ -69,3 +75,15 @@ export const untimedSession = (bagId: string, search: string, asOf: string, nowM
   finishedS: 0,
   untimed: true,
 })
+
+/** True when a brew is finished but its log is not done: the app holds you on the log screen until it is. */
+export const logIsPending = (): boolean => readSession()?.finishedS != null
+
+export function subscribeToSession(listener: () => void): () => void {
+  window.addEventListener(CHANGED, listener)
+  window.addEventListener('storage', listener)
+  return () => {
+    window.removeEventListener(CHANGED, listener)
+    window.removeEventListener('storage', listener)
+  }
+}

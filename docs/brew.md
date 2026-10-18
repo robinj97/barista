@@ -72,7 +72,17 @@ Be honest about what the goal chips and slider do. They move one thing: how the 
 
 **The bag.** When the drawdown ends (the tap on **Drawdown finished**) the coffee is spent, so the dose is taken out of "Left in the bag" (never below 0; skipped if you never said how much was in it) and a bag that was *New* becomes *Dialing in*. A cancelled brew changes nothing. Locking a recipe in marks the bag *Locked*. The changes show at once and, offline, wait in the same queue as the other writes (the newest amount wins).
 
-**Log.** Taste (good, sour, bitter, weak, heavy), "compared with last time: sweeter, more acidity, about the same" (only when there is a previous brew of this bean; this is the data that tests whether the goal slider does anything, stored with the first-pour size), yield in the cup, notes. Rating is **only** asked when locking.
+**Log.** The log is a gate: once a brew is finished (the drawdown tap or **Finished brewing**), every route sends you to `/brew/log` and the tab bar is hidden until it is done, so you cannot forget it. The finished brew lives in `localStorage`, so closing the app and coming back hours later lands on the same screen; data refreshes, a dropped connection or the bag update do not move you off it. If the bag is gone or the beans cannot be loaded the screen says so (with Try again, or Discard this brew), so you are never stuck.
+
+It asks, all as chips where more than one can be picked:
+
+- **How did it taste?** Good, Sour, Bitter, Weak, Heavy, Astringent, Flat. *Good* stands alone (picking it clears the rest, picking another clears it). At least one is needed to save.
+- **What do you want to improve next time?** More sweetness, More acidity, More body, More clarity, Less bitterness, Less sourness, Stronger, Weaker, *Nothing, it's good* (stands alone).
+- "Compared with last time: sweeter, more acidity, about the same" (only when there is a previous brew; this is the data that tests whether the goal slider does anything, stored with the first-pour size), yield in the cup, notes.
+- **Lock this as my recipe** with the rating (rating is only asked when locking).
+- **Skip, I didn't taste it**: records the brew itself (time, numbers, what changed) with no taste, and lets you on.
+
+**The reminder.** The next time you open that bean's recipe, a **Last brew** card sits at the top: the date, how it tasted, what you wanted, your note, the settings brewed (the grind in your grinder's units) and what changed from the brew before (coffee, water, ratio, temperature, grind direction). The same lines show under "Where you left off" on the bean page. A skipped log shows nothing. It only reminds: the app does not suggest a tweak from it (that is assisted tuning, later). Taste, improve, notes, the brewed numbers and the changes are stored on the working recipe's last brew (`recipe_drafts.last_brew`, overwritten each brew), and the taste, improve and notes are also in a locked brew's `feedback`. Brews saved earlier with a single `taste` are still read.
 
 **What is stored.**
 

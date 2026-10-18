@@ -4,7 +4,7 @@ import { enqueue, flushOutbox, isNetworkError, pendingCount, readOutbox } from '
 import type { BrewResult, SaveDraftInput } from './types'
 
 const choices = { bagId: 'bag-b-geisha', balance: 0, strength: 'medium', grinderId: null, filterId: null, cups: 2, edits: {} } as const
-const result: BrewResult = { brewedAt: '2026-10-17T08:00:00Z', totalTimeS: 170, taste: 'good', compared: null, yieldG: null, notes: '', firstPourG: 60 }
+const result: BrewResult = { brewedAt: '2026-10-17T08:00:00Z', totalTimeS: 170, tastes: ['good'], improve: [], compared: null, yieldG: null, notes: '', firstPourG: 60 }
 const draft = (extra: Partial<SaveDraftInput> = {}): SaveDraftInput => ({ beanId: 'b-geisha', method: 'v60', choices, ...extra })
 
 describe('outbox', () => {

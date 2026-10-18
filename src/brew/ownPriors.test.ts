@@ -13,7 +13,7 @@ const numbers = { doseG: 20, waterG: 300, ratio: 15, tempC: 91, grindUm: 700, ta
 const locked = (extra: Partial<LockedRecipe> = {}): LockedRecipe => ({
   id: 'r1', beanId: 'b-geisha', method: 'v60', name: 'V60', versionId: 'v1', snapshot: { choices, recipe: numbers }, rating: 4, lockedAt: '2026-10-10T10:00:00Z', brewCount: 1, ...extra,
 })
-const brew = (extra: Partial<BrewResult> = {}): BrewResult => ({ brewedAt: '2026-10-12T10:00:00Z', totalTimeS: 170, taste: 'good', compared: null, yieldG: null, notes: '', firstPourG: 60, ...extra })
+const brew = (extra: Partial<BrewResult> = {}): BrewResult => ({ brewedAt: '2026-10-12T10:00:00Z', totalTimeS: 170, tastes: ['good'], improve: [], compared: null, yieldG: null, notes: '', firstPourG: 60, ...extra })
 const draft = (lastBrew: BrewResult | null, edits = {}): Draft => ({ beanId: 'b-geisha', method: 'v60', choices: { ...choices, edits }, lastBrew, updatedAt: '2026-10-12T10:00:00Z' })
 const asOf = '2026-10-17'
 
@@ -33,7 +33,7 @@ describe('ownPriors', () => {
   })
 
   it('does not start from a brew that tasted sour, or one older than the lock', () => {
-    expect(ownPriors({ recipes: [locked()], drafts: [draft(brew({ taste: 'sour' }), { tempC: 93 })], bags: [bag], filters: [], asOf })[0]).toMatchObject({ tempC: 91 })
+    expect(ownPriors({ recipes: [locked()], drafts: [draft(brew({ tastes: ['sour'] }), { tempC: 93 })], bags: [bag], filters: [], asOf })[0]).toMatchObject({ tempC: 91 })
     expect(ownPriors({ recipes: [locked()], drafts: [draft(brew({ brewedAt: '2026-10-01T10:00:00Z' }), { tempC: 93 })], bags: [bag], filters: [], asOf })[0]).toMatchObject({ tempC: 91 })
   })
 
