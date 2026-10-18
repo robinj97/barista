@@ -27,6 +27,12 @@ Domain pieces: `<BeanHeader>` (a screen about one bean), `<PourList>` (planned, 
 - **Extend by adding, not editing.** A new variant of a button, a new kind of confirm, a new chip list is a new value passed to a primitive, not a copy of its markup.
 - **Behaviour changes need a test; refactors keep the tests green and do not change them.**
 
+## The data layer (`src/data`)
+
+- **`api.ts`**: the backend, in five areas that stand alone: `ProfileApi`, `GearApi`, `BeansApi`, `RecipesApi`, `FriendsApi` (and `Api`, all of them). A new call goes in the area it belongs to.
+- **`supabase/`**: the real implementation, one file per area, with `shared.ts` (`fail`, `currentUserId`, `toBean`) and `lockedRows.ts` (the one loader for yours and friends' locked recipes). `supabaseApi.ts` only composes them. The fake in `dev/mockApi.ts` implements the same `Api`.
+- **`hooks/`**: React Query hooks, one file per area, each asking only for its area's API (`useBeansApi()`, `useFriendsApi()`, ...), so a bean hook cannot call a friends method. `keys.ts` is the one place query keys are written. Screens import from `../data/hooks`.
+- **Two helpers do the repeated work.** `useOptimisticMutation` (show the change at once, roll back on failure, refetch what it touched) and `saveOrQueue` (send a write, or keep it on the phone if the connection is down). New mutations use them instead of repeating the dance.
 ## Screens: container, model, parts
 
 A big screen is split by job, as the recipe screen is (`src/pages/RecipePage.tsx` and `src/recipe/`):

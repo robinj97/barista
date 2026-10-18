@@ -20,6 +20,8 @@ const tables: Record<string, Row[]> = {
   profiles: [{ id: 'friend', display_name: 'Mario', avatar_url: null }],
 }
 
+const deleted: { table: string; filters: Record<string, unknown> }[] = []
+
 function query(table: string) {
   let rows = [...(tables[table] ?? [])]
   const builder = {
@@ -29,6 +31,14 @@ function query(table: string) {
     is: (column: string, value: unknown) => ((rows = rows.filter((r) => r[column] === value)), builder),
     not: (column: string, _op: string, value: unknown) => ((rows = rows.filter((r) => r[column] !== value)), builder),
     in: (column: string, values: unknown[]) => ((rows = rows.filter((r) => values.includes(r[column]))), builder),
+    delete: () => {
+      const filters: Record<string, unknown> = {}
+      const del = {
+        eq: (column: string, value: unknown) => ((filters[column] = value), del),
+        then: (resolve: (value: { data: null; error: null }) => unknown) => (deleted.push({ table, filters }), resolve({ data: null, error: null })),
+      }
+      return del
+    },
     then: (resolve: (value: { data: Row[]; error: null }) => unknown) => resolve({ data: rows, error: null }),
   }
   return builder
@@ -59,5 +69,16 @@ describe('listFriendRecipes', () => {
     expect(recipes.map((r) => r.id)).toEqual(['friends'])
     expect(recipes[0]?.friend.name).toBe('Mario')
     expect(recipes[0]?.bean.name).toBe('Lychee peach')
+  })
+})
+
+describe('removeFriend', () => {
+  it('deletes the one friendship row, which stores the smaller id first', async () => {
+    await supabaseApi.removeFriend('zed')
+    await supabaseApi.removeFriend('abc')
+    expect(deleted).toEqual([
+      { table: 'friendships', filters: { user_a: 'me', user_b: 'zed' } },
+      { table: 'friendships', filters: { user_a: 'abc', user_b: 'me' } },
+    ])
   })
 })
