@@ -7,7 +7,7 @@ import { ToastProvider } from '../components/Toast'
 import { ApiContext } from '../data/ApiContext'
 import { router } from '../router'
 import { DEFAULT_CHOICES } from '../brew/params'
-import type { Bag, Draft, LockedRecipe } from '../data/types'
+import type { Bag, Draft, FriendRecipe, LockedRecipe } from '../data/types'
 import { SEED_BEANS, createMockApi } from './mockApi'
 
 const session = {
@@ -65,6 +65,33 @@ const SAMPLE_DRAFTS: Draft[] = [
   },
 ]
 
+const SAMPLE_FRIEND_RECIPES: FriendRecipe[] = [
+  {
+    id: 'fr-1',
+    friend: { id: 'friend-1', name: 'Sam Lee', avatarUrl: null },
+    bean: SEED_BEANS[1]!,
+    method: 'v60',
+    name: 'V60',
+    lockedAt: '2026-10-16T08:00:00Z',
+    snapshot: {
+      choices: { ...DEFAULT_CHOICES },
+      recipe: { doseG: 18, waterG: 300, ratio: 16.7, tempC: 96, grindUm: 760, targetTimeS: 180, pours: [{ atS: 0, toG: 70 }, { atS: 44, toG: 120 }, { atS: 80, toG: 180 }, { atS: 120, toG: 240 }, { atS: 173, toG: 300 }] },
+    },
+  },
+  {
+    id: 'fr-2',
+    friend: { id: 'friend-1', name: 'Sam Lee', avatarUrl: null },
+    bean: SEED_BEANS[3]!,
+    method: 'v60',
+    name: 'V60',
+    lockedAt: '2026-10-12T08:00:00Z',
+    snapshot: {
+      choices: { ...DEFAULT_CHOICES },
+      recipe: { doseG: 20, waterG: 300, ratio: 15, tempC: 93, grindUm: 800, targetTimeS: 190, pours: [{ atS: 0, toG: 60 }, { atS: 45, toG: 300 }] },
+    },
+  },
+]
+
 export default function MockApp() {
   // ?mock starts with an empty inventory; ?mock=bags starts with three sample bags.
   const withBags = new URLSearchParams(window.location.search).get('mock') === 'bags'
@@ -76,6 +103,7 @@ export default function MockApp() {
       bags: withBags ? SAMPLE_BAGS : [],
       recipes: withBags ? SAMPLE_RECIPES : [],
       drafts: withBags ? SAMPLE_DRAFTS : [],
+      friendRecipeList: withBags ? SAMPLE_FRIEND_RECIPES : [],
       friends: withBags ? [{ id: 'friend-1', name: 'Sam Lee', avatarUrl: null, since: '2026-10-10T10:00:00Z' }] : [],
       invites: withBags ? [{ id: 'hash-1', expiresAt: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString() }] : [],
       // /invite/demo in the preview shows an invite from Ava.

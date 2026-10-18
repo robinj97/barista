@@ -1,6 +1,6 @@
 import { suggest } from '../../engine/suggest.ts'
 import type { PriorRecipe } from '../../engine/types.ts'
-import { tastesOf, type Bag, type Draft, type LockedRecipe, type MyFilter } from '../data/types'
+import { tastesOf, type Bag, type Draft, type FriendRecipe, type LockedRecipe, type MyFilter } from '../data/types'
 import { beanTraits, buildSuggestInput } from './buildInput'
 
 interface Sources {
@@ -51,4 +51,16 @@ export function ownPriors({ recipes, drafts, bags, filters, asOf }: Sources): Pr
     })
   }
   return [...priors.values()]
+}
+
+/** Friends' locked recipes as suggestion data. Their grind is already in microns, so it needs no converting. */
+export function friendPriors(recipes: FriendRecipe[]): PriorRecipe[] {
+  return recipes.map((recipe) => ({
+    method: recipe.method,
+    beanId: recipe.bean.id,
+    bean: beanTraits(recipe.bean),
+    tempC: recipe.snapshot.recipe.tempC,
+    grindUm: recipe.snapshot.recipe.grindUm,
+    from: recipe.friend.name,
+  }))
 }

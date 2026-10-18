@@ -13,8 +13,14 @@ export const beanTraits = (bean: Bean): BeanTraits => ({
   notes: bean.roasterNotes,
 })
 
-/** Turns what is on the screen into what the engine needs. `own` are your own recipes to learn from. */
-export function buildSuggestInput(bag: Bag, choices: BrewChoices, filter: FilterRow | null, asOf: string, own: PriorRecipe[] = []): SuggestInput {
+/** Turns what is on the screen into what the engine needs. `context` is the recipes to learn from: yours, and your friends'. */
+export function buildSuggestInput(
+  bag: Bag,
+  choices: BrewChoices,
+  filter: FilterRow | null,
+  asOf: string,
+  context: { own: PriorRecipe[]; friends: PriorRecipe[] } = { own: [], friends: [] },
+): SuggestInput {
   const { bean } = bag
   return {
     method: 'v60',
@@ -45,7 +51,7 @@ export function buildSuggestInput(bag: Bag, choices: BrewChoices, filter: Filter
       ? { id: filter.id, brand: filter.brand, model: filter.model, flowClass: filter.flow_class as FlowClass | null }
       : null,
     asOf,
-    context: { own, friends: [] },
+    context,
   }
 }
 

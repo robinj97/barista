@@ -19,7 +19,7 @@ import { PoursSheet } from '../brew/PoursSheet'
 import { finishSession, readSession, clearSession, startSession, untimedSession, writeSession, type BrewSession } from '../brew/session'
 import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
-import { useOwnPriors } from '../brew/useOwnPriors'
+import { usePriors } from '../brew/usePriors'
 import { useMyDrafts, useSaveDraft, useUpdateBag } from '../data/hooks'
 import { WhySheet } from '../brew/WhySheet'
 import { PourRing } from '../components/PourRing'
@@ -88,7 +88,7 @@ export function RecipePage() {
   }, [view])
   // Fixed when the screen opens, so the recipe does not change under you at midnight.
   const [today] = useState(() => toISODate(new Date()))
-  const own = useOwnPriors(today)
+  const own = usePriors(today)
   const drafts = useMyDrafts()
 
   const back = (
@@ -120,7 +120,7 @@ export function RecipePage() {
   }
 
   const unit = selection.profile.data?.temp_unit ?? 'c'
-  const out = suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, today, own.priors))
+  const out = suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, today, own.context))
   const { recipe } = out
   const cover = beanCover(bag.bean.id)
   const goal = goalOf(choices.balance)
@@ -191,7 +191,7 @@ export function RecipePage() {
           onClick={() => setWhy(true)}
           className="mx-auto mt-5 flex h-9 items-center rounded-full bg-accent-soft px-4 text-sm text-accent"
         >
-          {out.overridden.length > 0 ? 'Your edits · started from a suggestion' : CONFIDENCE_TEXT[out.confidence.level]} ›
+          {out.overridden.length > 0 ? 'Your edits · started from a suggestion' : out.confidence.source === 'friend' && out.confidence.who ? `Based on ${out.confidence.who}` : CONFIDENCE_TEXT[out.confidence.level]} ›
         </button>
       )}
 

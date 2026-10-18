@@ -257,6 +257,24 @@ describe('learning from recipes', () => {
     expect(out.confidence.level).toBe('high')
   })
 
+  it('names the friend when it knows whose recipe it is', () => {
+    const one = suggest({ ...base, context: { own: [], friends: [prior({ tempC: 94, from: 'Sam' })] } })
+    expect(one.reasons.find((r) => r.param === 'temp')?.why).toContain("Sam's locked recipe")
+    expect(one.confidence.basis).toContain("Sam's locked recipe")
+    const two = suggest({ ...base, context: { own: [], friends: [prior({ from: 'Sam' }), prior({ from: 'Ava' })] } })
+    expect(two.confidence.basis).toContain('locked recipes from Sam and Ava')
+    const unnamed = suggest({ ...base, context: { own: [], friends: [prior({ tempC: 94 })] } })
+    expect(unnamed.confidence.basis).toContain("a friend's locked recipe")
+  })
+
+  it('says where the starting point came from', () => {
+    expect(suggest({ ...base, context: { own: [prior()], friends: [] } }).confidence.source).toBe('own')
+    const friend = suggest({ ...base, context: { own: [], friends: [prior({ from: 'Sam' })] } }).confidence
+    expect(friend.source).toBe('friend')
+    expect(friend.who).toBe("Sam's locked recipe")
+    expect(suggest(base).confidence.source).toBe('guidance')
+  })
+
   it('takes the middle of several friends', () => {
     const friends = [90, 94, 96].map((tempC) => prior({ tempC }))
     expect(suggest({ ...base, context: { own: [], friends } }).recipe.tempC).toBe(94)

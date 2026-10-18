@@ -118,6 +118,9 @@ export interface Api {
   peekInvite(token: string): Promise<InviterPreview>
   acceptInvite(token: string): Promise<InviterPreview>
 
+  /** Locked recipes your friends have made, newest first. */
+  listFriendRecipes(): Promise<FriendRecipe[]>
+
   /** Stops friends seeing a locked recipe and removes it from your lists. Your brews are kept. */
   archiveRecipe(recipeId: string): Promise<void>
 }
@@ -127,6 +130,17 @@ export interface Friend {
   name: string
   avatarUrl: string | null
   since: string
+}
+
+/** A recipe a friend has locked. You see its numbers and the bean, nothing about their brews. */
+export interface FriendRecipe {
+  id: string
+  friend: { id: string; name: string; avatarUrl: string | null }
+  bean: Bean
+  method: Method
+  name: string
+  lockedAt: string
+  snapshot: RecipeSnapshot
 }
 
 export interface PendingInvite {

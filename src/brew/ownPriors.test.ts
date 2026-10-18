@@ -46,7 +46,7 @@ describe('ownPriors', () => {
 describe('suggestions from your own recipes', () => {
   it('start from the locked recipe and say so', () => {
     const own = ownPriors({ recipes: [locked()], drafts: [], bags: [bag], filters: [], asOf })
-    const out = suggest(buildSuggestInput(bag, choices, null, asOf, own))
+    const out = suggest(buildSuggestInput(bag, choices, null, asOf, { own, friends: [] }))
     expect(out.recipe.tempC).toBe(91)
     expect(out.recipe.grindUm).toBe(700)
     expect(out.confidence.level).toBe('high')

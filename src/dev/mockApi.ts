@@ -7,6 +7,7 @@ import {
   type Bean,
   type Draft,
   type Friend,
+  type FriendRecipe,
   type InviterPreview,
   type PendingInvite,
   type LockedRecipe,
@@ -60,6 +61,7 @@ export interface MockOptions {
   isOffline?: () => boolean
   drafts?: Draft[]
   friends?: Friend[]
+  friendRecipeList?: FriendRecipe[]
   invites?: PendingInvite[]
   /** Invite links that others sent you, by token. Anything else is invalid. */
   incomingInvites?: Record<string, InviterPreview>
@@ -309,6 +311,8 @@ export function createMockApi(options: MockOptions = {}): Api {
       else recipes.push(next)
       return wait(undefined)
     },
+
+    listFriendRecipes: () => wait(options.friendRecipeList ?? []),
 
     listFriends: () => wait([...friends].sort((a, b) => a.name.localeCompare(b.name))),
 
