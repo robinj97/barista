@@ -11,6 +11,7 @@ import type { MyFilter, MyGrinder } from '../data/types'
 import { AddFilterSheet } from '../profile/AddFilterSheet'
 import { AddGrinderSheet } from '../profile/AddGrinderSheet'
 import { filterName, grinderName, grinderNote } from '../profile/gearLabels'
+import { Button } from '../components/Button'
 
 interface GearCardProps {
   grinders: MyGrinder[]
@@ -134,9 +135,9 @@ export function GearCard({ grinders, grinder, filters, filter, onGrinder, onFilt
             </button>
           </div>
 
-          <button type="button" onClick={() => setEditing(false)} className="h-12 w-full rounded-full bg-ink font-medium text-bg">
+          <Button onClick={() => setEditing(false)}>
             Done
-          </button>
+          </Button>
         </div>
       </Sheet>
 

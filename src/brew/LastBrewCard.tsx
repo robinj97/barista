@@ -1,7 +1,8 @@
-import { formatTemp, type TempUnit } from '../../engine/units.ts'
+import type { TempUnit } from '../../engine/units.ts'
 import { formatDMY, toISODate } from '../beans/dates'
 import type { BrewResult, MyGrinder } from '../data/types'
 import { describeChange, grindText, lastBrewLines } from './feedback'
+import { recipeSummary } from './format'
 
 interface LastBrewCardProps {
   brew: BrewResult
@@ -32,7 +33,7 @@ export function LastBrewCard({ brew, unit, grinder }: LastBrewCardProps) {
       {note && <p className="mt-2 text-sm italic text-muted">“{note}”</p>}
       {recipe && (
         <p className="num mt-3 text-xs text-muted">
-          {recipe.doseG} g · {recipe.waterG} g · {formatTemp(recipe.tempC, unit)} · {grindText(recipe.grindUm, grinder)}
+          {recipeSummary(recipe, unit, grindText(recipe.grindUm, grinder))}
         </p>
       )}
       {brew.changes && brew.changes.length > 0 && (

@@ -1,14 +1,13 @@
 import { Link } from 'react-router'
 import { suggest } from '../../engine/suggest.ts'
 import { buildSuggestInput } from '../brew/buildInput'
+import { recipeSummary } from '../brew/format'
 import { toSearchParams, type BrewChoices } from '../brew/params'
 import { usePriors } from '../brew/usePriors'
-import { useMyDrafts, useMyFilters, useMyRecipes } from '../data/hooks'
-import { tastesOf, TASTE_LABELS, type Bag, type RecipeNumbers } from '../data/types'
+import { useMyDrafts, useMyFilters, useMyRecipes, useProfile } from '../data/hooks'
+import { tastesOf, TASTE_LABELS, type Bag } from '../data/types'
 import { formatDMY, toISODate } from './dates'
 import { lastBrewLines } from '../brew/feedback'
-
-const line = (r: Pick<RecipeNumbers, 'doseG' | 'waterG' | 'tempC'>) => `${r.doseG} g · ${r.waterG} g · ${r.tempC}°C`
 
 function Card({ to, title, meta, detail, children }: { to: string; title: string; meta: string; detail?: string; children: string }) {
   return (
@@ -28,6 +27,7 @@ export function BrewHistory({ bag, today }: { bag: Bag; today: string }) {
   const drafts = useMyDrafts()
   const recipes = useMyRecipes()
   const filters = useMyFilters()
+  const unit = useProfile().data?.temp_unit ?? 'c'
   const own = usePriors(today)
 
   const draft = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')
@@ -41,7 +41,7 @@ export function BrewHistory({ bag, today }: { bag: Bag; today: string }) {
     const brewed = draft.lastBrew
     working = {
       to: open(draft.choices),
-      summary: `${line(recipe)}${brewed && tastesOf(brewed).length ? ` · ${tastesOf(brewed).map((t) => TASTE_LABELS[t].toLowerCase()).join(', ')}` : ''}`,
+      summary: `${recipeSummary(recipe, unit)}${brewed && tastesOf(brewed).length ? ` · ${tastesOf(brewed).map((t) => TASTE_LABELS[t].toLowerCase()).join(', ')}` : ''}`,
       detail: brewed ? [lastBrewLines(brewed).wanted && `Wanted ${lastBrewLines(brewed).wanted!.toLowerCase()}`, lastBrewLines(brewed).note && `“${lastBrewLines(brewed).note}”`].filter(Boolean).join(' · ') : '',
       meta: brewed ? `Brewed ${formatDMY(toISODate(new Date(brewed.brewedAt)))}` : 'Not brewed yet',
     }
@@ -60,7 +60,7 @@ export function BrewHistory({ bag, today }: { bag: Bag; today: string }) {
       )}
       {locked.map((recipe) => (
         <Card key={recipe.id} to={open(recipe.snapshot.choices)} title={`Locked · ${'★'.repeat(recipe.rating ?? 0) || recipe.name}`} meta={formatDMY(toISODate(new Date(recipe.lockedAt)))}>
-          {line(recipe.snapshot.recipe)}
+          {recipeSummary(recipe.snapshot.recipe, unit)}
         </Card>
       ))}
     </div>

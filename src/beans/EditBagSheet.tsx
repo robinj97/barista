@@ -3,6 +3,7 @@ import { Sheet } from '../components/Sheet'
 import { useUpdateBag } from '../data/hooks'
 import type { Bag } from '../data/types'
 import { daysAgo, formatDMY, maskDMY, parseDMY } from './dates'
+import { Button } from '../components/Button'
 
 interface EditBagSheetProps {
   open: boolean
@@ -80,19 +81,18 @@ function Form({ bag, close }: { bag: Bag; close: () => void }) {
           </span>
         )}
       </label>
-      <button type="submit" className="h-12 w-full rounded-full bg-ink font-medium text-bg">
+      <Button type="submit">
         Save
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
         onClick={() => {
           update.mutate({ bagId: bag.id, patch: { finishedAt: bag.finishedAt ? null : new Date().toISOString() } })
           close()
         }}
-        className="h-12 w-full rounded-full bg-soft"
+        variant="soft"
       >
         {bag.finishedAt ? 'Back in use' : 'Mark as finished'}
-      </button>
+      </Button>
       {!bag.finishedAt && <p className="px-2 text-center text-xs text-muted">A finished bag moves out of the way. Its brews and recipes stay.</p>}
     </form>
   )

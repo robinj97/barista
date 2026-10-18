@@ -1,10 +1,13 @@
 import { Link } from 'react-router'
-import { formatTemp, type TempUnit } from '../../engine/units.ts'
+import type { TempUnit } from '../../engine/units.ts'
 import { formatDMY, toISODate } from '../beans/dates'
-import { clock } from '../brew/buildInput'
 import { grindText } from '../brew/feedback'
+import { recipeText } from '../brew/format'
+import { PourList } from '../brew/PourList'
+import { Spec, SpecGrid } from '../components/Spec'
 import { Sheet } from '../components/Sheet'
 import type { FriendRecipe, MyGrinder } from '../data/types'
+import { buttonClass } from '../components/buttonStyle'
 
 interface FriendRecipeSheetProps {
   recipe: FriendRecipe | null
@@ -15,45 +18,28 @@ interface FriendRecipeSheetProps {
   brewTo: string | null
 }
 
-function Spec({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="squircle rounded-3xl bg-soft px-4 py-3">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="num mt-0.5 text-base">{value}</dd>
-    </div>
-  )
-}
-
 /** A friend's locked recipe in full. Tapping one always opens this; brewing from it needs a bag of the bean. */
 export function FriendRecipeSheet({ recipe, onClose, unit, grinder, brewTo }: FriendRecipeSheetProps) {
   const numbers = recipe?.snapshot.recipe
+  const text = numbers ? recipeText(numbers, unit) : null
   return (
     <Sheet open={recipe !== null} onOpenChange={(open) => !open && onClose()} title={recipe ? `${recipe.bean.name}` : 'Recipe'}>
-      {recipe && numbers && (
+      {recipe && numbers && text && (
         <div className="px-3 pb-3">
           <p className="px-1 text-sm text-muted">
             {recipe.friend.name}'s recipe · {recipe.bean.roaster} · locked {formatDMY(toISODate(new Date(recipe.lockedAt)))}
           </p>
-          <dl className="mt-3 grid grid-cols-3 gap-2" aria-label="Their recipe">
-            <Spec label="Coffee" value={`${numbers.doseG} g`} />
-            <Spec label="Water" value={`${numbers.waterG} g`} />
-            <Spec label="Ratio" value={`1:${numbers.ratio}`} />
-            <Spec label="Water temp" value={formatTemp(numbers.tempC, unit)} />
-            <Spec label="Total time" value={`~${clock(numbers.targetTimeS)}`} />
+          <SpecGrid label="Their recipe" className="mt-3">
+            <Spec label="Coffee" value={text.coffee} />
+            <Spec label="Water" value={text.water} />
+            <Spec label="Ratio" value={text.ratio} />
+            <Spec label="Water temp" value={text.temp} />
+            <Spec label="Total time" value={text.time} />
             <Spec label="Grind" value={grindText(numbers.grindUm, grinder)} />
-          </dl>
-          <ol className="mt-3 space-y-1" aria-label="Their pours">
-            {numbers.pours.map((pour, index) => (
-              <li key={pour.atS} className="flex items-center gap-3 rounded-full py-1.5 pr-5 pl-2">
-                <span className="grid size-7 place-items-center rounded-full bg-soft text-xs">{index + 1}</span>
-                <span className="num flex-1 text-sm">{clock(pour.atS)}</span>
-                <span className="num text-sm text-muted">+{pour.toG - (numbers.pours[index - 1]?.toG ?? 0)} g</span>
-                <span className="num w-16 text-right text-sm">{pour.toG} g</span>
-              </li>
-            ))}
-          </ol>
+          </SpecGrid>
+          <PourList pours={numbers.pours} label="Their pours" amounts className="mt-3" />
           {brewTo ? (
-            <Link to={brewTo} onClick={onClose} className="mt-4 grid h-12 w-full place-items-center rounded-full bg-ink font-medium text-bg">
+            <Link to={brewTo} onClick={onClose} className={`mt-4 ${buttonClass(undefined, true)}`}>
               Brew this
             </Link>
           ) : (

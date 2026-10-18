@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { formatTemp } from '../../engine/units.ts'
 import { formatDMY, toISODate } from '../beans/dates'
 import { grindText } from '../brew/feedback'
+import { recipeSummary } from '../brew/format'
 import { toSearchParams } from '../brew/params'
 import { Avatar } from '../components/Avatar'
 import { useFriendRecipes, useFriends, useMyBags, useMyGrinders, useProfile } from '../data/hooks'
 import type { Bag, FriendRecipe } from '../data/types'
 import { FriendRecipeSheet } from './FriendRecipeSheet'
+import { LoadingNote } from '../components/LoadingNote'
 
 /** Their numbers as the starting edits for your own brew. Their gear and goal choices are theirs; yours are used. */
 function startFrom(recipe: FriendRecipe, bag: Bag) {
@@ -32,9 +33,7 @@ export function FriendRecipes() {
 
   if (recipes.isPending || bags.isPending) {
     return (
-      <p role="status" className="mt-10 text-center text-sm text-muted">
-        Loading…
-      </p>
+      <LoadingNote />
     )
   }
 
@@ -72,7 +71,7 @@ export function FriendRecipes() {
                 {recipe.friend.name} · {formatDMY(toISODate(new Date(recipe.lockedAt)))}
               </span>
               <span className="num mt-0.5 block truncate text-xs text-muted">
-                {numbers.doseG} g · {numbers.waterG} g · {formatTemp(numbers.tempC, unit)} · {grindText(numbers.grindUm, grinder)}
+                {recipeSummary(numbers, unit, grindText(numbers.grindUm, grinder))}
               </span>
               {!bag && <span className="mt-0.5 block text-xs text-accent">Add this bean to brew it</span>}
             </span>

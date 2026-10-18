@@ -10,6 +10,7 @@ import { useMyBags, useMyDrafts } from '../data/hooks'
 import type { BagStatus } from '../data/types'
 import { InstallPrompt } from '../install/InstallPrompt'
 import { PageHeader } from '../layout/PageHeader'
+import { LoadingNote } from '../components/LoadingNote'
 
 type Filter = 'all' | BagStatus | 'finished'
 
@@ -45,9 +46,7 @@ export function BeansPage() {
       <InstallPrompt />
 
       {bags.isPending && (
-        <p role="status" className="mt-10 text-center text-sm text-muted">
-          Loading your beans…
-        </p>
+        <LoadingNote>Loading your beans…</LoadingNote>
       )}
 
       {bags.isError && (

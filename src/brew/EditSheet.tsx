@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Sheet } from '../components/Sheet'
+import { Button } from '../components/Button'
 
 interface EditSheetProps {
   open: boolean
@@ -67,20 +68,21 @@ function Editor({ title, value, unit, step, min, max, places = 0, onSave, onRese
         </p>
       )}
       {children}
-      <button type="submit" disabled={!valid} className="mt-3 h-12 w-full rounded-full bg-ink font-medium text-bg disabled:opacity-40">
+      <Button type="submit" disabled={!valid} className="mt-3">
         Done
-      </button>
+      </Button>
       {onReset && (
-        <button
-          type="button"
+        <Button
           onClick={() => {
             onReset()
             close()
           }}
-          className="mt-2 h-11 w-full rounded-full text-sm text-muted"
+          variant="quiet"
+          size="md"
+          className="mt-2"
         >
           Back to the suggestion
-        </button>
+        </Button>
       )}
     </form>
   )

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Sheet } from '../components/Sheet'
 import { useOnOpen } from '../hooks/useOnOpen'
+import { Button } from '../components/Button'
 
 interface EditNameSheetProps {
   open: boolean
@@ -51,9 +52,9 @@ export function EditNameSheet({ open, onOpenChange, initialName, onSave }: EditN
             {error}
           </p>
         )}
-        <button type="submit" className="h-12 w-full rounded-full bg-ink font-medium text-bg active:scale-[0.98]">
+        <Button type="submit">
           Save
-        </button>
+        </Button>
       </form>
     </Sheet>
   )

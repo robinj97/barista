@@ -3,6 +3,7 @@ import { MAX_POURS, LIMITS, validateOverrides } from '../../engine/overrides.ts'
 import type { Pour } from '../../engine/types.ts'
 import { Sheet } from '../components/Sheet'
 import { clock } from './buildInput'
+import { Button } from '../components/Button'
 
 interface PoursSheetProps {
   open: boolean
@@ -89,20 +90,21 @@ function Editor({ pours, edited, onSave, onReset, close }: Omit<PoursSheetProps,
           {error}
         </p>
       )}
-      <button type="submit" disabled={!!error} className="mt-3 h-12 w-full rounded-full bg-ink font-medium text-bg disabled:opacity-40">
+      <Button type="submit" disabled={!!error} className="mt-3">
         Done
-      </button>
+      </Button>
       {edited && (
-        <button
-          type="button"
+        <Button
           onClick={() => {
             onReset()
             close()
           }}
-          className="mt-2 h-11 w-full rounded-full text-sm text-muted"
+          variant="quiet"
+          size="md"
+          className="mt-2"
         >
           Back to the suggestion
-        </button>
+        </Button>
       )}
     </form>
   )

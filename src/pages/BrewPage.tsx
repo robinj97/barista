@@ -11,8 +11,8 @@ import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
 import { METHOD_LABELS } from '../data/types'
 import { PageHeader } from '../layout/PageHeader'
-
-const label = 'px-2 text-xs font-medium text-muted'
+import { LoadingNote } from '../components/LoadingNote'
+import { SectionHeading } from '../components/SectionHeading'
 
 /** Set up the cup: bean, goal and gear. The recipe is on the next screen. */
 export function BrewPage() {
@@ -30,9 +30,7 @@ export function BrewPage() {
     return (
       <>
         <PageHeader title="Brew" />
-        <p role="status" className="mt-10 text-center text-sm text-muted">
-          Loading…
-        </p>
+        <LoadingNote />
       </>
     )
   }
@@ -79,7 +77,7 @@ export function BrewPage() {
       <PageHeader title="Brew" subtitle="Set up the cup and get a starting recipe." />
 
       <section aria-label="Bean" className="mt-6">
-        <h2 className={label}>Which bean?</h2>
+        <SectionHeading>Which bean?</SectionHeading>
         <button
           type="button"
           onClick={() => setPicking(true)}
@@ -96,7 +94,7 @@ export function BrewPage() {
       </section>
 
       <section aria-label="Method" className="mt-6">
-        <h2 className={label}>Method</h2>
+        <SectionHeading>Method</SectionHeading>
         <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Brew method">
           <button type="button" aria-pressed className="h-10 rounded-full bg-ink px-4 text-sm text-bg">
             {METHOD_LABELS.v60}
@@ -115,7 +113,7 @@ export function BrewPage() {
       </section>
 
       <section aria-label="Goal" className="mt-6">
-        <h2 className={label}>What do you want from this cup?</h2>
+        <SectionHeading>What do you want from this cup?</SectionHeading>
         <div className="mt-2 space-y-2">
           <GoalSlider balance={choices.balance} onChange={(balance) => update({ balance })} />
           <div className="flex items-center gap-1">
