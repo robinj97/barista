@@ -57,7 +57,7 @@ Asked up front, all optional:
 
 - **Variety:** type-ahead plus free text.
 - **Origin:** country with type-ahead, plus free-text region.
-- **Process:** chips (Washed, Natural, Honey, Anaerobic, Other), single choice.
+- **Process:** chips (Washed, Natural, Honey, Anaerobic) where **more than one can be picked**, because processes combine (anaerobic washed, anaerobic natural), plus a free-text "Other process" field (carbonic maceration, thermal shock). They are stored as one text value, anaerobic first: "Anaerobic washed", "Washed, thermal shock". No schema change: the engine already reads free text and treats any "anaerobic ..." as anaerobic (`engine/traits.ts`).
 - **Roast level:** chips (Light, Medium, Dark), single choice.
 - **Tasting notes:** tag input with suggestions from a flavour vocabulary, plus free text. The notes become the notes you can choose to bring out when brewing.
 

@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { ChipGroup } from '../components/ChipGroup'
+import { MultiChipGroup } from '../components/MultiChipGroup'
 import { useBeanSearch } from '../data/hooks'
 import type { BeanMatch, NewBean, RoastLevel } from '../data/types'
-import { FLAVOURS, ORIGINS, PROCESSES, VARIETIES } from './lists'
+import { FLAVOURS, ORIGINS, PROCESSES, VARIETIES, composeProcess, parseProcess } from './lists'
 import { TagInput } from './TagInput'
 import { useDebouncedValue } from './useDebouncedValue'
 
@@ -26,7 +27,7 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, onBa
   const [name, setName] = useState(draft?.name ?? initialName)
   const [origin, setOrigin] = useState(draft?.origin ?? '')
   const [region, setRegion] = useState(draft?.region ?? '')
-  const [process, setProcess] = useState<string | null>(draft?.process ?? null)
+  const [process, setProcess] = useState(() => parseProcess(draft?.process))
   const [roastLevel, setRoastLevel] = useState<RoastLevel | null>(draft?.roastLevel ?? null)
   const [notes, setNotes] = useState<string[]>(draft?.roasterNotes ?? [])
   const [variety, setVariety] = useState(draft?.variety ?? '')
@@ -58,7 +59,7 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, onBa
       name: name.trim(),
       origin: origin.trim() || undefined,
       region: region.trim() || undefined,
-      process: process ?? undefined,
+      process: composeProcess(process.chips, process.other) || undefined,
       roastLevel: roastLevel ?? undefined,
       roasterNotes: notes,
       variety: variety.trim() || undefined,
@@ -135,8 +136,17 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, onBa
       <div>
         <p className={label}>Process</p>
         <div className="mt-1">
-          <ChipGroup label="Process" options={PROCESSES.map((p) => ({ value: p, label: p }))} value={process as (typeof PROCESSES)[number] | null} onChange={setProcess} />
+          <MultiChipGroup label="Process" options={PROCESSES.map((p) => ({ value: p, label: p }))} value={process.chips} onChange={(chips) => setProcess((p) => ({ ...p, chips }))} />
         </div>
+        <p className="mt-1 px-2 text-xs text-muted">Pick more than one when it applies, like Anaerobic and Washed.</p>
+        <input
+          value={process.other}
+          onChange={(e) => setProcess((p) => ({ ...p, other: e.target.value }))}
+          aria-label="Other process"
+          placeholder="Something else, e.g. Carbonic maceration"
+          className={`${field} mt-2`}
+          maxLength={60}
+        />
       </div>
 
       <div>
