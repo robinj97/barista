@@ -6,6 +6,7 @@ import type { BeanMatch, NewBean, RoastLevel } from '../data/types'
 import { FLAVOURS, ORIGINS, PROCESSES, VARIETIES, composeProcess, parseProcess } from './lists'
 import { TagInput } from './TagInput'
 import { useDebouncedValue } from './useDebouncedValue'
+import { Button } from '../components/Button'
 
 interface NewBeanStepProps {
   /** The details entered earlier, restored when you come back from the next step. */
@@ -186,9 +187,9 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, from
         </div>
       </details>
 
-      <button type="submit" className="h-12 w-full rounded-full bg-ink font-medium text-bg active:scale-[0.98]">
+      <Button type="submit">
         Continue
-      </button>
+      </Button>
     </form>
   )
 }

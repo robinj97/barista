@@ -3,11 +3,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { micronsToSetting, settingToMicrons } from '../../engine/grinder.ts'
 import { suggest } from '../../engine/suggest.ts'
 import { LIMITS } from '../../engine/overrides.ts'
-import { formatTemp, fromDisplayTemp, toDisplayTemp } from '../../engine/units.ts'
+import { fromDisplayTemp, toDisplayTemp } from '../../engine/units.ts'
 import type { Confidence } from '../../engine/grinder.ts'
-import { beanCover } from '../beans/cover'
+import { BeanHeader } from '../beans/BeanHeader'
 import { toISODate } from '../beans/dates'
-import { buildSuggestInput, clock } from '../brew/buildInput'
+import { buildSuggestInput } from '../brew/buildInput'
 import { afterBrew, isEmpty } from '../brew/bagUsage'
 import { BrewingPanel } from '../brew/BrewingPanel'
 import { primeSound } from '../brew/cues'
@@ -15,7 +15,11 @@ import { EditSheet } from '../brew/EditSheet'
 import { clearEdits, doseFor, hasEdits, resetEdit, setCups, setDose, setGrind, setPours, setRatio, setTemp, setTime, setWater } from '../brew/edits'
 import { GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices, type RecipeEdits } from '../brew/params'
 import { LastBrewCard } from '../brew/LastBrewCard'
+import { BackLink } from '../components/BackLink'
+import { Spec, SpecGrid } from '../components/Spec'
+import { PourList } from '../brew/PourList'
 import { PoursSheet } from '../brew/PoursSheet'
+import { recipeText } from '../brew/format'
 import { finishSession, readSession, clearSession, startSession, untimedSession, writeSession, type BrewSession } from '../brew/session'
 import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
@@ -26,6 +30,8 @@ import { PourRing } from '../components/PourRing'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { isCalibrated } from '../../engine/grinder.ts'
 import { grinderName } from '../profile/gearLabels'
+import { Button } from '../components/Button'
+import { LoadingNote } from '../components/LoadingNote'
 
 /** The time of a tap; kept out of the component so it is clearly not read while rendering. */
 const clockNow = () => Date.now()
@@ -34,16 +40,6 @@ const CONFIDENCE_TEXT: Record<Confidence, string> = {
   low: 'Starting point · expect 2–3 brews',
   medium: 'Informed by similar brews',
   high: 'Based on your own recipe',
-}
-
-function Spec({ label, value, edited, onEdit }: { label: string; value: string; edited: boolean; onEdit: () => void }) {
-  return (
-    <button type="button" onClick={onEdit} aria-label={`${label}: ${value}${edited ? ', set by you' : ''}. Edit`} className="squircle relative rounded-3xl bg-soft px-4 py-3 text-left active:scale-[0.97]">
-      <span className="block text-xs text-muted">{label}</span>
-      <span className="num mt-0.5 block text-base">{value}</span>
-      {edited && <span className="absolute top-3 right-3 size-1.5 rounded-full bg-accent" aria-hidden />}
-    </button>
-  )
 }
 
 const doseProblem = (doseG: number): string | null =>
@@ -91,19 +87,13 @@ export function RecipePage() {
   const own = usePriors(today)
   const drafts = useMyDrafts()
 
-  const back = (
-    <Link to={{ pathname: '/brew', search: params.toString() }} aria-label="Back to set up" className="grid size-11 place-items-center rounded-full bg-soft text-lg">
-      ←
-    </Link>
-  )
+  const back = <BackLink to={{ pathname: '/brew', search: params.toString() }} label="Back to set up" />
 
   if (selection.bags.isPending || own.pending) {
     return (
       <>
         {back}
-        <p role="status" className="mt-10 text-center text-sm text-muted">
-          Loading…
-        </p>
+        <LoadingNote />
       </>
     )
   }
@@ -122,7 +112,7 @@ export function RecipePage() {
   const unit = selection.profile.data?.temp_unit ?? 'c'
   const out = suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, today, own.context))
   const { recipe } = out
-  const cover = beanCover(bag.bean.id)
+  const text = recipeText(recipe, unit)
   const goal = goalOf(choices.balance)
   const goalText = goal ? GOAL_LABELS[goal].toLowerCase() : 'custom balance'
 
@@ -179,16 +169,7 @@ export function RecipePage() {
 
   return (
     <>
-      <div className="flex items-center gap-3">
-        {back}
-        <span className={`size-12 shrink-0 ${cover.tint} ${cover.pebble}`} aria-hidden />
-        <div className="min-w-0">
-          <h1 className="truncate text-lg leading-tight font-medium">{bag.bean.name}</h1>
-          <p className="truncate text-xs text-muted">
-            V60 · {goalText}, {choices.strength}
-          </p>
-        </div>
-      </div>
+      <BeanHeader beanId={bag.bean.id} title={bag.bean.name} subtitle={`V60 · ${goalText}, ${choices.strength}`} back={back} />
 
       {!brewing && (
         <button
@@ -228,17 +209,14 @@ export function RecipePage() {
         <BrewingPanel pours={recipe.pours} session={session} now={now} onFinish={finish} onCancel={cancel} />
       ) : view === 'recipe' ? (
         <>
-      <dl className="mt-4 grid grid-cols-3 gap-2" aria-label="Recipe">
-        <Spec label="Coffee" value={`${recipe.doseG} g`} edited={isOverridden('doseG')} onEdit={() => setEditing('dose')} />
-        <Spec label="Water" value={`${recipe.waterG} g`} edited={isOverridden('waterG') || isOverridden('pours')} onEdit={() => setEditing('water')} />
-        <Spec label="Ratio" value={`1:${recipe.ratio}`} edited={isOverridden('ratio')} onEdit={() => setEditing('ratio')} />
-        <Spec label="Water temp" value={formatTemp(recipe.tempC, unit)} edited={isOverridden('tempC')} onEdit={() => setEditing('temp')} />
-        <Spec label="Total time" value={`~${clock(recipe.targetTimeS)}`} edited={isOverridden('targetTimeS')} onEdit={() => setEditing('time')} />
-        <div className="squircle rounded-3xl bg-soft px-4 py-3">
-          <dt className="text-xs text-muted">Filter</dt>
-          <dd className="num mt-0.5 text-base">{recipe.filter ? recipe.filter.model : 'None'}</dd>
-        </div>
-      </dl>
+      <SpecGrid label="Recipe">
+        <Spec label="Coffee" value={text.coffee} edited={isOverridden('doseG')} onEdit={() => setEditing('dose')} />
+        <Spec label="Water" value={text.water} edited={isOverridden('waterG') || isOverridden('pours')} onEdit={() => setEditing('water')} />
+        <Spec label="Ratio" value={text.ratio} edited={isOverridden('ratio')} onEdit={() => setEditing('ratio')} />
+        <Spec label="Water temp" value={text.temp} edited={isOverridden('tempC')} onEdit={() => setEditing('temp')} />
+        <Spec label="Total time" value={text.time} edited={isOverridden('targetTimeS')} onEdit={() => setEditing('time')} />
+        <Spec label="Filter" value={recipe.filter ? recipe.filter.model : 'None'} />
+      </SpecGrid>
 
       <section aria-label="Grind" className="squircle relative mt-3 rounded-4xl bg-soft px-5 py-4 active:scale-[0.99]">
         <button type="button" onClick={() => setEditing('grind')} aria-label="Edit grind" className="absolute inset-0 rounded-4xl" />
@@ -296,9 +274,9 @@ export function RecipePage() {
         </div>
       </div>
 
-      <button type="button" onClick={startBrewing} className="mt-5 h-12 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
+      <Button onClick={startBrewing} className="mt-5">
         Start brewing
-      </button>
+      </Button>
         </>
       ) : (
       <section aria-label="Pours" className="mt-4">
@@ -308,38 +286,29 @@ export function RecipePage() {
             Edit pours
           </button>
         </div>
-        <ol className="mt-2 space-y-1">
-          {recipe.pours.map((pour, index) => (
-            <li key={pour.atS} className="flex items-center gap-3 rounded-full py-2 pr-5 pl-2">
-              <span className="grid size-8 place-items-center rounded-full bg-soft text-xs">{index + 1}</span>
-              <span className="num flex-1 text-sm">{clock(pour.atS)}</span>
-              <span className="num text-sm text-muted">+{pour.toG - (recipe.pours[index - 1]?.toG ?? 0)} g</span>
-              <span className="num w-16 text-right text-sm">{pour.toG} g</span>
-            </li>
-          ))}
-        </ol>
+        <PourList pours={recipe.pours} amounts className="mt-2" />
         <p className="mt-2 px-2 text-xs text-muted">Times are a guide, not a clock.</p>
         <div className="mt-4 space-y-3">
-          <button type="button" onClick={startTimer} className="h-14 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
+          <Button onClick={startTimer} size="xl">
             Start timer
-          </button>
-          <button type="button" onClick={finishUntimed} className="h-14 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98]">
+          </Button>
+          <Button onClick={finishUntimed} size="xl">
             Finished brewing
-          </button>
+          </Button>
         </div>
       </section>
       )}
 
       {!brewing && view === 'recipe' && (
-        <button type="button" onClick={() => setWhy(true)} className="mt-3 h-12 w-full rounded-full bg-soft active:scale-[0.98]">
+        <Button onClick={() => setWhy(true)} variant="soft" className="mt-3">
           Why these numbers
-        </button>
+        </Button>
       )}
 
       {hasEdits(choices) && !brewing && view === 'recipe' && (
-        <button type="button" onClick={() => apply(clearEdits(choices))} className="mt-2 h-11 w-full rounded-full text-sm text-muted">
+        <Button onClick={() => apply(clearEdits(choices))} variant="quiet" size="md" className="mt-2">
           Reset all to the suggestion
-        </button>
+        </Button>
       )}
 
       <EditSheet

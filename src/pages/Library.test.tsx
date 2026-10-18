@@ -65,3 +65,11 @@ describe('Starting from a locked recipe', () => {
     expect(within(screen.getByLabelText('Recipe')).getByText('Water temp').nextSibling).toHaveTextContent('91°C')
   })
 })
+
+describe('Library: temperature unit', () => {
+  it('shows recipes in your unit, not always Celsius', async () => {
+    renderApp('/library', { mock: { ...mock, profile: { temp_unit: 'f' } } })
+    const list = await screen.findByRole('list', { name: 'Your recipes' })
+    expect(within(list).getByRole('listitem')).toHaveTextContent('196°F')
+  })
+})

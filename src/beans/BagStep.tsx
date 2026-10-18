@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChipGroup } from '../components/ChipGroup'
 import { beanCover } from './cover'
 import { daysAgo, formatDMY, maskDMY, parseDMY } from './dates'
+import { Button } from '../components/Button'
 
 export interface BagDetails {
   roastDate: string | null
@@ -168,9 +169,9 @@ export function BagStep({ beanId, name, roaster, initial, onBack, onSubmit }: Ba
         </p>
       )}
 
-      <button type="button" onClick={submit} className="h-12 w-full rounded-full bg-ink font-medium text-bg active:scale-[0.98]">
+      <Button onClick={submit}>
         Add to my beans
-      </button>
+      </Button>
     </div>
   )
 }

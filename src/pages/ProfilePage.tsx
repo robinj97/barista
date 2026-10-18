@@ -26,11 +26,12 @@ import { AddFilterSheet } from '../profile/AddFilterSheet'
 import { AddGrinderSheet } from '../profile/AddGrinderSheet'
 import { EditNameSheet } from '../profile/EditNameSheet'
 import { filterName, filterNote, grinderName, grinderNote } from '../profile/gearLabels'
+import { SectionHeading } from '../components/SectionHeading'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="mt-6">
-      <h2 className="px-2 text-xs font-medium text-muted">{title}</h2>
+      <SectionHeading>{title}</SectionHeading>
       <div className="squircle mt-2 rounded-4xl bg-soft p-2">{children}</div>
     </section>
   )
