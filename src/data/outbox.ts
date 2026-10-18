@@ -1,4 +1,5 @@
-import type { Api, BagPatch, LockRecipeInput, SaveDraftInput } from './types'
+import type { Api } from './api'
+import type { BagPatch, LockRecipeInput, SaveDraftInput } from './types'
 
 /**
  * Writes that could not reach the server wait here, on the phone, and are sent when the
@@ -37,6 +38,21 @@ export function isNetworkError(error: unknown): boolean {
 }
 
 export const bagKey = (bagId: string) => `bag:${bagId}`
+/** Whether a save reached the server or is waiting on the phone for the connection to return. */
+export type SaveOutcome = 'saved' | 'queued'
+
+/** Sends a write; if the connection is down, keeps it on the phone to send later. Any other failure is thrown. */
+export async function saveOrQueue(send: () => Promise<void>, entry: OutboxEntry): Promise<SaveOutcome> {
+  try {
+    await send()
+    return 'saved'
+  } catch (error) {
+    if (!isNetworkError(error)) throw error
+    enqueue(entry)
+    return 'queued'
+  }
+}
+
 export const draftKey = (input: SaveDraftInput) => `draft:${input.beanId}:${input.method}`
 
 export function enqueue(entry: OutboxEntry): void {

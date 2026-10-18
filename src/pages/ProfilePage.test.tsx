@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { AuthContext } from '../auth/AuthContext'
 import { ApiContext } from '../data/ApiContext'
-import type { Api } from '../data/types'
+import type { Api } from '../data/api'
 import { createMockApi, type MockOptions } from '../dev/mockApi'
 import { ProfilePage } from './ProfilePage'
 

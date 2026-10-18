@@ -1,10 +1,11 @@
 import { SIMILAR_FROM, dedupeKey, similarity } from '../beans/dedupe'
+import type { Api } from '../data/api'
 import { GRINDER_SEED } from '../../engine/grinderSeed.ts'
 import {
   byBrandModel,
   filterMatchKey,
   ScanError,
-  type Api,
+
   type Bag,
   type Bean,
   type Draft,
