@@ -26,3 +26,15 @@ Domain pieces: `<BeanHeader>` (a screen about one bean), `<PourList>` (planned, 
 - **Depend on narrow interfaces.** Screens and hooks use the `Api` the app provides (real or mock); new data access is added to the area it belongs to.
 - **Extend by adding, not editing.** A new variant of a button, a new kind of confirm, a new chip list is a new value passed to a primitive, not a copy of its markup.
 - **Behaviour changes need a test; refactors keep the tests green and do not change them.**
+
+## Screens: container, model, parts
+
+A big screen is split by job, as the recipe screen is (`src/pages/RecipePage.tsx` and `src/recipe/`):
+
+- **The page** loads data and works the answer out (a few dozen lines): loading and not-found states, then `buildRecipeModel`.
+- **The model** (`recipe/model.ts`) is everything the parts need, computed once and handed down as one prop, so parts neither take a long list of props nor recalculate.
+- **A hook per behaviour** (`useBrewRun`: the timer and the moves between planning, brewing and logging).
+- **Small parts that do one thing** (`RecipeView`, `PoursView`, `GrindCard`, `SizeControls`, `RecipeEditSheets`, `ConfidencePill`), each tested on its own.
+- **The screen** (`RecipeScreen`) only owns what is on screen: which view, which sheet is open.
+
+Follow the same shape when another screen grows past a couple of hundred lines.

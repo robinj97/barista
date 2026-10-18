@@ -70,8 +70,8 @@ export function finishSession(session: BrewSession, nowMs: number): BrewSession 
 }
 
 /** For people who brew without the timer: a finished brew with no time to record. */
-export const untimedSession = (bagId: string, search: string, asOf: string, nowMs: number): BrewSession => ({
-  ...startSession(bagId, search, asOf, nowMs),
+export const untimedSession = (bagId: string, search: string, asOf: string, nowMs: number, recipe?: RecipeNumbers): BrewSession => ({
+  ...startSession(bagId, search, asOf, nowMs, recipe),
   finishedS: 0,
   untimed: true,
 })

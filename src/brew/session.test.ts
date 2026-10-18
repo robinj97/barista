@@ -21,4 +21,10 @@ describe('brew session', () => {
     expect(s.finishedS).toBe(0)
     expect(s.untimed).toBe(true)
   })
+
+  it('keeps the numbers brewed, timed or not, so the log shows exactly them', () => {
+    const recipe = { doseG: 20, waterG: 300, ratio: 15, tempC: 94, grindUm: 780, targetTimeS: 190, pours: [] }
+    expect(untimedSession('bag', 'bag=bag', '2026-10-17', 1_000_000, recipe).recipe).toEqual(recipe)
+    expect(startSession('bag', 'bag=bag', '2026-10-17', 1_000_000, recipe).recipe).toEqual(recipe)
+  })
 })
