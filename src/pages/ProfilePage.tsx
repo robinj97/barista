@@ -27,6 +27,7 @@ import { AddGrinderSheet } from '../profile/AddGrinderSheet'
 import { EditNameSheet } from '../profile/EditNameSheet'
 import { filterName, filterNote, grinderName, grinderNote } from '../profile/gearLabels'
 import { SectionHeading } from '../components/SectionHeading'
+import { IconButton } from '../components/IconButton'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -84,15 +85,15 @@ export function ProfilePage() {
   return (
     <>
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          aria-label="Back"
+        <IconButton
+          label="Back"
+          size="lg"
+          className="text-lg"
           // Back to the tab that opened the profile; Beans when it was opened directly.
           onClick={() => (location.key === 'default' ? navigate('/beans') : navigate(-1))}
-          className="grid size-11 place-items-center rounded-full bg-soft text-lg"
         >
           ←
-        </button>
+        </IconButton>
         <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Profile</h1>
       </div>
 

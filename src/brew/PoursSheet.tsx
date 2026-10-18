@@ -4,6 +4,7 @@ import type { Pour } from '../../engine/types.ts'
 import { Sheet } from '../components/Sheet'
 import { clock } from './buildInput'
 import { Button } from '../components/Button'
+import { IconButton } from '../components/IconButton'
 
 interface PoursSheetProps {
   open: boolean
@@ -67,15 +68,9 @@ function Editor({ pours, edited, onSave, onReset, close }: Omit<PoursSheetProps,
             <span className="grid size-8 place-items-center rounded-full bg-soft text-xs">{i + 1}</span>
             <input aria-label={`Pour ${i + 1} start`} value={i === 0 ? '0:00' : row.at} disabled={i === 0} onChange={(e) => patch(i, { at: e.target.value })} className={`${field} disabled:text-muted`} />
             <input aria-label={`Pour ${i + 1} total water`} type="number" inputMode="decimal" value={row.to} onChange={(e) => patch(i, { to: e.target.value })} className={field} />
-            <button
-              type="button"
-              aria-label={`Remove pour ${i + 1}`}
-              disabled={rows.length === 1}
-              onClick={() => setRows((all) => all.filter((_, j) => j !== i))}
-              className="size-10 rounded-full text-muted disabled:opacity-30"
-            >
+            <IconButton label={`Remove pour ${i + 1}`} tone="plain" disabled={rows.length === 1} className="disabled:opacity-30" onClick={() => setRows((all) => all.filter((_, j) => j !== i))}>
               ✕
-            </button>
+            </IconButton>
           </li>
         ))}
       </ol>

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Sheet } from '../components/Sheet'
 import { Button } from '../components/Button'
+import { IconButton } from '../components/IconButton'
 
 interface EditSheetProps {
   open: boolean
@@ -42,9 +43,9 @@ function Editor({ title, value, unit, step, min, max, places = 0, onSave, onRese
       }}
     >
       <div className="flex items-center justify-center gap-4 py-4">
-        <button type="button" aria-label={`Decrease ${title}`} onClick={() => nudge(-1)} className="size-12 rounded-full bg-soft text-xl active:scale-95">
+        <IconButton label={`Decrease ${title}`} size="xl" className="text-xl" onClick={() => nudge(-1)}>
           −
-        </button>
+        </IconButton>
         <label className="flex items-baseline gap-1">
           <span className="sr-only">{title}</span>
           <input
@@ -58,9 +59,9 @@ function Editor({ title, value, unit, step, min, max, places = 0, onSave, onRese
           />
           <span className="text-sm text-muted">{unit}</span>
         </label>
-        <button type="button" aria-label={`Increase ${title}`} onClick={() => nudge(1)} className="size-12 rounded-full bg-soft text-xl active:scale-95">
+        <IconButton label={`Increase ${title}`} size="xl" className="text-xl" onClick={() => nudge(1)}>
           +
-        </button>
+        </IconButton>
       </div>
       {!valid && (
         <p role="alert" className="text-center text-xs text-muted">

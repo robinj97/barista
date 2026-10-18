@@ -3,6 +3,7 @@ import { ChipGroup } from '../components/ChipGroup'
 import { beanCover } from './cover'
 import { daysAgo, formatDMY, maskDMY, parseDMY } from './dates'
 import { Button } from '../components/Button'
+import { TextField } from '../components/TextField'
 
 export interface BagDetails {
   roastDate: string | null
@@ -115,21 +116,19 @@ export function BagStep({ beanId, name, roaster, initial, onBack, onSubmit }: Ba
           />
         </div>
         {roast === 'pick' && (
-          <label className="mt-2 block">
-            <span className="sr-only">Roast date</span>
-            <input
-              value={pickedDate}
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={10}
-              placeholder="dd/mm/yyyy"
-              onChange={(event) => {
-                setPickedDate(maskDMY(event.target.value))
-                setError(null)
-              }}
-              className="num h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            />
-          </label>
+          <TextField
+            aria-label="Roast date"
+            value={pickedDate}
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={10}
+            placeholder="dd/mm/yyyy"
+            onChange={(event) => {
+              setPickedDate(maskDMY(event.target.value))
+              setError(null)
+            }}
+            className="mt-2"
+          />
         )}
       </div>
 
@@ -147,19 +146,17 @@ export function BagStep({ beanId, name, roaster, initial, onBack, onSubmit }: Ba
           />
         </div>
         {size === 'other' && (
-          <label className="mt-2 block">
-            <span className="sr-only">Bag size in grams</span>
-            <input
-              value={custom}
-              inputMode="decimal"
-              placeholder="Grams"
-              onChange={(event) => {
-                setCustom(event.target.value)
-                setError(null)
-              }}
-              className="h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            />
-          </label>
+          <TextField
+            aria-label="Bag size in grams"
+            value={custom}
+            inputMode="decimal"
+            placeholder="Grams"
+            onChange={(event) => {
+              setCustom(event.target.value)
+              setError(null)
+            }}
+            className="mt-2"
+          />
         )}
       </div>
 

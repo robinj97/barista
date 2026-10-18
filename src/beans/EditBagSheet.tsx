@@ -4,14 +4,13 @@ import { useUpdateBag } from '../data/hooks'
 import type { Bag } from '../data/types'
 import { daysAgo, formatDMY, maskDMY, parseDMY } from './dates'
 import { Button } from '../components/Button'
+import { TextField } from '../components/TextField'
 
 interface EditBagSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   bag: Bag
 }
-
-const field = 'h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent'
 
 function Form({ bag, close }: { bag: Bag; close: () => void }) {
   const update = useUpdateBag()
@@ -48,39 +47,25 @@ function Form({ bag, close }: { bag: Bag; close: () => void }) {
         save()
       }}
     >
-      <label className="block">
-        <span className="px-2 text-xs text-muted">Roasted</span>
-        <input
-          value={roast}
-          onChange={(event) => setRoast(maskDMY(event.target.value))}
-          inputMode="numeric"
-          placeholder="dd/mm/yyyy"
-          aria-invalid={!!errors.roast}
-          className={`${field} num mt-1`}
-        />
-        {errors.roast && (
-          <span role="alert" className="mt-1 block px-2 text-xs text-accent">
-            {errors.roast}
-          </span>
-        )}
-      </label>
-      <label className="block">
-        <span className="px-2 text-xs text-muted">Left in the bag (g)</span>
-        <input
-          value={left}
-          onChange={(event) => setLeft(event.target.value)}
-          type="number"
-          inputMode="decimal"
-          placeholder="Not set"
-          aria-invalid={!!errors.left}
-          className={`${field} num mt-1`}
-        />
-        {errors.left && (
-          <span role="alert" className="mt-1 block px-2 text-xs text-accent">
-            {errors.left}
-          </span>
-        )}
-      </label>
+      <TextField
+        label="Roasted"
+        value={roast}
+        onChange={(event) => setRoast(maskDMY(event.target.value))}
+        inputMode="numeric"
+        placeholder="dd/mm/yyyy"
+        error={errors.roast}
+        mono
+      />
+      <TextField
+        label="Left in the bag (g)"
+        value={left}
+        onChange={(event) => setLeft(event.target.value)}
+        type="number"
+        inputMode="decimal"
+        placeholder="Not set"
+        error={errors.left}
+        mono
+      />
       <Button type="submit">
         Save
       </Button>

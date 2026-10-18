@@ -5,6 +5,8 @@ import { groupByRoaster, refineCatalogue } from './catalogue'
 import { beanCover } from './cover'
 import { splitKnownRoaster, type Prefill } from './roasters'
 import { useDebouncedValue } from './useDebouncedValue'
+import { TextField } from '../components/TextField'
+import { IconButton } from '../components/IconButton'
 
 interface SearchStepProps {
   query: string
@@ -82,9 +84,9 @@ export function SearchStep({ query, onQueryChange, onPick, roasters, onAddNew, o
   return (
     <div className="flex min-h-full flex-col">
       <div className="sticky top-0 z-20 flex gap-2 bg-bg pb-2">
-        <label className="block min-w-0 flex-1">
-          <span className="sr-only">Search roaster or bean</span>
-          <input
+        <div className="min-w-0 flex-1">
+          <TextField
+            aria-label="Search roaster or bean"
             type="search"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
@@ -92,20 +94,14 @@ export function SearchStep({ query, onQueryChange, onPick, roasters, onAddNew, o
             enterKeyHint="search"
             autoComplete="off"
             autoCorrect="off"
-            className="h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
-        </label>
-        <button
-          type="button"
-          onClick={() => camera.current?.click()}
-          aria-label="Scan the bag"
-          className="grid size-12 shrink-0 place-items-center rounded-full bg-soft text-ink active:scale-95"
-        >
+        </div>
+        <IconButton label="Scan the bag" size="xl" className="text-ink" onClick={() => camera.current?.click()}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
             <circle cx="12" cy="13" r="3.5" />
           </svg>
-        </button>
+        </IconButton>
         <input
           ref={camera}
           type="file"

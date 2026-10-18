@@ -4,6 +4,7 @@ import type { CatalogueGrinder } from '../data/types'
 import { useOnOpen } from '../hooks/useOnOpen'
 import { CatalogueStatus } from './CatalogueStatus'
 import { grinderName, grinderNote } from './gearLabels'
+import { TextField } from '../components/TextField'
 
 interface AddGrinderSheetProps {
   open: boolean
@@ -26,16 +27,7 @@ export function AddGrinderSheet({ open, onOpenChange, catalogue, catalogueFailed
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="Add a grinder">
       <div className="space-y-2 px-3 pb-2">
-        <label className="block">
-          <span className="sr-only">Search grinders</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search grinders"
-            className="h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-        </label>
+        <TextField aria-label="Search grinders" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search grinders" />
         {!catalogue ? (
           <CatalogueStatus failed={catalogueFailed} onRetry={onRetry} />
         ) : available.length === 0 ? (
