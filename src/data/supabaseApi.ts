@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import type { CalibrationSource } from '../../engine/grinder.ts'
@@ -5,6 +6,8 @@ import type { BrewChoices } from '../brew/params'
 import type { Json } from '../lib/database.types'
 import {
   BROWSE_LIMIT,
+  ScanError,
+  type ScannedBag,
   byBrandModel,
   filterMatchKey,
   type Api,
@@ -214,6 +217,16 @@ export const supabaseApi: Api = {
       status: row.status as BagStatus,
       createdAt: row.created_at,
     }))
+  },
+
+  async scanBag(imageBase64): Promise<ScannedBag> {
+    const { data, error } = await supabase.functions.invoke<ScannedBag>('scan-bag', { body: { image: imageBase64 } })
+    if (error) {
+      const status = error instanceof FunctionsHttpError ? (error.context as Response).status : 0
+      throw new ScanError(status === 422 ? 'unreadable' : status === 429 ? 'busy' : 'failed')
+    }
+    if (!data) throw new ScanError('failed')
+    return data
   },
 
   async browseBeans(): Promise<BeanMatch[]> {

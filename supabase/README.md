@@ -11,3 +11,20 @@
    - Leaked-password protection does not apply because sign-in is Google only.
    - Unused-index notices on an empty database.
 3. Regenerate `src/lib/database.types.ts` (Supabase generate-types) after every schema change.
+
+## Edge Functions
+
+### `scan-bag`
+
+Reads a coffee bag photo with Claude Haiku 5.5 and returns the label as bag fields (the add-bag sheet's camera button). The prompt and schema live in `functions/scan-bag/label.ts`, shared with `scripts/scan-eval.ts`.
+
+- Signed-in users only: the gateway checks the JWT, so deploy without `--no-verify-jwt`.
+- Needs an Anthropic API key from the Claude Console (billed per token, separate from a Claude subscription). Set it as a function secret; it never reaches the app.
+- Photos are not stored. Each scan costs roughly $0.0005 at low effort.
+
+```bash
+supabase secrets set ANTHROPIC_API_KEY=<your key> --project-ref rjzewbeodonqxxltsbrf
+supabase functions deploy scan-bag --project-ref rjzewbeodonqxxltsbrf
+```
+
+To compare low and medium effort on your own photos, see the header of `scripts/scan-eval.ts` (`bun run scan-eval <folder>`).
