@@ -14,6 +14,8 @@ How the code is organised, so new work reuses what exists instead of copying it.
 | A labelled number (Coffee 20 g) | `<Spec>` inside `<SpecGrid>` | Pass `onEdit` to make it editable. |
 | A round back arrow | `<BackLink>` | |
 | An (i) explaining something | `<InfoButton>` | |
+| A text input | `<TextField>` | Pill input; `label` adds a visible label and an `error` line, `compact` for a search box, `mono` for numbers, `tone="bg"` on a soft card. Hidden label: pass `aria-label`. |
+| A round icon button (back, − +, info, remove) | `<IconButton label size tone>` | `label` is required; a link that looks like one uses `iconButtonClass`. |
 | An on/off toggle | `<Switch>` | |
 | One or many chips | `<ChipGroup>` / `<MultiChipGroup>` | |
 
@@ -25,7 +27,7 @@ Domain pieces: `<BeanHeader>` (a screen about one bean), `<PourList>` (planned, 
 - **Small units with one job.** A screen reads data (hooks), decides (pure functions in `brew/`, `beans/`, `engine/`) and renders (components). Rules worth testing live in plain functions with unit tests, not inside components.
 - **Depend on narrow interfaces.** Screens and hooks use the `Api` the app provides (real or mock); new data access is added to the area it belongs to.
 - **Extend by adding, not editing.** A new variant of a button, a new kind of confirm, a new chip list is a new value passed to a primitive, not a copy of its markup.
-- **Behaviour changes need a test; refactors keep the tests green and do not change them.**
+- **Behaviour changes need a test; refactors keep the tests green and do not change them.** New shared pieces are written test first (see `TextField.test.tsx`, `IconButton.test.tsx`): the tests state what the piece promises, then the piece is built, then screens adopt it with the existing screen tests as the safety net.
 
 ## The data layer (`src/data`)
 

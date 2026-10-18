@@ -2,6 +2,7 @@ import { LIMITS } from '../../engine/overrides.ts'
 import { setCups, setDose } from '../brew/edits'
 import { SegmentedControl } from '../components/SegmentedControl'
 import type { RecipeModel } from './model'
+import { IconButton } from '../components/IconButton'
 
 /** How much to make: cups as a shortcut, and the coffee in grams a step at a time. */
 export function SizeControls({ model }: { model: RecipeModel }) {
@@ -24,13 +25,13 @@ export function SizeControls({ model }: { model: RecipeModel }) {
       <div className="mt-3 flex items-center justify-between px-2">
         <span className="text-sm text-muted">Coffee</span>
         <div className="flex items-center gap-2">
-          <button type="button" aria-label="Less coffee" onClick={() => nudgeDose(-1)} className="size-10 rounded-full bg-soft active:scale-95">
+          <IconButton label="Less coffee" onClick={() => nudgeDose(-1)}>
             −
-          </button>
+          </IconButton>
           <span className="num min-w-[4.5rem] text-center whitespace-nowrap">{recipe.doseG} g</span>
-          <button type="button" aria-label="More coffee" onClick={() => nudgeDose(1)} className="size-10 rounded-full bg-soft active:scale-95">
+          <IconButton label="More coffee" onClick={() => nudgeDose(1)}>
             +
-          </button>
+          </IconButton>
         </div>
       </div>
     </>

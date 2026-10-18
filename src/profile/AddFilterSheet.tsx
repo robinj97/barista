@@ -4,6 +4,7 @@ import type { FilterRow, NewFilter } from '../data/types'
 import { useOnOpen } from '../hooks/useOnOpen'
 import { CatalogueStatus } from './CatalogueStatus'
 import { filterName, filterNote } from './gearLabels'
+import { TextField } from '../components/TextField'
 
 interface AddFilterSheetProps {
   open: boolean
@@ -17,7 +18,6 @@ interface AddFilterSheetProps {
   onCreate: (input: NewFilter) => void
 }
 
-const field = 'h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent'
 
 export function AddFilterSheet({
   open,
@@ -69,16 +69,7 @@ export function AddFilterSheet({
     >
       {mode === 'pick' ? (
         <div className="space-y-2 px-3 pb-2">
-          <label className="block">
-            <span className="sr-only">Search filters</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search filters"
-              className={field}
-            />
-          </label>
+          <TextField aria-label="Search filters" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search filters" />
           {!catalogue ? (
             <CatalogueStatus failed={catalogueFailed} onRetry={onRetry} />
           ) : available.length === 0 ? (
@@ -112,9 +103,9 @@ export function AddFilterSheet({
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-3 px-3 pb-2">
-          <input aria-label="Brand" placeholder="Brand, e.g. CAFEC" value={brand} onChange={(e) => { setBrand(e.target.value); setError(null) }} className={field} />
-          <input aria-label="Model" placeholder="Model, e.g. T-90" value={model} onChange={(e) => { setModel(e.target.value); setError(null) }} className={field} />
-          <input aria-label="Size" placeholder="Size, e.g. 02 (optional)" value={size} onChange={(e) => setSize(e.target.value)} className={field} />
+          <TextField aria-label="Brand" placeholder="Brand, e.g. CAFEC" value={brand} onChange={(e) => { setBrand(e.target.value); setError(null) }} />
+          <TextField aria-label="Model" placeholder="Model, e.g. T-90" value={model} onChange={(e) => { setModel(e.target.value); setError(null) }} />
+          <TextField aria-label="Size" placeholder="Size, e.g. 02 (optional)" value={size} onChange={(e) => setSize(e.target.value)} />
           <label className="flex items-center justify-between gap-3 px-2 text-sm">
             <span className="text-muted">Material</span>
             <select value={material} onChange={(e) => setMaterial(e.target.value as NewFilter['material'])} className="h-10 rounded-full bg-soft px-4">

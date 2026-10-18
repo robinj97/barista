@@ -10,6 +10,7 @@ import { PageHeader } from '../layout/PageHeader'
 import { Button } from '../components/Button'
 import { LoadingNote } from '../components/LoadingNote'
 import { SectionHeading } from '../components/SectionHeading'
+import { TextField } from '../components/TextField'
 
 const DAY_MS = 24 * 3600 * 1000
 
@@ -141,13 +142,7 @@ export function FriendsPage() {
       <Sheet open={link !== null} onOpenChange={(open) => !open && setLink(null)} title="Your invite link">
         <div className="px-3 pb-3">
           <p className="px-1 text-sm text-muted">Send this to one friend. It works once and for 7 days. You won't be able to see it again after you close this.</p>
-          <input
-            readOnly
-            value={link ?? ''}
-            aria-label="Invite link"
-            onFocus={(event) => event.currentTarget.select()}
-            className="mt-3 h-12 w-full rounded-full bg-soft px-5 text-sm outline-none"
-          />
+          <TextField readOnly value={link ?? ''} aria-label="Invite link" onFocus={(event) => event.currentTarget.select()} className="mt-3 text-sm" />
           <Button onClick={() => void copy()} className="mt-3">
             Copy link
           </Button>
