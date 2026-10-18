@@ -3,6 +3,8 @@ import { AppShell } from './layout/AppShell'
 import { BeanPage } from './pages/BeanPage'
 import { BeansPage } from './pages/BeansPage'
 import { BrewPage } from './pages/BrewPage'
+import { FriendsPage } from './pages/FriendsPage'
+import { InvitePage } from './pages/InvitePage'
 import { LogPage } from './pages/LogPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -19,6 +21,8 @@ export const routes: RouteObject[] = [
       { path: 'brew', element: <BrewPage /> },
       { path: 'brew/recipe', element: <RecipePage /> },
       { path: 'brew/log', element: <LogPage /> },
+      { path: 'friends', element: <FriendsPage /> },
+      { path: 'invite/:token', element: <InvitePage /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: '*', element: <NotFoundPage /> },

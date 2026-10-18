@@ -45,6 +45,17 @@ const tabs: { to: string; label: string; icon: ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    to: '/friends',
+    label: 'Friends',
+    icon: (
+      <svg {...icon}>
+        <circle cx="9" cy="8" r="3.2" />
+        <path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
+        <path d="M16 5.2a3 3 0 0 1 0 5.6M18 14c1.8.7 3 2.3 3 5" />
+      </svg>
+    ),
+  },
 ]
 
 export function TabBar() {

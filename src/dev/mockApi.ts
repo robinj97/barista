@@ -6,6 +6,9 @@ import {
   type Bag,
   type Bean,
   type Draft,
+  type Friend,
+  type InviterPreview,
+  type PendingInvite,
   type LockedRecipe,
   type FilterRow,
   type MyFilter,
@@ -56,6 +59,10 @@ export interface MockOptions {
   /** While this returns true, saving a draft or locking a recipe fails like a dropped connection. */
   isOffline?: () => boolean
   drafts?: Draft[]
+  friends?: Friend[]
+  invites?: PendingInvite[]
+  /** Invite links that others sent you, by token. Anything else is invalid. */
+  incomingInvites?: Record<string, InviterPreview>
   recipes?: LockedRecipe[]
 }
 
@@ -83,6 +90,9 @@ export function createMockApi(options: MockOptions = {}): Api {
   const drafts = new Map<string, Draft>((options.drafts ?? []).map((d) => [`${d.beanId}:${d.method}`, d]))
   const recipes = [...(options.recipes ?? [])]
   const lockedBrews = new Set<string>()
+  const friends = [...(options.friends ?? [])]
+  const invites = [...(options.invites ?? [])]
+  const incoming = { ...(options.incomingInvites ?? {}) }
   const needNetwork = () => {
     if (options.isOffline?.()) throw new TypeError('Failed to fetch')
   }
@@ -298,6 +308,39 @@ export function createMockApi(options: MockOptions = {}): Api {
       if (at >= 0) recipes[at] = { ...next, id: recipes[at]!.id, name: recipes[at]!.name, brewCount: recipes[at]!.brewCount + 1 }
       else recipes.push(next)
       return wait(undefined)
+    },
+
+    listFriends: () => wait([...friends].sort((a, b) => a.name.localeCompare(b.name))),
+
+    listMyInvites: () => wait([...invites]),
+
+    async createInvite() {
+      needNetwork()
+      const token = `token-${invites.length + 1}`
+      invites.unshift({ id: `hash-${token}`, expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString() })
+      return wait(token)
+    },
+
+    async cancelInvite(inviteId) {
+      needNetwork()
+      const at = invites.findIndex((i) => i.id === inviteId)
+      if (at >= 0) invites.splice(at, 1)
+      return wait(undefined)
+    },
+
+    async peekInvite(token) {
+      const preview = incoming[token]
+      if (!preview) throw new Error('invalid_or_expired_invite')
+      return wait(preview)
+    },
+
+    async acceptInvite(token) {
+      needNetwork()
+      const preview = incoming[token]
+      if (!preview) throw new Error('invalid_or_expired_invite')
+      delete incoming[token]
+      friends.push({ id: `friend-${friends.length + 1}`, name: preview.displayName, avatarUrl: preview.avatarUrl, since: new Date().toISOString() })
+      return wait(preview)
     },
   }
 }

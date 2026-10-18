@@ -610,6 +610,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      peek_invite: { Args: { p_token: string }; Returns: Json }
+      cancel_invite: { Args: { p_token_hash: string }; Returns: undefined }
       browse_beans: {
         Args: { max_results?: number }
         Returns: {

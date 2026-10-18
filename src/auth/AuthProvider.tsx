@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
+import { rememberDestination } from './afterSignIn'
 import { AuthContext, type AuthState } from './AuthContext'
 
 /** OAuth errors come back on the redirect URL, either in the query or the hash. */
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       signInWithGoogle: async () => {
         setError(null)
+        rememberDestination()
         const { error: failure } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: { redirectTo: window.location.origin },

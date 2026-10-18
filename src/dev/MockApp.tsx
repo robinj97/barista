@@ -76,6 +76,10 @@ export default function MockApp() {
       bags: withBags ? SAMPLE_BAGS : [],
       recipes: withBags ? SAMPLE_RECIPES : [],
       drafts: withBags ? SAMPLE_DRAFTS : [],
+      friends: withBags ? [{ id: 'friend-1', name: 'Sam Lee', avatarUrl: null, since: '2026-10-10T10:00:00Z' }] : [],
+      invites: withBags ? [{ id: 'hash-1', expiresAt: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString() }] : [],
+      // /invite/demo in the preview shows an invite from Ava.
+      incomingInvites: { demo: { displayName: 'Ava Martin', avatarUrl: null } },
     }),
   )
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
