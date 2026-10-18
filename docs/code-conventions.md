@@ -33,3 +33,14 @@ Domain pieces: `<BeanHeader>` (a screen about one bean), `<PourList>` (planned, 
 - **`supabase/`**: the real implementation, one file per area, with `shared.ts` (`fail`, `currentUserId`, `toBean`) and `lockedRows.ts` (the one loader for yours and friends' locked recipes). `supabaseApi.ts` only composes them. The fake in `dev/mockApi.ts` implements the same `Api`.
 - **`hooks/`**: React Query hooks, one file per area, each asking only for its area's API (`useBeansApi()`, `useFriendsApi()`, ...), so a bean hook cannot call a friends method. `keys.ts` is the one place query keys are written. Screens import from `../data/hooks`.
 - **Two helpers do the repeated work.** `useOptimisticMutation` (show the change at once, roll back on failure, refetch what it touched) and `saveOrQueue` (send a write, or keep it on the phone if the connection is down). New mutations use them instead of repeating the dance.
+## Screens: container, model, parts
+
+A big screen is split by job, as the recipe screen is (`src/pages/RecipePage.tsx` and `src/recipe/`):
+
+- **The page** loads data and works the answer out (a few dozen lines): loading and not-found states, then `buildRecipeModel`.
+- **The model** (`recipe/model.ts`) is everything the parts need, computed once and handed down as one prop, so parts neither take a long list of props nor recalculate.
+- **A hook per behaviour** (`useBrewRun`: the timer and the moves between planning, brewing and logging).
+- **Small parts that do one thing** (`RecipeView`, `PoursView`, `GrindCard`, `SizeControls`, `RecipeEditSheets`, `ConfidencePill`), each tested on its own.
+- **The screen** (`RecipeScreen`) only owns what is on screen: which view, which sheet is open.
+
+Follow the same shape when another screen grows past a couple of hundred lines.
