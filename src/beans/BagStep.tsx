@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChipGroup } from '../components/ChipGroup'
 import { beanCover } from './cover'
-import { daysAgo, maskDMY, parseDMY } from './dates'
+import { daysAgo, formatDMY, maskDMY, parseDMY } from './dates'
 
 export interface BagDetails {
   roastDate: string | null
@@ -12,6 +12,8 @@ interface BagStepProps {
   beanId: string
   name: string
   roaster: string
+  /** Roast date and size read from a photo, for the person to confirm. */
+  initial?: BagDetails
   onBack: () => void
   onSubmit: (details: BagDetails) => void
 }
@@ -34,12 +36,19 @@ const SIZE_CHIPS = [
   { value: 'other', label: 'Other' },
 ] as const
 
-export function BagStep({ beanId, name, roaster, onBack, onSubmit }: BagStepProps) {
+function initialSize(grams: number | null | undefined): { size: string | null; custom: string } {
+  if (!grams) return { size: null, custom: '' }
+  const chip = SIZE_CHIPS.find((c) => c.value === String(grams))
+  return chip ? { size: chip.value, custom: '' } : { size: 'other', custom: String(grams) }
+}
+
+export function BagStep({ beanId, name, roaster, initial, onBack, onSubmit }: BagStepProps) {
   const cover = beanCover(beanId)
-  const [roast, setRoast] = useState<string | null>(null)
-  const [pickedDate, setPickedDate] = useState('')
-  const [size, setSize] = useState<string | null>(null)
-  const [custom, setCustom] = useState('')
+  const [roast, setRoast] = useState<string | null>(initial?.roastDate ? 'pick' : null)
+  const [pickedDate, setPickedDate] = useState(initial?.roastDate ? formatDMY(initial.roastDate) : '')
+  const [size, setSize] = useState<string | null>(() => initialSize(initial?.grams).size)
+  const [custom, setCustom] = useState(() => initialSize(initial?.grams).custom)
+  const filled = initial?.roastDate && initial.grams ? 'Roast date and size' : initial?.roastDate ? 'Roast date' : initial?.grams ? 'Size' : null
   const [error, setError] = useState<string | null>(null)
 
   const today = daysAgo(0)
@@ -84,6 +93,12 @@ export function BagStep({ beanId, name, roaster, onBack, onSubmit }: BagStepProp
           <span className="block truncate text-xs text-muted">{roaster}</span>
         </span>
       </div>
+
+      {filled && (
+        <p className="rounded-2xl bg-accent-soft px-3 py-2 text-sm text-accent">
+          {filled} filled in from your photo. Check before adding.
+        </p>
+      )}
 
       <div>
         <p className="px-2 text-xs text-muted">Roast date</p>
