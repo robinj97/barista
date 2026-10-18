@@ -116,3 +116,5 @@ While the roaster and name are typed, a "Did you mean…?" strip shows near matc
 - Freshness advice (for example more bloom for fresh coffee) is a tuning topic still being researched, so the flow shows "Roasted N days ago" and no advice yet.
 - Photo of the bag as the cover image, and photo scanning itself (build step 9).
 - The offline queue (outbox) design, to be done with the brew flow.
+
+The search box in the add-a-bag sheet is **not** focused when the sheet opens, so the keyboard does not cover the catalogue list; tap the box to type.
