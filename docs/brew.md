@@ -104,6 +104,10 @@ Your locked recipe for a bean is what the next suggestion starts from: its tempe
 
 The **Library** tab lists the recipes you have locked in, across all beans, newest first: bean, stars, how many times you brewed it (all versions), dose, water and temperature. It differs from the bean page in that a recipe stays here when its bag is empty or gone, and it is where archiving lives. Tap a row to start a brew from it (the same pre-fill as the bean page). **Archive** asks first; it hides the recipe from friends and your lists but keeps your brews (the row is flagged `archived_at`, never deleted). A **Mine / Friends** switch will come with the friends feature.
 
+## Brew starts where you left off
+
+With nothing chosen in the link, Brew opens on the **bean you brewed most recently** (your most recently used working recipe whose bag is not finished), and uses the **grinder and filter of your last brew** instead of "first grinder, default filter". With no history it falls back to the newest bag, your first grinder and your default filter. "Start brewing" saves the gear actually in use with the working recipe so the next brew picks it up (it follows you across devices, since it lives with the recipe). Finished bags are never picked on their own and are left out of the bean picker.
+
 ## Still to do
 
 - Friends and invites, then friends' locked recipes in the suggestion and the Library.

@@ -505,6 +505,7 @@ export type Database = {
           bean_id: string
           collection: string | null
           created_at: string
+          finished_at: string | null
           grams_remaining: number | null
           id: string
           notes: string | null
@@ -516,6 +517,7 @@ export type Database = {
           bean_id: string
           collection?: string | null
           created_at?: string
+          finished_at?: string | null
           grams_remaining?: number | null
           id?: string
           notes?: string | null
@@ -527,6 +529,7 @@ export type Database = {
           bean_id?: string
           collection?: string | null
           created_at?: string
+          finished_at?: string | null
           grams_remaining?: number | null
           id?: string
           notes?: string | null

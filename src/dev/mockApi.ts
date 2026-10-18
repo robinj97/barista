@@ -118,6 +118,7 @@ export function createMockApi(options: MockOptions = {}): Api {
   const recipes = [...(options.recipes ?? [])]
   const lockedBrews = new Set<string>()
   const friends = [...(options.friends ?? [])]
+  const friendRecipeList = [...(options.friendRecipeList ?? [])]
   const invites = [...(options.invites ?? [])]
   const incoming = { ...(options.incomingInvites ?? {}) }
   const needNetwork = () => {
@@ -304,6 +305,8 @@ export function createMockApi(options: MockOptions = {}): Api {
       if (!bag) throw new Error('bag_not_found')
       if (patch.gramsRemaining !== undefined) bag.gramsRemaining = patch.gramsRemaining
       if (patch.status !== undefined) bag.status = patch.status
+      if (patch.roastDate !== undefined) bag.roastDate = patch.roastDate
+      if (patch.finishedAt !== undefined) bag.finishedAt = patch.finishedAt
       return wait(undefined)
     },
 
@@ -361,9 +364,20 @@ export function createMockApi(options: MockOptions = {}): Api {
       return wait(undefined)
     },
 
-    listFriendRecipes: () => wait(options.friendRecipeList ?? []),
+    listFriendRecipes: () => wait(friendRecipeList),
 
     listFriends: () => wait([...friends].sort((a, b) => a.name.localeCompare(b.name))),
+
+    async removeFriend(friendId) {
+      needNetwork()
+      const at = friends.findIndex((f) => f.id === friendId)
+      if (at >= 0) friends.splice(at, 1)
+      // Their recipes stop being visible.
+      const kept = friendRecipeList.filter((r) => r.friend.id !== friendId)
+      friendRecipeList.length = 0
+      friendRecipeList.push(...kept)
+      return wait(undefined)
+    },
 
     listMyInvites: () => wait([...invites]),
 

@@ -433,3 +433,17 @@ export function useScanBag() {
     mutationFn: async (photo: Blob) => api.scanBag(await shrinkPhoto(photo)),
   })
 }
+
+/** Ends a friendship. They leave your list at once; their recipes disappear from your Library and suggestions. */
+export function useRemoveFriend() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (friendId: string) => api.removeFriend(friendId),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['friends'] })
+      void client.invalidateQueries({ queryKey: ['friend-recipes'] })
+      void client.invalidateQueries({ queryKey: ['beans', 'search'] })
+    },
+  })
+}

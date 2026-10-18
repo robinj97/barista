@@ -5,7 +5,9 @@ import { beanCover } from '../beans/cover'
 import { BrewHistory } from '../beans/BrewHistory'
 import { roastAge, toISODate } from '../beans/dates'
 import { ROAST_LABELS, STATUS_LABELS } from '../beans/labels'
-import { useMyBags, useRemoveBag } from '../data/hooks'
+import { EditBagSheet } from '../beans/EditBagSheet'
+import { stockOf, stockText, usualDoseG } from '../beans/stock'
+import { useMyBags, useMyDrafts, useRemoveBag } from '../data/hooks'
 
 function Fact({ label, value }: { label: string; value: string | null }) {
   if (!value) return null
@@ -23,6 +25,8 @@ export function BeanPage() {
   const bags = useMyBags()
   const removeBag = useRemoveBag()
   const [confirming, setConfirming] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const drafts = useMyDrafts()
   const [today] = useState(() => toISODate(new Date()))
 
   const bag = bags.data?.find((item) => item.id === id)
@@ -56,6 +60,7 @@ export function BeanPage() {
   const { bean } = bag
   const cover = beanCover(bean.id)
   const roasted = roastAge(bag.roastDate)
+  const stock = stockOf(bag, usualDoseG(bean.id, drafts.data))
 
   return (
     <>
@@ -96,13 +101,19 @@ export function BeanPage() {
       </section>
 
       <section aria-label="Your bag" className="mt-6">
-        <h2 className="px-2 text-xs font-medium text-muted">Your bag</h2>
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-xs font-medium text-muted">Your bag</h2>
+          <button type="button" onClick={() => setEditing(true)} className="h-9 rounded-full px-3 text-sm text-accent">
+            Edit
+          </button>
+        </div>
         <div className="squircle mt-2 rounded-4xl bg-soft p-2">
           <dl>
             <Fact label="Roasted" value={roasted ?? 'Date not set'} />
             <Fact label="Left in the bag" value={bag.gramsRemaining != null ? `${bag.gramsRemaining} g` : 'Not set'} />
-            <Fact label="Status" value={STATUS_LABELS[bag.status]} />
+            <Fact label="Status" value={bag.finishedAt ? 'Finished' : STATUS_LABELS[bag.status]} />
           </dl>
+          {stock && <p className="px-3 pb-2 text-xs text-accent">{stockText(stock)}</p>}
         </div>
       </section>
 
@@ -147,6 +158,7 @@ export function BeanPage() {
           </button>
         </div>
       </Sheet>
+      <EditBagSheet open={editing} onOpenChange={setEditing} bag={bag} />
     </>
   )
 }

@@ -143,7 +143,12 @@ export function RecipePage() {
 
   const startBrewing = () => {
     // Your working recipe for this bean is overwritten with what you are about to brew.
-    saveDraft.mutate({ beanId: bag.bean.id, method: 'v60', choices: { ...choices, bagId: bag.id } })
+    // The gear in use is saved with it, so the next brew starts on the same grinder and filter.
+    saveDraft.mutate({
+      beanId: bag.bean.id,
+      method: 'v60',
+      choices: { ...choices, bagId: bag.id, grinderId: selection.grinder?.grinder.id ?? null, filterId: selection.filter?.filter.id ?? 'none' },
+    })
     setView('pours')
   }
   const startTimer = () => {
