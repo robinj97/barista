@@ -14,12 +14,13 @@ import { primeSound } from '../brew/cues'
 import { EditSheet } from '../brew/EditSheet'
 import { clearEdits, doseFor, hasEdits, resetEdit, setCups, setDose, setGrind, setPours, setRatio, setTemp, setTime, setWater } from '../brew/edits'
 import { GOAL_LABELS, goalOf, parseChoices, toSearchParams, type BrewChoices, type RecipeEdits } from '../brew/params'
+import { LastBrewCard } from '../brew/LastBrewCard'
 import { PoursSheet } from '../brew/PoursSheet'
 import { finishSession, readSession, clearSession, startSession, untimedSession, writeSession, type BrewSession } from '../brew/session'
 import { useNow, useWakeLock } from '../brew/useBrewClock'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { useOwnPriors } from '../brew/useOwnPriors'
-import { useSaveDraft, useUpdateBag } from '../data/hooks'
+import { useMyDrafts, useSaveDraft, useUpdateBag } from '../data/hooks'
 import { WhySheet } from '../brew/WhySheet'
 import { PourRing } from '../components/PourRing'
 import { SegmentedControl } from '../components/SegmentedControl'
@@ -88,6 +89,7 @@ export function RecipePage() {
   // Fixed when the screen opens, so the recipe does not change under you at midnight.
   const [today] = useState(() => toISODate(new Date()))
   const own = useOwnPriors(today)
+  const drafts = useMyDrafts()
 
   const back = (
     <Link to={{ pathname: '/brew', search: params.toString() }} aria-label="Back to set up" className="grid size-11 place-items-center rounded-full bg-soft text-lg">
@@ -137,7 +139,7 @@ export function RecipePage() {
     apply(setDose(choices, doseG, 'ratio', shown))
   }
   const unitLabel = myGrinder?.grinder.unitLabel ?? 'µm'
-  const unfinished = session !== null && session.finishedS !== null && session.bagId === bag.id
+  const lastBrew = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')?.lastBrew
 
   const startBrewing = () => {
     // Your working recipe for this bean is overwritten with what you are about to brew.
@@ -193,6 +195,8 @@ export function RecipePage() {
         </button>
       )}
 
+      {view === 'recipe' && !brewing && lastBrew && <LastBrewCard brew={lastBrew} unit={unit} grinder={selection.grinder} />}
+
       {/* The ring is only on the Recipe view: on the Pours view the space is for the pours and the buttons. */}
       {view === 'recipe' && !brewing && (
         <div className="mt-4">
@@ -200,11 +204,6 @@ export function RecipePage() {
         </div>
       )}
 
-      {unfinished && (
-        <Link to="/brew/log" className="mt-4 grid h-12 place-items-center rounded-full bg-accent-soft text-sm text-accent">
-          Finish logging your last brew ›
-        </Link>
-      )}
 
       {!brewing && (
       <div className="mt-4 flex justify-center">

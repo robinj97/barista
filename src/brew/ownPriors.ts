@@ -1,6 +1,6 @@
 import { suggest } from '../../engine/suggest.ts'
 import type { PriorRecipe } from '../../engine/types.ts'
-import type { Bag, Draft, LockedRecipe, MyFilter } from '../data/types'
+import { tastesOf, type Bag, type Draft, type LockedRecipe, type MyFilter } from '../data/types'
 import { beanTraits, buildSuggestInput } from './buildInput'
 
 interface Sources {
@@ -35,7 +35,8 @@ export function ownPriors({ recipes, drafts, bags, filters, asOf }: Sources): Pr
   for (const draft of drafts) {
     const bag = bagFor(draft.beanId)
     const brewed = draft.lastBrew
-    if (!bag || !brewed || brewed.taste !== 'good') continue
+    const tastes = brewed ? tastesOf(brewed) : []
+    if (!bag || !brewed || tastes.length !== 1 || tastes[0] !== 'good') continue
     const locked = recipes.find((r) => r.beanId === draft.beanId && r.method === draft.method)
     if (locked && new Date(brewed.brewedAt) <= new Date(locked.lockedAt)) continue
     const filter = filters.find((f) => f.filter.id === draft.choices.filterId)?.filter ?? filters.find((f) => f.isDefault)?.filter ?? null

@@ -1,26 +1,33 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { suggest } from '../../engine/suggest.ts'
 import { beanCover } from '../beans/cover'
 import { afterLock, isEmpty } from '../brew/bagUsage'
 import { buildSuggestInput, clock } from '../brew/buildInput'
+import { diffRecipes, toggleExclusive } from '../brew/feedback'
 import { parseChoices } from '../brew/params'
 import { clearSession, readSession } from '../brew/session'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
+import { MultiChipGroup } from '../components/MultiChipGroup'
 import { Switch } from '../components/Switch'
 import { useToast } from '../components/toastContext'
 import { useLockRecipe, useMyDrafts, useSaveDraft, useUpdateBag } from '../data/hooks'
-import { TASTE_LABELS, type BrewResult, type Compared, type Taste } from '../data/types'
+import { IMPROVE_LABELS, TASTE_LABELS, type BrewResult, type Compared, type Improve, type RecipeNumbers, type Taste } from '../data/types'
 
 const TASTES = (Object.keys(TASTE_LABELS) as Taste[]).map((value) => ({ value, label: TASTE_LABELS[value] }))
+const IMPROVES = (Object.keys(IMPROVE_LABELS) as Improve[]).map((value) => ({ value, label: IMPROVE_LABELS[value] }))
 const COMPARED: { value: Compared; label: string }[] = [
   { value: 'sweeter', label: 'Sweeter' },
   { value: 'more_acidity', label: 'More acidity' },
   { value: 'same', label: 'About the same' },
 ]
 
-/** After a brew: how it went. Saves your working recipe; locking it in also keeps it for good. */
+/**
+ * After a brew: how it went. The app holds you here until it is done (or skipped), and the brew
+ * waits on the phone, so coming back hours later finds this screen as you left it. Saves your
+ * working recipe; locking it in also keeps it for good.
+ */
 export function LogPage() {
   const navigate = useNavigate()
   const toast = useToast()
@@ -34,7 +41,8 @@ export function LogPage() {
   // Minted once so a retry after a dropped connection cannot save the brew twice.
   const [ids] = useState(() => ({ recipe: crypto.randomUUID(), version: crypto.randomUUID(), brew: crypto.randomUUID() }))
 
-  const [taste, setTaste] = useState<Taste | null>(null)
+  const [tastes, setTastes] = useState<Taste[]>([])
+  const [improve, setImprove] = useState<Improve[]>([])
   const [compared, setCompared] = useState<Compared | null>(null)
   const [yieldText, setYieldText] = useState('')
   const [notes, setNotes] = useState('')
@@ -42,65 +50,78 @@ export function LogPage() {
   const [rating, setRating] = useState(0)
   const [saving, setSaving] = useState(false)
 
-  const back = (
-    <Link to="/brew" aria-label="Back to Brew" className="grid size-11 place-items-center rounded-full bg-soft text-lg">
-      ←
-    </Link>
-  )
+  const discard = () => {
+    clearSession()
+    void navigate('/brew')
+  }
 
   if (!session || session.finishedS === null) {
     return (
       <>
-        {back}
-        <h1 className="mt-4 text-[2rem] leading-tight font-medium tracking-tight">Nothing to log</h1>
+        <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Nothing to log</h1>
         <p className="mt-2 text-sm text-muted">Finish a brew and it will show up here.</p>
+      </>
+    )
+  }
+  if (selection.bags.isError) {
+    return (
+      <>
+        <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Couldn't load your beans</h1>
+        <p className="mt-2 text-sm text-muted">Your brew is safe on this phone. Check your connection and try again.</p>
+        <button type="button" onClick={() => void selection.bags.refetch()} className="mt-4 h-12 w-full rounded-full bg-ink font-medium text-bg">
+          Try again
+        </button>
       </>
     )
   }
   if (selection.bags.isPending || drafts.isPending) {
     return (
-      <>
-        {back}
-        <p role="status" className="mt-10 text-center text-sm text-muted">
-          Loading…
-        </p>
-      </>
+      <p role="status" className="mt-10 text-center text-sm text-muted">
+        Loading…
+      </p>
     )
   }
   const { bag } = selection
-  if (!bag) {
+  // A bag that is gone must not quietly fall back to another one.
+  if (!bag || selection.bagMissing) {
     return (
       <>
-        {back}
-        <h1 className="mt-4 text-[2rem] leading-tight font-medium tracking-tight">Bean not found</h1>
-        <p className="mt-2 text-sm text-muted">That bag isn't in your beans any more.</p>
+        <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Bean not found</h1>
+        <p className="mt-2 text-sm text-muted">That bag isn't in your beans any more, so this brew can't be logged.</p>
+        <button type="button" onClick={discard} className="mt-4 h-12 w-full rounded-full bg-ink font-medium text-bg">
+          Discard this brew
+        </button>
       </>
     )
   }
 
   // The numbers that were brewed. Older sessions did not keep them, so work them out again.
-  const recipe = session.recipe ?? suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, session.asOf)).recipe
+  const brewed = session.recipe ?? suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, session.asOf)).recipe
+  const recipe: RecipeNumbers = { doseG: brewed.doseG, waterG: brewed.waterG, ratio: brewed.ratio, tempC: brewed.tempC, grindUm: brewed.grindUm, targetTimeS: brewed.targetTimeS, pours: brewed.pours }
   const cover = beanCover(bag.bean.id)
   const previous = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')?.lastBrew ?? null
   const yieldG = Number(yieldText)
   const yieldOk = yieldText.trim() === '' || (Number.isFinite(yieldG) && yieldG > 0)
-  const canSave = !saving && yieldOk && (!lock || rating > 0)
+  const canSave = !saving && yieldOk && tastes.length > 0 && (!lock || rating > 0)
 
-  const save = async () => {
+  const facts = {
+    brewedAt: new Date(session.startedAt).toISOString(),
+    totalTimeS: session.untimed ? null : session.finishedS,
+    firstPourG: recipe.pours[0]?.toG ?? 0,
+    recipe,
+    changes: previous?.recipe ? diffRecipes(previous.recipe, recipe) : undefined,
+  }
+
+  /** `skip` records the brew itself (time, numbers) and nothing about taste, and lets you on. */
+  const save = async (skip = false) => {
     setSaving(true)
-    const result: BrewResult = {
-      brewedAt: new Date(session.startedAt).toISOString(),
-      totalTimeS: session.untimed ? null : session.finishedS,
-      taste,
-      compared: previous ? compared : null,
-      yieldG: yieldText.trim() === '' ? null : yieldG,
-      notes: notes.trim(),
-      firstPourG: recipe.pours[0]?.toG ?? 0,
-    }
+    const result: BrewResult = skip
+      ? { ...facts, tastes: [], improve: [], compared: null, yieldG: null, notes: '' }
+      : { ...facts, tastes, improve, compared: previous ? compared : null, yieldG: yieldText.trim() === '' ? null : yieldG, notes: notes.trim() }
     const savedChoices = { ...choices, bagId: bag.id }
     try {
       const outcomes = [await saveDraft.mutateAsync({ beanId: bag.bean.id, method: 'v60', choices: savedChoices, lastBrew: result })]
-      if (lock) {
+      if (lock && !skip) {
         outcomes.push(
           await lockRecipe.mutateAsync({
             recipeId: ids.recipe,
@@ -132,7 +153,6 @@ export function LogPage() {
   return (
     <>
       <div className="flex items-center gap-3">
-        {back}
         <span className={`size-12 shrink-0 ${cover.tint} ${cover.pebble}`} aria-hidden />
         <div className="min-w-0">
           <h1 className="truncate text-lg leading-tight font-medium">How did it go?</h1>
@@ -151,7 +171,14 @@ export function LogPage() {
       <section aria-label="Taste" className="mt-6">
         <h2 className="px-2 text-xs font-medium text-muted">How did it taste?</h2>
         <div className="mt-2">
-          <ChipGroup<Taste> label="Taste" options={TASTES} value={taste} onChange={setTaste} />
+          <MultiChipGroup<Taste> label="Taste" options={TASTES} value={tastes} onToggle={(chip) => setTastes((current) => toggleExclusive(current, chip, 'good'))} />
+        </div>
+      </section>
+
+      <section aria-label="Improve next time" className="mt-6">
+        <h2 className="px-2 text-xs font-medium text-muted">What do you want to improve next time?</h2>
+        <div className="mt-2">
+          <MultiChipGroup<Improve> label="Improve next time" options={IMPROVES} value={improve} onToggle={(chip) => setImprove((current) => toggleExclusive(current, chip, 'nothing'))} />
         </div>
       </section>
 
@@ -226,6 +253,9 @@ export function LogPage() {
         className="mt-6 h-12 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98] disabled:opacity-40"
       >
         {lock ? 'Lock in and save' : 'Save'}
+      </button>
+      <button type="button" onClick={() => void save(true)} disabled={saving} className="mt-2 h-11 w-full rounded-full text-sm text-muted disabled:opacity-40">
+        Skip, I didn't taste it
       </button>
     </>
   )

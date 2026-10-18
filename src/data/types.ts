@@ -112,23 +112,65 @@ export interface Api {
   archiveRecipe(recipeId: string): Promise<void>
 }
 
-export type Taste = 'good' | 'sour' | 'bitter' | 'weak' | 'heavy'
-export const TASTE_LABELS: Record<Taste, string> = { good: 'Good', sour: 'Sour', bitter: 'Bitter', weak: 'Weak', heavy: 'Heavy' }
+export type Taste = 'good' | 'sour' | 'bitter' | 'weak' | 'heavy' | 'astringent' | 'flat'
+export const TASTE_LABELS: Record<Taste, string> = {
+  good: 'Good',
+  sour: 'Sour',
+  bitter: 'Bitter',
+  weak: 'Weak',
+  heavy: 'Heavy',
+  astringent: 'Astringent',
+  flat: 'Flat',
+}
+
+/** What you want to be different next time. */
+export type Improve = 'sweetness' | 'acidity' | 'body' | 'clarity' | 'less_bitter' | 'less_sour' | 'stronger' | 'weaker' | 'nothing'
+export const IMPROVE_LABELS: Record<Improve, string> = {
+  sweetness: 'More sweetness',
+  acidity: 'More acidity',
+  body: 'More body',
+  clarity: 'More clarity',
+  less_bitter: 'Less bitterness',
+  less_sour: 'Less sourness',
+  stronger: 'Stronger',
+  weaker: 'Weaker',
+  nothing: "Nothing, it's good",
+}
+
 export type Compared = 'sweeter' | 'more_acidity' | 'same'
+
+/** A setting that is different from the brew before. */
+export interface Change {
+  param: 'dose' | 'water' | 'ratio' | 'temp' | 'grind'
+  from: number
+  to: number
+}
 
 /** What happened in a brew, as logged. */
 export interface BrewResult {
   brewedAt: string
   /** Seconds from the start of the timer to the end of the drawdown. Null when the timer was not used. */
   totalTimeS: number | null
-  taste: Taste | null
+  /** How it tasted; any number. Empty when the log was skipped. */
+  tastes: Taste[]
+  /** What you want to improve next time; any number. */
+  improve: Improve[]
+  /** Older brews saved a single taste. Read it through `tastesOf`. */
+  taste?: Taste | null
   /** Against the previous brew of this bean. Null when there was none or it was skipped. */
   compared: Compared | null
   yieldG: number | null
   notes: string
   /** Water in the first pour, so "sweeter or more acidity" can be checked against what changed. */
   firstPourG: number
+  /** The numbers that were brewed. Missing on brews saved before this was kept. */
+  recipe?: RecipeNumbers
+  /** What was different from the brew before it. */
+  changes?: Change[]
 }
+
+/** The tastes of a brew, including ones saved before more than one could be picked. */
+export const tastesOf = (result: Pick<BrewResult, 'tastes' | 'taste'>): Taste[] => result.tastes ?? (result.taste ? [result.taste] : [])
 
 /** The numbers a recipe resolved to, kept next to the choices that produced them. */
 export interface RecipeNumbers {

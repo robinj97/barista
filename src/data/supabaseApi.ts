@@ -345,7 +345,7 @@ export const supabaseApi: Api = {
       p_brew_params: input.snapshot as unknown as Json,
       p_actual_time_s: input.result.totalTimeS,
       p_yield_ml: input.result.yieldG,
-      p_feedback: { rating: input.rating, taste: input.result.taste, compared: input.result.compared, notes: input.result.notes } as Json,
+      p_feedback: { rating: input.rating, tastes: input.result.tastes, improve: input.result.improve, compared: input.result.compared, notes: input.result.notes } as Json,
       p_brewed_at: input.result.brewedAt,
     })
     fail(error)
