@@ -3,18 +3,22 @@ import { useNavigate } from 'react-router'
 import { Sheet } from '../components/Sheet'
 import { useToast } from '../components/toastContext'
 import { useAddBag, useBeanCatalogue, useMyBags, useRoasters, useScanBag } from '../data/hooks'
-import { ScanError, type Bag, type Bean, type BeanMatch, type NewBean } from '../data/types'
+import { useApi } from '../data/ApiContext'
+import { ScanError, type Bag, type Bean, type BeanMatch, type NewBean, type SimilarBean } from '../data/types'
 import { BagStep, type BagDetails } from './BagStep'
 import { NewBeanStep } from './NewBeanStep'
 import type { Prefill } from './roasters'
 import { matchScan, scanToBag, scanToNewBean } from './scan'
 import { SearchStep } from './SearchStep'
+import { SimilarStep } from './SimilarStep'
 
 type Step =
   | { name: 'search' }
   | { name: 'scanning' }
   /** `bagDraft` carries a scanned roast date and size through to the bag step. */
   | { name: 'new'; prefill: Prefill; draft?: NewBean; fromPhoto?: boolean; bagDraft?: BagDetails }
+  /** A new bean that looks like ones already in the catalogue: use one of them, or carry on as a new bean. */
+  | { name: 'similar'; bean: NewBean; similar: SimilarBean[]; fromPhoto?: boolean; bagDraft?: BagDetails }
   | {
       name: 'bag'
       target: { kind: 'existing'; bean: Bean } | { kind: 'new'; bean: NewBean; id: string; fromPhoto?: boolean }
@@ -33,7 +37,7 @@ interface AddBagSheetProps {
   onOpenChange: (open: boolean) => void
 }
 
-const TITLES = { search: 'Add a bag', scanning: 'Reading the label', new: 'New bean', bag: 'Your bag' } as const
+const TITLES = { search: 'Add a bag', scanning: 'Reading the label', new: 'New bean', similar: 'Is it one of these?', bag: 'Your bag' } as const
 
 /**
  * Search first, then add as new if it is not in the catalogue, then roast date and size.
@@ -51,6 +55,7 @@ export function AddBagSheet({ open, onOpenChange }: AddBagSheetProps) {
   const catalogue = useBeanCatalogue()
   const scanBag = useScanBag()
   const toast = useToast()
+  const api = useApi()
   /** Bumped on every scan and on cancel, so a late answer for an abandoned scan is ignored. */
   const scanAttempt = useRef(0)
 
@@ -62,6 +67,26 @@ export function AddBagSheet({ open, onOpenChange }: AddBagSheetProps) {
       return
     }
     setStep({ name: 'bag', target: { kind: 'existing', bean: match } })
+  }
+
+  /** A new bean: the same coffee is reused, one that looks alike is checked with the person, otherwise on to the bag. */
+  async function continueWithNew(bean: NewBean, fromPhoto: boolean | undefined, bagDraft: BagDetails | undefined) {
+    const toBag = () =>
+      setStep({ name: 'bag', target: { kind: 'new', bean, id: crypto.randomUUID(), fromPhoto }, initial: bagDraft })
+    let similar: SimilarBean[] = []
+    try {
+      similar = await api.findSimilarBeans(bean.roaster, bean.name)
+    } catch {
+      // The check is a courtesy: the database still keeps one entry per coffee when it is saved.
+      return toBag()
+    }
+    const same = similar.find((item) => item.exact)
+    if (same) {
+      toast.show("That's already in the catalogue, so we're using it.")
+      return pick(same.bean)
+    }
+    if (similar.length > 0) return setStep({ name: 'similar', bean, similar, fromPhoto, bagDraft })
+    toBag()
   }
 
   async function scan(photo: File) {
@@ -190,14 +215,19 @@ export function AddBagSheet({ open, onOpenChange }: AddBagSheetProps) {
           roasters={roasters}
           fromPhoto={step.fromPhoto}
           onBack={() => setStep({ name: 'search' })}
-          onContinue={(bean) =>
-            setStep({
-              name: 'bag',
-              target: { kind: 'new', bean, id: crypto.randomUUID(), fromPhoto: step.fromPhoto },
-              initial: step.bagDraft,
-            })
-          }
+          onContinue={(bean) => void continueWithNew(bean, step.fromPhoto, step.bagDraft)}
           onPickExisting={pick}
+        />
+      )}
+      {step.name === 'similar' && (
+        <SimilarStep
+          entered={step.bean}
+          similar={step.similar}
+          onBack={() => setStep({ name: 'new', prefill: {}, draft: step.bean, fromPhoto: step.fromPhoto, bagDraft: step.bagDraft })}
+          onUseExisting={pick}
+          onDifferent={() =>
+            setStep({ name: 'bag', target: { kind: 'new', bean: step.bean, id: crypto.randomUUID(), fromPhoto: step.fromPhoto }, initial: step.bagDraft })
+          }
         />
       )}
       {step.name === 'bag' && (

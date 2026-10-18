@@ -682,6 +682,26 @@ export type Database = {
       claim_scan: { Args: never; Returns: number }
       create_invite: { Args: never; Returns: string }
       remove_my_filter: { Args: { target: string }; Returns: undefined }
+      similar_beans: {
+        Args: { p_name: string; p_roaster: string }
+        Returns: {
+          altitude_m: number
+          exact: boolean
+          friends_with_recipe: number
+          id: string
+          name: string
+          origin: string
+          owned: boolean
+          process: string
+          producer: string
+          region: string
+          roast_level: string
+          roaster: string
+          roaster_notes: string[]
+          score: number
+          variety: string
+        }[]
+      }
       search_beans: {
         Args: { max_results?: number; q: string }
         Returns: {
