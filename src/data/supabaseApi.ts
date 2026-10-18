@@ -22,6 +22,7 @@ import {
   type PendingInvite,
   type SimilarBean,
   type LockedRecipe,
+  type LockedRecipeBase,
   type Method,
   type RecipeSnapshot,
   type BeanMatch,
@@ -88,6 +89,51 @@ function toBeanMatch(row: BeanMatchRow): BeanMatch {
 
 function fail(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(error.message)
+}
+
+/** A locked recipe as stored, with its locked version and its bean. */
+interface LockedRow extends LockedRecipeBase {
+  ownerId: string
+  versionId: string
+}
+
+/**
+ * Locked recipes with their versions and beans, either yours or your friends'. Row-level security lets
+ * you read both, so the owner has to be said out loud: leaving it out lists friends' recipes as yours.
+ */
+async function loadLockedRows(scope: 'mine' | 'friends'): Promise<LockedRow[]> {
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  fail(userError)
+  const me = userData.user.id
+  const base = supabase.from('recipes').select('id, owner_id, bean_id, method, name, locked_version_id')
+  const { data: recipes, error } = await (scope === 'mine' ? base.eq('owner_id', me) : base.neq('owner_id', me))
+    .not('locked_version_id', 'is', null)
+    .is('archived_at', null)
+  fail(error)
+  if (recipes.length === 0) return []
+  const [versions, beans] = await Promise.all([
+    supabase.from('recipe_versions').select('id, params, created_at').in('id', recipes.map((r) => r.locked_version_id!)),
+    supabase.from('beans').select('*').in('id', [...new Set(recipes.map((r) => r.bean_id))]),
+  ])
+  fail(versions.error)
+  fail(beans.error)
+  return recipes.flatMap((recipe) => {
+    const version = versions.data.find((v) => v.id === recipe.locked_version_id)
+    const bean = beans.data.find((b) => b.id === recipe.bean_id)
+    if (!version || !bean) return []
+    return [
+      {
+        id: recipe.id,
+        ownerId: recipe.owner_id,
+        versionId: version.id,
+        bean: toBean(bean),
+        method: recipe.method as Method,
+        name: recipe.name,
+        lockedAt: version.created_at,
+        snapshot: version.params as unknown as RecipeSnapshot,
+      },
+    ]
+  })
 }
 
 export const supabaseApi: Api = {
@@ -320,45 +366,18 @@ export const supabaseApi: Api = {
   },
 
   async listMyRecipes(): Promise<LockedRecipe[]> {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    fail(userError)
-    // Row-level security also lets you read your friends' locked recipes, so "mine" has to say so.
-    const { data: recipes, error } = await supabase
-      .from('recipes')
-      .select('id, bean_id, method, name, locked_version_id')
-      .eq('owner_id', userData.user.id)
-      .not('locked_version_id', 'is', null)
-      .is('archived_at', null)
-    fail(error)
-    const versionIds = recipes.map((r) => r.locked_version_id!).filter(Boolean)
-    if (versionIds.length === 0) return []
-    const recipeIds = recipes.map((r) => r.id)
-    const [versions, allVersions, brews] = await Promise.all([
-      supabase.from('recipe_versions').select('id, params, created_at').in('id', versionIds),
-      supabase.from('recipe_versions').select('id, recipe_id').in('recipe_id', recipeIds),
+    const rows = await loadLockedRows('mine')
+    if (rows.length === 0) return []
+    const [allVersions, brews] = await Promise.all([
+      supabase.from('recipe_versions').select('id, recipe_id').in('recipe_id', rows.map((r) => r.id)),
       supabase.from('brews').select('recipe_version_id, feedback'),
     ])
-    fail(versions.error)
     fail(allVersions.error)
     fail(brews.error)
-    return recipes.flatMap((recipe) => {
-      const version = versions.data.find((v) => v.id === recipe.locked_version_id)
-      if (!version) return []
-      const feedback = brews.data.find((b) => b.recipe_version_id === version.id)?.feedback as { rating?: number } | null
-      const mine = new Set(allVersions.data.filter((v) => v.recipe_id === recipe.id).map((v) => v.id))
-      return [
-        {
-          id: recipe.id,
-          beanId: recipe.bean_id,
-          method: recipe.method as Method,
-          name: recipe.name,
-          versionId: version.id,
-          snapshot: version.params as unknown as RecipeSnapshot,
-          rating: feedback?.rating ?? null,
-          lockedAt: version.created_at,
-          brewCount: brews.data.filter((b) => mine.has(b.recipe_version_id)).length,
-        },
-      ]
+    return rows.map(({ ownerId: _owner, ...recipe }) => {
+      const feedback = brews.data.find((b) => b.recipe_version_id === recipe.versionId)?.feedback as { rating?: number } | null
+      const versions = new Set(allVersions.data.filter((v) => v.recipe_id === recipe.id).map((v) => v.id))
+      return { ...recipe, rating: feedback?.rating ?? null, brewCount: brews.data.filter((b) => versions.has(b.recipe_version_id)).length }
     })
   },
 
@@ -450,42 +469,17 @@ export const supabaseApi: Api = {
     return { displayName: result.display_name, avatarUrl: null }
   },
   async listFriendRecipes(): Promise<FriendRecipe[]> {
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    fail(userError)
-    // Row-level security already limits this to friends' recipes that are currently locked.
-    const { data: recipes, error } = await supabase
-      .from('recipes')
-      .select('id, owner_id, bean_id, method, name, locked_version_id')
-      .neq('owner_id', userData.user.id)
-      .not('locked_version_id', 'is', null)
-      .is('archived_at', null)
+    const rows = await loadLockedRows('friends')
+    if (rows.length === 0) return []
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', [...new Set(rows.map((r) => r.ownerId))])
     fail(error)
-    if (recipes.length === 0) return []
-    const [versions, profiles, beans] = await Promise.all([
-      supabase.from('recipe_versions').select('id, params, created_at').in('id', recipes.map((r) => r.locked_version_id!)),
-      supabase.from('profiles').select('id, display_name, avatar_url').in('id', [...new Set(recipes.map((r) => r.owner_id))]),
-      supabase.from('beans').select('*').in('id', [...new Set(recipes.map((r) => r.bean_id))]),
-    ])
-    fail(versions.error)
-    fail(profiles.error)
-    fail(beans.error)
-    return recipes
-      .flatMap((recipe) => {
-        const version = versions.data.find((v) => v.id === recipe.locked_version_id)
-        const bean = beans.data.find((b) => b.id === recipe.bean_id)
-        if (!version || !bean) return []
-        const owner = profiles.data.find((p) => p.id === recipe.owner_id)
-        return [
-          {
-            id: recipe.id,
-            friend: { id: recipe.owner_id, name: owner?.display_name ?? 'A friend', avatarUrl: owner?.avatar_url ?? null },
-            bean: toBean(bean),
-            method: recipe.method as Method,
-            name: recipe.name,
-            lockedAt: version.created_at,
-            snapshot: version.params as unknown as RecipeSnapshot,
-          },
-        ]
+    return rows
+      .map(({ ownerId, versionId: _version, ...recipe }) => {
+        const owner = profiles.find((p) => p.id === ownerId)
+        return { ...recipe, friend: { id: ownerId, name: owner?.display_name ?? 'A friend', avatarUrl: owner?.avatar_url ?? null } }
       })
       .sort((a, b) => b.lockedAt.localeCompare(a.lockedAt))
   },

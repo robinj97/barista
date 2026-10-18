@@ -31,7 +31,7 @@ export function BrewHistory({ bag, today }: { bag: Bag; today: string }) {
   const own = usePriors(today)
 
   const draft = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')
-  const locked = recipes.data?.filter((r) => r.beanId === bag.bean.id) ?? []
+  const locked = recipes.data?.filter((r) => r.bean.id === bag.bean.id) ?? []
   const open = (choices: BrewChoices) => `/brew/recipe?${toSearchParams({ ...choices, bagId: bag.id }).toString()}`
 
   let working: { to: string; summary: string; detail: string; meta: string } | null = null

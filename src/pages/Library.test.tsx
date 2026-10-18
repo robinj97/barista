@@ -4,12 +4,13 @@ import { describe, expect, it } from 'vitest'
 import type { BrewChoices } from '../brew/params'
 import { DEFAULT_CHOICES } from '../brew/params'
 import type { LockedRecipe } from '../data/types'
+import { SEED_BEANS } from '../dev/mockApi'
 import { makeBag, renderApp } from '../test/renderApp'
 
 const geisha = makeBag('b-geisha')
 const choices: BrewChoices = { ...DEFAULT_CHOICES, bagId: geisha.id }
 const recipe: LockedRecipe = {
-  id: 'r1', beanId: 'b-geisha', method: 'v60', name: 'V60', versionId: 'v1',
+  id: 'r1', bean: SEED_BEANS.find((b) => b.id === 'b-geisha')!, method: 'v60', name: 'V60', versionId: 'v1',
   snapshot: { choices, recipe: { doseG: 20, waterG: 300, ratio: 15, tempC: 91, grindUm: 700, targetTimeS: 180, pours: [{ atS: 0, toG: 300 }] } },
   rating: 4, lockedAt: '2026-10-10T10:00:00Z', brewCount: 3,
 }

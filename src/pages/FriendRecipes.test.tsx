@@ -105,7 +105,7 @@ describe('Suggestions from a friend', () => {
 
   it('prefer your own locked recipe', async () => {
     const own: LockedRecipe = {
-      id: 'r1', beanId: 'b-geisha', method: 'v60', name: 'V60', versionId: 'v1',
+      id: 'r1', bean: SEED_BEANS.find((b) => b.id === 'b-geisha')!, method: 'v60', name: 'V60', versionId: 'v1',
       snapshot: { choices: { ...DEFAULT_CHOICES, bagId: geisha.id }, recipe: { doseG: 20, waterG: 300, ratio: 15, tempC: 94, grindUm: 780, targetTimeS: 190, pours: [{ atS: 0, toG: 300 }] } },
       rating: 5, lockedAt: '2026-10-15T08:00:00Z', brewCount: 2,
     }

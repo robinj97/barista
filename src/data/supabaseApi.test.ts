@@ -13,6 +13,11 @@ const tables: Record<string, Row[]> = {
     { id: 'v2', recipe_id: 'friends', params: { choices: {}, recipe: {} }, created_at: '2026-10-11T10:00:00Z' },
   ],
   brews: [{ recipe_version_id: 'v1', feedback: { rating: 4 } }],
+  beans: [
+    { id: 'bean-1', roaster: 'Parallel', name: 'Finca Milan', origin: null, region: null, producer: null, variety: null, process: null, altitude_m: null, roast_level: null, roaster_notes: [] },
+    { id: 'bean-2', roaster: 'Taith', name: 'Lychee peach', origin: null, region: null, producer: null, variety: null, process: null, altitude_m: null, roast_level: null, roaster_notes: [] },
+  ],
+  profiles: [{ id: 'friend', display_name: 'Mario', avatar_url: null }],
 }
 
 function query(table: string) {
@@ -40,5 +45,19 @@ describe('listMyRecipes', () => {
     const recipes = await supabaseApi.listMyRecipes()
     expect(recipes.map((r) => r.id)).toEqual(['mine'])
     expect(recipes[0]?.rating).toBe(4)
+  })
+
+  it('carries each recipe\'s own bean, so the list never needs your bag', async () => {
+    const [recipe] = await supabaseApi.listMyRecipes()
+    expect(recipe?.bean).toMatchObject({ id: 'bean-1', roaster: 'Parallel', name: 'Finca Milan' })
+  })
+})
+
+describe('listFriendRecipes', () => {
+  it("returns only friends' recipes, with the friend and the bean", async () => {
+    const recipes = await supabaseApi.listFriendRecipes()
+    expect(recipes.map((r) => r.id)).toEqual(['friends'])
+    expect(recipes[0]?.friend.name).toBe('Mario')
+    expect(recipes[0]?.bean.name).toBe('Lychee peach')
   })
 })

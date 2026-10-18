@@ -76,8 +76,9 @@ export function LibraryPage() {
       {header}
       <ul className="mt-6 space-y-2" aria-label="Your recipes">
         {list.map((recipe) => {
-          const bag = bags.data?.find((b) => b.bean.id === recipe.beanId)
-          const cover = beanCover(recipe.beanId)
+          const { bean } = recipe
+          const bag = bags.data?.find((b) => b.bean.id === bean.id)
+          const cover = beanCover(bean.id)
           const { recipe: numbers } = recipe.snapshot
           const rating = stars(recipe.rating)
           const to = bag ? `/brew/recipe?${toSearchParams({ ...recipe.snapshot.choices, bagId: bag.id }).toString()}` : null
@@ -85,7 +86,7 @@ export function LibraryPage() {
             <>
               <span className={`size-[3.25rem] shrink-0 ${cover.tint} ${cover.pebble}`} aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{bag?.bean.name ?? 'A bean you no longer have'}</span>
+                <span className="block truncate font-medium">{bean.name}</span>
                 <span className="block truncate text-xs text-muted">
                   {rating && <span className="text-accent">{rating} · </span>}
                   {recipe.brewCount} {recipe.brewCount === 1 ? 'brew' : 'brews'}
@@ -99,13 +100,13 @@ export function LibraryPage() {
           return (
             <li key={recipe.id} className="squircle flex items-center gap-1 rounded-4xl bg-soft py-3 pr-3 pl-3">
               {to ? (
-                <Link to={to} aria-label={`Brew ${bag?.bean.name ?? 'this recipe'} again`} className="flex min-w-0 flex-1 items-center gap-4">
+                <Link to={to} aria-label={`Brew ${bean.name} again`} className="flex min-w-0 flex-1 items-center gap-4">
                   {body}
                 </Link>
               ) : (
                 <div className="flex min-w-0 flex-1 items-center gap-4">{body}</div>
               )}
-              <button type="button" onClick={() => setArchiving(recipe)} aria-label={`Archive the recipe for ${bag?.bean.name ?? 'this bean'}`} className="h-10 rounded-full px-3 text-sm text-muted">
+              <button type="button" onClick={() => setArchiving(recipe)} aria-label={`Archive the recipe for ${bean.name}`} className="h-10 rounded-full px-3 text-sm text-muted">
                 Archive
               </button>
             </li>
