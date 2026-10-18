@@ -20,6 +20,7 @@ import {
   type FriendRecipe,
   type InviterPreview,
   type PendingInvite,
+  type SimilarBean,
   type LockedRecipe,
   type Method,
   type RecipeSnapshot,
@@ -243,6 +244,12 @@ export const supabaseApi: Api = {
     const { data, error } = await supabase.rpc('search_beans', { q: query })
     fail(error)
     return data.map(toBeanMatch)
+  },
+
+  async findSimilarBeans(roaster, name): Promise<SimilarBean[]> {
+    const { data, error } = await supabase.rpc('similar_beans', { p_roaster: roaster, p_name: name })
+    fail(error)
+    return data.map((row) => ({ bean: toBeanMatch(row), exact: row.exact }))
   },
 
   async addBag(input) {

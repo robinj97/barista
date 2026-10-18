@@ -117,4 +117,17 @@ While the roaster and name are typed, a "Did you mean…?" strip shows near matc
 - Photo of the bag as the cover image, and photo scanning itself (build step 9).
 - The offline queue (outbox) design, to be done with the brew flow.
 
+
+## One entry per coffee (duplicates)
+
+The shared catalogue keeps a single entry per coffee, in three layers:
+
+1. **The database refuses a second copy.** `beans.dedupe_key` (generated from `public.bean_dedupe_key(roaster, name)`) has a **unique index**. The key is lower case, accents dropped, filler words dropped from the *roaster* (coffee, roasters, roastery, roasting, co, company, the), letters and digits only, so "Rogue Wave", "Rogue Wave Coffee" and "Rogue Wave Coffee Roasters" are one roaster, and Café equals Cafe. It holds against two people adding at the same moment and against inserting a bean straight through the API.
+2. **`add_bag` reuses it.** A new bean with an existing key reuses that bean; when it loses a race to another insert it uses the winner's. Retrying changes nothing. `match_key`, which search uses, is unchanged.
+3. **The form checks first.** Before a new bean (typed or from a photo scan) goes to the bag step, `similar_beans(roaster, name)` looks for the same coffee or ones that look very alike (trigram similarity of 0.6 or more on the key):
+   - the **same coffee** is used automatically, with a note ("That's already in the catalogue, so we're using it");
+   - **similar ones** show an "Is it one of these?" step: each with **Use this one** (it shows if you already own it and how many friends have it dialed), or **It's a different bean**, so a genuinely different lot or harvest is never blocked;
+   - if the check cannot run (offline), it carries on, and layers 1 and 2 still apply.
+
+`src/beans/dedupe.ts` mirrors the key and the similarity for the dev preview and tests. Tests: `supabase/tests/dedupe.test.sql`, `src/beans/dedupe.test.ts` and `src/pages/BeanDedupe.test.tsx`. Merging two entries that were created before this rule is not needed (none existed) and is not built.
 The search box in the add-a-bag sheet is **not** focused when the sheet opens, so the keyboard does not cover the catalogue list; tap the box to type.

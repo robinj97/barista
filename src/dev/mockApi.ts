@@ -1,3 +1,4 @@
+import { SIMILAR_FROM, dedupeKey, similarity } from '../beans/dedupe'
 import { GRINDER_SEED } from '../../engine/grinderSeed.ts'
 import {
   byBrandModel,
@@ -11,6 +12,7 @@ import {
   type FriendRecipe,
   type InviterPreview,
   type PendingInvite,
+  type SimilarBean,
   type LockedRecipe,
   type FilterRow,
   type MyFilter,
@@ -40,6 +42,8 @@ export const SEED_BEANS: Bean[] = [
 ]
 
 const beanKey = (roaster: string, name: string) => (roaster + name).replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+/** One entry per coffee, as in the database. */
+const sameCoffee = (a: { roaster: string; name: string }, b: { roaster: string; name: string }) => dedupeKey(a.roaster, a.name) === dedupeKey(b.roaster, b.name)
 
 const SEED_FILTERS: FilterRow[] = [
   { id: 'f-cafec-t90', brand: 'CAFEC', model: 'T-90', size: '02', material: 'paper', flow_class: 'fast', bleached: null, created_by: null, match_key: 'cafect90' },
@@ -243,6 +247,20 @@ export function createMockApi(options: MockOptions = {}): Api {
       )
     },
 
+    async findSimilarBeans(roaster, name): Promise<SimilarBean[]> {
+      const key = dedupeKey(roaster, name)
+      if (!key) return wait([])
+      const owned = new Set(bags.map((b) => b.bean.id))
+      return wait(
+        catalogue
+          .map((b) => ({ b, exact: dedupeKey(b.roaster, b.name) === key, score: similarity(dedupeKey(b.roaster, b.name), key) }))
+          .filter(({ exact, score }) => exact || score >= SIMILAR_FROM)
+          .sort((x, y) => Number(y.exact) - Number(x.exact) || y.score - x.score)
+          .slice(0, 3)
+          .map(({ b, exact }) => ({ bean: { ...b, owned: owned.has(b.id), friendsWithRecipe: friendRecipes[b.id] ?? 0 }, exact })),
+      )
+    },
+
     async addBag(input) {
       await wait(undefined)
       if (options.failAddBag) throw new Error('Could not save')
@@ -251,7 +269,7 @@ export function createMockApi(options: MockOptions = {}): Api {
       if (!target && input.newBean) {
         const nb = input.newBean
         if (!nb.roaster.trim() || !nb.name.trim()) throw new Error('invalid_bean_name')
-        target = catalogue.find((b) => beanKey(b.roaster, b.name) === beanKey(nb.roaster, nb.name))
+        target = catalogue.find((b) => sameCoffee(b, nb))
         if (!target) {
           target = bean({
             id: input.newBeanId ?? `b-${catalogue.length + 1}`,

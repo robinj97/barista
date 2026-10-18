@@ -94,6 +94,8 @@ export interface Api {
   browseBeans(): Promise<BeanMatch[]>
   /** Catalogue search: every word matches roaster + name in any order, tolerant of small typos. */
   searchBeans(query: string): Promise<BeanMatch[]>
+  /** Catalogue beans that are the same coffee (same dedupe key) or look very alike, for the "is it one of these?" check before a new bean is created. */
+  findSimilarBeans(roaster: string, name: string): Promise<SimilarBean[]>
   /**
    * Adds a bag, creating the shared bean first when needed. Idempotent for the same `bagId`.
    * An exact roaster + name match reuses the existing catalogue bean.
@@ -304,6 +306,12 @@ export class ScanError extends Error {
 
 /** How many beans `browseBeans` returns at most; at the cap the app searches the server instead. */
 export const BROWSE_LIMIT = 1000
+
+export interface SimilarBean {
+  bean: BeanMatch
+  /** The same coffee, spelled a little differently: it would be reused anyway. */
+  exact: boolean
+}
 
 export interface BeanMatch extends Bean {
   /** You already have a bag of it. */
