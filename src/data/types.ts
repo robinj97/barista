@@ -140,14 +140,8 @@ export interface Friend {
 }
 
 /** A recipe a friend has locked. You see its numbers and the bean, nothing about their brews. */
-export interface FriendRecipe {
-  id: string
+export interface FriendRecipe extends LockedRecipeBase {
   friend: { id: string; name: string; avatarUrl: string | null }
-  bean: Bean
-  method: Method
-  name: string
-  lockedAt: string
-  snapshot: RecipeSnapshot
 }
 
 export interface PendingInvite {
@@ -251,15 +245,20 @@ export interface SaveDraftInput {
   lastBrew?: BrewResult
 }
 
-export interface LockedRecipe {
+/** What every locked recipe has, yours or a friend's. It carries its own bean, so it never depends on you having a bag of it. */
+export interface LockedRecipeBase {
   id: string
-  beanId: string
+  bean: Bean
   method: Method
   name: string
-  versionId: string
-  snapshot: RecipeSnapshot
-  rating: number | null
   lockedAt: string
+  snapshot: RecipeSnapshot
+}
+
+/** A recipe you locked in. */
+export interface LockedRecipe extends LockedRecipeBase {
+  versionId: string
+  rating: number | null
   /** How many times you brewed it, across all its versions. */
   brewCount: number
 }

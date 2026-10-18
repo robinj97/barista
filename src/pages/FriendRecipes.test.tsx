@@ -42,11 +42,24 @@ describe('Library: Friends', () => {
     await waitFor(() => expect(row).toHaveTextContent('dial'))
   })
 
+  it('opens the recipe in full when you tap it', async () => {
+    const user = userEvent.setup()
+    renderApp('/library', { mock })
+    await user.click(await screen.findByRole('radio', { name: 'Friends' }))
+    await user.click(await screen.findByRole('button', { name: /Tanzania Geisha from Sam: see the recipe/ }))
+    const specs = await screen.findByLabelText('Their recipe')
+    expect(within(specs).getByText('Coffee').nextSibling).toHaveTextContent('18 g')
+    expect(within(specs).getByText('Water').nextSibling).toHaveTextContent('270 g')
+    expect(within(specs).getByText('Ratio').nextSibling).toHaveTextContent('1:15')
+    expect(within(screen.getByRole('list', { name: 'Their pours' })).getAllByRole('listitem')).toHaveLength(3)
+  })
+
   it('starts a brew from their numbers, on your gear', async () => {
     const user = userEvent.setup()
     renderApp('/library', { mock })
     await user.click(await screen.findByRole('radio', { name: 'Friends' }))
-    await user.click(await screen.findByRole('link', { name: /Brew Tanzania Geisha from Sam's recipe/ }))
+    await user.click(await screen.findByRole('button', { name: /Tanzania Geisha from Sam/ }))
+    await user.click(await screen.findByRole('link', { name: 'Brew this' }))
     const specs = await screen.findByLabelText('Recipe')
     expect(within(specs).getByText('Coffee').nextSibling).toHaveTextContent('18 g')
     expect(within(specs).getByText('Water').nextSibling).toHaveTextContent('270 g')
@@ -54,13 +67,16 @@ describe('Library: Friends', () => {
     expect(within(specs).getByText('Filter').nextSibling).toHaveTextContent('T-90')
   })
 
-  it('shows a recipe for a bean you do not have, without a way to brew it', async () => {
+  it('still shows a recipe for a bean you do not have, and says what to do', async () => {
     const user = userEvent.setup()
     renderApp('/library', { mock: { ...mock, bags: [] } })
     await user.click(await screen.findByRole('radio', { name: 'Friends' }))
     const row = within(await screen.findByRole('list', { name: "Friends' recipes" })).getByRole('listitem')
     expect(row).toHaveTextContent('Add this bean to brew it')
-    expect(within(row).queryByRole('link')).not.toBeInTheDocument()
+    await user.click(within(row).getByRole('button'))
+    expect(await screen.findByText(/You don't have this bean yet/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Their recipe')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Brew this' })).not.toBeInTheDocument()
   })
 
   it('points you to Friends when you have none, and says so when they have not locked anything', async () => {
@@ -89,7 +105,7 @@ describe('Suggestions from a friend', () => {
 
   it('prefer your own locked recipe', async () => {
     const own: LockedRecipe = {
-      id: 'r1', beanId: 'b-geisha', method: 'v60', name: 'V60', versionId: 'v1',
+      id: 'r1', bean: SEED_BEANS.find((b) => b.id === 'b-geisha')!, method: 'v60', name: 'V60', versionId: 'v1',
       snapshot: { choices: { ...DEFAULT_CHOICES, bagId: geisha.id }, recipe: { doseG: 20, waterG: 300, ratio: 15, tempC: 94, grindUm: 780, targetTimeS: 190, pours: [{ atS: 0, toG: 300 }] } },
       rating: 5, lockedAt: '2026-10-15T08:00:00Z', brewCount: 2,
     }
