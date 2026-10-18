@@ -320,9 +320,13 @@ export const supabaseApi: Api = {
   },
 
   async listMyRecipes(): Promise<LockedRecipe[]> {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    fail(userError)
+    // Row-level security also lets you read your friends' locked recipes, so "mine" has to say so.
     const { data: recipes, error } = await supabase
       .from('recipes')
       .select('id, bean_id, method, name, locked_version_id')
+      .eq('owner_id', userData.user.id)
       .not('locked_version_id', 'is', null)
       .is('archived_at', null)
     fail(error)
