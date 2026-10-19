@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { suggest } from '../../engine/suggest.ts'
-import { beanCover } from '../beans/cover'
+import { BeanHeader } from '../beans/BeanHeader'
 import { afterLock, isEmpty } from '../brew/bagUsage'
 import { buildSuggestInput, clock } from '../brew/buildInput'
 import { diffRecipes, toggleExclusive } from '../brew/feedback'
@@ -15,6 +15,9 @@ import { Switch } from '../components/Switch'
 import { useToast } from '../components/toastContext'
 import { useLockRecipe, useMyDrafts, useSaveDraft, useUpdateBag } from '../data/hooks'
 import { IMPROVE_LABELS, TASTE_LABELS, type BrewResult, type Compared, type Improve, type RecipeNumbers, type Taste } from '../data/types'
+import { Button } from '../components/Button'
+import { LoadingNote } from '../components/LoadingNote'
+import { SectionHeading } from '../components/SectionHeading'
 
 const TASTES = (Object.keys(TASTE_LABELS) as Taste[]).map((value) => ({ value, label: TASTE_LABELS[value] }))
 const IMPROVES = (Object.keys(IMPROVE_LABELS) as Improve[]).map((value) => ({ value, label: IMPROVE_LABELS[value] }))
@@ -69,17 +72,15 @@ export function LogPage() {
       <>
         <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Couldn't load your beans</h1>
         <p className="mt-2 text-sm text-muted">Your brew is safe on this phone. Check your connection and try again.</p>
-        <button type="button" onClick={() => void selection.bags.refetch()} className="mt-4 h-12 w-full rounded-full bg-ink font-medium text-bg">
+        <Button onClick={() => void selection.bags.refetch()} className="mt-4">
           Try again
-        </button>
+        </Button>
       </>
     )
   }
   if (selection.bags.isPending || drafts.isPending) {
     return (
-      <p role="status" className="mt-10 text-center text-sm text-muted">
-        Loading…
-      </p>
+      <LoadingNote />
     )
   }
   const { bag } = selection
@@ -89,9 +90,9 @@ export function LogPage() {
       <>
         <h1 className="text-[2rem] leading-tight font-medium tracking-tight">Bean not found</h1>
         <p className="mt-2 text-sm text-muted">That bag isn't in your beans any more, so this brew can't be logged.</p>
-        <button type="button" onClick={discard} className="mt-4 h-12 w-full rounded-full bg-ink font-medium text-bg">
+        <Button onClick={discard} className="mt-4">
           Discard this brew
-        </button>
+        </Button>
       </>
     )
   }
@@ -99,7 +100,6 @@ export function LogPage() {
   // The numbers that were brewed. Older sessions did not keep them, so work them out again.
   const brewed = session.recipe ?? suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, session.asOf)).recipe
   const recipe: RecipeNumbers = { doseG: brewed.doseG, waterG: brewed.waterG, ratio: brewed.ratio, tempC: brewed.tempC, grindUm: brewed.grindUm, targetTimeS: brewed.targetTimeS, pours: brewed.pours }
-  const cover = beanCover(bag.bean.id)
   const previousDraft = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')
   const previous = previousDraft?.lastBrew ?? null
   const asked = currentSuggestion(previousDraft)
@@ -156,11 +156,11 @@ export function LogPage() {
 
   return (
     <>
-      <div className="flex items-center gap-3">
-        <span className={`size-12 shrink-0 ${cover.tint} ${cover.pebble}`} aria-hidden />
-        <div className="min-w-0">
-          <h1 className="truncate text-lg leading-tight font-medium">How did it go?</h1>
-          <p className="truncate text-xs text-muted">
+      <BeanHeader
+        beanId={bag.bean.id}
+        title="How did it go?"
+        subtitle={
+          <>
             {bag.bean.name}
             {!session.untimed && (
               <>
@@ -168,19 +168,19 @@ export function LogPage() {
                 <span className="num">{clock(session.finishedS)}</span> total
               </>
             )}
-          </p>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <section aria-label="Taste" className="mt-6">
-        <h2 className="px-2 text-xs font-medium text-muted">How did it taste?</h2>
+        <SectionHeading>How did it taste?</SectionHeading>
         <div className="mt-2">
           <MultiChipGroup<Taste> label="Taste" options={TASTES} value={tastes} onToggle={(chip) => setTastes((current) => toggleExclusive(current, chip, 'good'))} />
         </div>
       </section>
 
       <section aria-label="Improve next time" className="mt-6">
-        <h2 className="px-2 text-xs font-medium text-muted">What do you want to improve next time?</h2>
+        <SectionHeading>What do you want to improve next time?</SectionHeading>
         <div className="mt-2">
           <MultiChipGroup<Improve> label="Improve next time" options={IMPROVES} value={improve} onToggle={(chip) => setImprove((current) => toggleExclusive(current, chip, 'nothing'))} />
         </div>
@@ -188,7 +188,7 @@ export function LogPage() {
 
       {previous && (
         <section aria-label="Compared with last time" className="mt-6">
-          <h2 className="px-2 text-xs font-medium text-muted">Compared with last time, was it…</h2>
+          <SectionHeading>Compared with last time, was it…</SectionHeading>
           <div className="mt-2">
             <ChipGroup<Compared> label="Compared with last time" options={COMPARED} value={compared} onChange={setCompared} />
           </div>
@@ -250,17 +250,16 @@ export function LogPage() {
         )}
       </section>
 
-      <button
-        type="button"
+      <Button
         onClick={() => void save()}
         disabled={!canSave}
-        className="mt-6 h-12 w-full rounded-full bg-ink font-medium text-bg transition-transform active:scale-[0.98] disabled:opacity-40"
+        className="mt-6"
       >
         {lock ? 'Lock in and save' : 'Save'}
-      </button>
-      <button type="button" onClick={() => void save(true)} disabled={saving} className="mt-2 h-11 w-full rounded-full text-sm text-muted disabled:opacity-40">
+      </Button>
+      <Button onClick={() => void save(true)} disabled={saving} variant="quiet" size="md" className="mt-2">
         Skip, I didn't taste it
-      </button>
+      </Button>
     </>
   )
 }

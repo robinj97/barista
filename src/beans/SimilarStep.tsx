@@ -1,5 +1,6 @@
 import type { BeanMatch, NewBean, SimilarBean } from '../data/types'
 import { beanCover } from './cover'
+import { Button } from '../components/Button'
 
 interface SimilarStepProps {
   entered: NewBean
@@ -44,9 +45,9 @@ export function SimilarStep({ entered, similar, onBack, onUseExisting, onDiffere
           )
         })}
       </ul>
-      <button type="button" onClick={onDifferent} className="h-12 w-full rounded-full bg-soft">
+      <Button onClick={onDifferent} variant="soft">
         It's a different bean
-      </button>
+      </Button>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import type { BrewChoices } from './params'
 import { DEFAULT_CHOICES } from './params'
 import { buildSuggestInput } from './buildInput'
 import { ownPriors } from './ownPriors'
+import { SEED_BEANS } from '../dev/mockApi'
 import { makeBag } from '../test/renderApp'
 import type { BrewResult, Draft, LockedRecipe } from '../data/types'
 
@@ -11,7 +12,7 @@ const bag = makeBag('b-geisha')
 const choices: BrewChoices = { ...DEFAULT_CHOICES, bagId: bag.id }
 const numbers = { doseG: 20, waterG: 300, ratio: 15, tempC: 91, grindUm: 700, targetTimeS: 180, pours: [{ atS: 0, toG: 300 }] }
 const locked = (extra: Partial<LockedRecipe> = {}): LockedRecipe => ({
-  id: 'r1', beanId: 'b-geisha', method: 'v60', name: 'V60', versionId: 'v1', snapshot: { choices, recipe: numbers }, rating: 4, lockedAt: '2026-10-10T10:00:00Z', brewCount: 1, ...extra,
+  id: 'r1', bean: SEED_BEANS.find((b) => b.id === 'b-geisha')!, method: 'v60', name: 'V60', versionId: 'v1', snapshot: { choices, recipe: numbers }, rating: 4, lockedAt: '2026-10-10T10:00:00Z', brewCount: 1, ...extra,
 })
 const brew = (extra: Partial<BrewResult> = {}): BrewResult => ({ brewedAt: '2026-10-12T10:00:00Z', totalTimeS: 170, tastes: ['good'], improve: [], compared: null, yieldG: null, notes: '', firstPourG: 60, ...extra })
 const draft = (lastBrew: BrewResult | null, edits = {}): Draft => ({ beanId: 'b-geisha', method: 'v60', choices: { ...choices, edits }, lastBrew, updatedAt: '2026-10-12T10:00:00Z' })
@@ -22,8 +23,9 @@ describe('ownPriors', () => {
     expect(ownPriors({ recipes: [locked()], drafts: [], bags: [bag], filters: [], asOf })).toMatchObject([{ beanId: 'b-geisha', tempC: 91, grindUm: 700 }])
   })
 
-  it('skips a recipe whose bean you have no bag for', () => {
-    expect(ownPriors({ recipes: [locked({ beanId: 'b-elto' })], drafts: [], bags: [bag], filters: [], asOf })).toEqual([])
+  it('needs no bag: a locked recipe carries its own bean', () => {
+    const elto = SEED_BEANS.find((b) => b.id === 'b-elto')!
+    expect(ownPriors({ recipes: [locked({ bean: elto })], drafts: [], bags: [], filters: [], asOf })).toMatchObject([{ beanId: 'b-elto', tempC: 91 }])
   })
 
   it('lets a newer working recipe that tasted good replace the locked one', () => {

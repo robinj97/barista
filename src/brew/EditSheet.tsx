@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Sheet } from '../components/Sheet'
+import { Button } from '../components/Button'
+import { IconButton } from '../components/IconButton'
 
 interface EditSheetProps {
   open: boolean
@@ -41,9 +43,9 @@ function Editor({ title, value, unit, step, min, max, places = 0, onSave, onRese
       }}
     >
       <div className="flex items-center justify-center gap-4 py-4">
-        <button type="button" aria-label={`Decrease ${title}`} onClick={() => nudge(-1)} className="size-12 rounded-full bg-soft text-xl active:scale-95">
+        <IconButton label={`Decrease ${title}`} size="xl" className="text-xl" onClick={() => nudge(-1)}>
           −
-        </button>
+        </IconButton>
         <label className="flex items-baseline gap-1">
           <span className="sr-only">{title}</span>
           <input
@@ -57,9 +59,9 @@ function Editor({ title, value, unit, step, min, max, places = 0, onSave, onRese
           />
           <span className="text-sm text-muted">{unit}</span>
         </label>
-        <button type="button" aria-label={`Increase ${title}`} onClick={() => nudge(1)} className="size-12 rounded-full bg-soft text-xl active:scale-95">
+        <IconButton label={`Increase ${title}`} size="xl" className="text-xl" onClick={() => nudge(1)}>
           +
-        </button>
+        </IconButton>
       </div>
       {!valid && (
         <p role="alert" className="text-center text-xs text-muted">
@@ -67,20 +69,21 @@ function Editor({ title, value, unit, step, min, max, places = 0, onSave, onRese
         </p>
       )}
       {children}
-      <button type="submit" disabled={!valid} className="mt-3 h-12 w-full rounded-full bg-ink font-medium text-bg disabled:opacity-40">
+      <Button type="submit" disabled={!valid} className="mt-3">
         Done
-      </button>
+      </Button>
       {onReset && (
-        <button
-          type="button"
+        <Button
           onClick={() => {
             onReset()
             close()
           }}
-          className="mt-2 h-11 w-full rounded-full text-sm text-muted"
+          variant="quiet"
+          size="md"
+          className="mt-2"
         >
           Back to the suggestion
-        </button>
+        </Button>
       )}
     </form>
   )

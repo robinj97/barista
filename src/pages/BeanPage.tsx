@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Sheet } from '../components/Sheet'
-import { beanCover } from '../beans/cover'
+import { BackLink } from '../components/BackLink'
+import { ConfirmSheet } from '../components/ConfirmSheet'
+import { BeanHeader } from '../beans/BeanHeader'
 import { BrewHistory } from '../beans/BrewHistory'
 import { roastAge, toISODate } from '../beans/dates'
 import { ROAST_LABELS, STATUS_LABELS } from '../beans/labels'
 import { EditBagSheet } from '../beans/EditBagSheet'
 import { stockOf, stockText, usualDoseG } from '../beans/stock'
 import { useMyBags, useMyDrafts, useRemoveBag } from '../data/hooks'
+import { LoadingNote } from '../components/LoadingNote'
+import { SectionHeading } from '../components/SectionHeading'
 
 function Fact({ label, value }: { label: string; value: string | null }) {
   if (!value) return null
@@ -30,19 +33,13 @@ export function BeanPage() {
   const [today] = useState(() => toISODate(new Date()))
 
   const bag = bags.data?.find((item) => item.id === id)
-  const back = (
-    <Link to="/beans" aria-label="Back to beans" className="grid size-11 place-items-center rounded-full bg-soft text-lg">
-      ←
-    </Link>
-  )
+  const back = <BackLink to="/beans" label="Back to beans" />
 
   if (bags.isPending) {
     return (
       <>
         {back}
-        <p role="status" className="mt-10 text-center text-sm text-muted">
-          Loading…
-        </p>
+        <LoadingNote />
       </>
     )
   }
@@ -58,23 +55,15 @@ export function BeanPage() {
   }
 
   const { bean } = bag
-  const cover = beanCover(bean.id)
   const roasted = roastAge(bag.roastDate)
   const stock = stockOf(bag, usualDoseG(bean.id, drafts.data))
 
   return (
     <>
-      <div className="flex items-center gap-3">
-        {back}
-        <span className={`size-12 shrink-0 ${cover.tint} ${cover.pebble}`} aria-hidden />
-        <div className="min-w-0">
-          <h1 className="truncate text-lg leading-tight font-medium">{bean.name}</h1>
-          <p className="truncate text-xs text-muted">{bean.roaster}</p>
-        </div>
-      </div>
+      <BeanHeader beanId={bean.id} title={bean.name} subtitle={bean.roaster} back={back} />
 
       <section aria-label="About this coffee" className="mt-6">
-        <h2 className="px-2 text-xs font-medium text-muted">About this coffee</h2>
+        <SectionHeading>About this coffee</SectionHeading>
         <div className="squircle mt-2 rounded-4xl bg-soft p-2">
           <dl>
             <Fact label="Origin" value={bean.origin} />
@@ -118,7 +107,7 @@ export function BeanPage() {
       </section>
 
       <section aria-label="Recipes" className="mt-6">
-        <h2 className="px-2 text-xs font-medium text-muted">Recipes</h2>
+        <SectionHeading>Recipes</SectionHeading>
         <BrewHistory bag={bag} today={today} />
       </section>
 
@@ -137,27 +126,19 @@ export function BeanPage() {
         Remove this bag
       </button>
 
-      <Sheet open={confirming} onOpenChange={setConfirming} title="Remove this bag?">
-        <div className="space-y-2 px-3 pb-2">
-          <p className="px-2 text-sm text-muted">
-            {bean.name} leaves your beans. The coffee stays in the shared catalogue for everyone else.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              removeBag.mutate(bag.id)
-              setConfirming(false)
-              navigate('/beans')
-            }}
-            className="h-12 w-full rounded-full bg-ink font-medium text-bg active:scale-[0.98]"
-          >
-            Remove bag
-          </button>
-          <button type="button" onClick={() => setConfirming(false)} className="h-12 w-full rounded-full bg-soft active:scale-[0.98]">
-            Keep it
-          </button>
-        </div>
-      </Sheet>
+      <ConfirmSheet
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Remove this bag?"
+        confirmLabel="Remove bag"
+        onConfirm={() => {
+          removeBag.mutate(bag.id)
+          setConfirming(false)
+          navigate('/beans')
+        }}
+      >
+        {bean.name} leaves your beans. The coffee stays in the shared catalogue for everyone else.
+      </ConfirmSheet>
       <EditBagSheet open={editing} onOpenChange={setEditing} bag={bag} />
     </>
   )

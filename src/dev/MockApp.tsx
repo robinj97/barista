@@ -27,7 +27,7 @@ const SAMPLE_BAGS: Bag[] = [
 const SAMPLE_RECIPES: LockedRecipe[] = [
   {
     id: 'recipe-1',
-    beanId: SEED_BEANS[0]!.id,
+    bean: SEED_BEANS[0]!,
     method: 'v60',
     name: 'V60',
     versionId: 'version-1',

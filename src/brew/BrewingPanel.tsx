@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Pour } from '../../engine/types.ts'
 import { clock } from './buildInput'
+import { PourList } from './PourList'
 import { beep } from './cues'
 import { currentIndex, phaseAt } from './progress'
 import { elapsedS, type BrewSession } from './session'
+import { Button } from '../components/Button'
 
 interface BrewingPanelProps {
   pours: Pour[]
@@ -47,20 +49,16 @@ export function BrewingPanel({ pours, session, now, onFinish, onCancel }: Brewin
         </button>
       )}
 
-      <ol className="mt-4 space-y-1" aria-label="Pour progress">
-        {pours.map((pour, index) => {
+      <PourList
+        pours={pours}
+        label="Pour progress"
+        className="mt-4"
+        progress={(index) => {
           // A pour stays highlighted until the next one begins, and is ticked then.
-          const done = index < current || (phase.kind === 'drawdown' && index === current)
-          const active = phase.kind !== 'drawdown' && index === current
-          return (
-            <li key={pour.atS} aria-current={active ? 'step' : undefined} className={`flex items-center gap-3 rounded-full py-2 pr-5 pl-2 ${active ? 'bg-accent-soft' : ''}`}>
-              <span className={`grid size-8 place-items-center rounded-full text-xs ${done ? 'bg-ink text-bg' : 'bg-soft'}`}>{done ? '✓' : index + 1}</span>
-              <span className="num flex-1 text-sm">{clock(pour.atS)}</span>
-              <span className="num w-16 text-right text-sm">{pour.toG} g</span>
-            </li>
-          )
-        })}
-      </ol>
+          if (index < current || (phase.kind === 'drawdown' && index === current)) return 'done'
+          return phase.kind !== 'drawdown' && index === current ? 'active' : 'upcoming'
+        }}
+      />
 
       {confirming ? (
         <div className="mt-4 flex gap-2">
@@ -72,9 +70,9 @@ export function BrewingPanel({ pours, session, now, onFinish, onCancel }: Brewin
           </button>
         </div>
       ) : (
-        <button type="button" onClick={() => setConfirming(true)} className="mt-4 h-11 w-full rounded-full text-sm text-muted">
+        <Button onClick={() => setConfirming(true)} variant="quiet" size="md" className="mt-4">
           Cancel brew
-        </button>
+        </Button>
       )}
     </section>
   )

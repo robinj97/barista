@@ -1,19 +1,15 @@
 import { useState } from 'react'
-import type { TempUnit } from '../../engine/units.ts'
+import { Button } from '../components/Button'
 import { appliedNow, useSetSuggestionApplied, useSuggestTweak } from '../data/hooks'
-import { SuggestError, type Draft, type MyGrinder, type RecipeNumbers } from '../data/types'
+import { SuggestError, type Draft } from '../data/types'
+import type { RecipeModel } from '../recipe/model'
 import type { BrewChoices } from './params'
 import { applySuggestion, currentSuggestion } from './suggestTweak'
 
 interface SuggestCardProps {
+  model: RecipeModel
+  /** The working recipe whose last brew is read. */
   draft: Draft
-  choices: BrewChoices
-  /** The recipe on screen now. */
-  current: RecipeNumbers
-  recompute: (choices: BrewChoices) => RecipeNumbers
-  grinder: MyGrinder | undefined
-  unit: TempUnit
-  onApply: (choices: BrewChoices) => void
 }
 
 const ERRORS: Record<SuggestError['reason'], string | null> = {
@@ -30,7 +26,8 @@ const ERRORS: Record<SuggestError['reason'], string | null> = {
  * "Suggest a tweak", inside the last brew card (docs/suggest-tweak.md). Runs only when tapped. The
  * answer is kept on the draft, so reopening the screen shows it again without asking.
  */
-export function SuggestCard({ draft, choices, current, recompute, grinder, unit, onApply }: SuggestCardProps) {
+export function SuggestCard({ model, draft }: SuggestCardProps) {
+  const { choices, recipe, grinder, unit, apply, recompute } = model
   const ask = useSuggestTweak()
   const setApplied = useSetSuggestionApplied()
   const [folded, setFolded] = useState(false)
@@ -50,14 +47,9 @@ export function SuggestCard({ draft, choices, current, recompute, grinder, unit,
     return (
       <div className="mt-3">
         {reason && <p className="mb-2 text-center text-xs text-muted">{ERRORS[reason]}</p>}
-        <button
-          type="button"
-          onClick={request}
-          disabled={ask.isPending}
-          className="h-11 w-full rounded-full border border-hairline bg-bg text-sm transition-transform active:scale-[0.98] disabled:opacity-60"
-        >
+        <Button variant="accent" size="md" onClick={request} disabled={ask.isPending} className="text-sm disabled:opacity-60">
           {ask.isPending ? 'Thinking…' : reason ? 'Try again' : '✦ Suggest a tweak'}
-        </button>
+        </Button>
         {!reason && <p className="mt-1.5 text-center text-xs text-muted">AI reads this brew and your note.</p>}
       </div>
     )
@@ -65,29 +57,37 @@ export function SuggestCard({ draft, choices, current, recompute, grinder, unit,
 
   if (folded) {
     return (
-      <button type="button" onClick={() => setFolded(false)} className="mt-2 h-9 rounded-full px-3 text-sm text-accent">
+      <Button variant="quiet" size="md" block={false} onClick={() => setFolded(false)} className="mt-2 px-3">
         See suggestion ›
-      </button>
+      </Button>
     )
   }
 
-  const brewed = brew.recipe!
   const applied =
     suggestion.kind === 'change'
       ? // After Apply, describe it against the choices from before Apply, which Undo goes back to.
-        applySuggestion({ choices: undo ?? choices, current, brewed, brewedChoices: draft.choices, changes: suggestion.changes, grinder, unit, recompute })
+        applySuggestion({
+          choices: undo ?? choices,
+          current: recipe,
+          brewed: brew.recipe!,
+          brewedChoices: draft.choices,
+          changes: suggestion.changes,
+          grinder,
+          unit,
+          recompute,
+        })
       : null
   const isApplied = undo !== null || suggestion.appliedAt !== null
 
-  const apply = () => {
+  const onApply = () => {
     if (!applied?.choices) return
     setUndo(choices)
-    onApply(applied.choices)
+    apply(applied.choices)
     setApplied.mutate({ beanId: draft.beanId, appliedAt: appliedNow() })
   }
-  const revert = () => {
+  const onUndo = () => {
     if (!undo) return
-    onApply(undo)
+    apply(undo)
     setUndo(null)
     setApplied.mutate({ beanId: draft.beanId, appliedAt: null })
   }
@@ -120,28 +120,28 @@ export function SuggestCard({ draft, choices, current, recompute, grinder, unit,
 
       {applied?.choices && !isApplied && (
         <div className="mt-3 flex gap-2">
-          <button type="button" onClick={apply} className="h-11 flex-1 rounded-full bg-ink text-sm font-medium text-bg active:scale-[0.98]">
+          <Button size="md" onClick={onApply} className="flex-1 text-sm">
             Apply to recipe
-          </button>
-          <button type="button" onClick={() => setFolded(true)} className="h-11 rounded-full px-4 text-sm text-muted">
+          </Button>
+          <Button variant="quiet" size="md" block={false} onClick={() => setFolded(true)} className="px-4">
             Not now
-          </button>
+          </Button>
         </div>
       )}
       {isApplied && (
         <p className="mt-3 flex items-center gap-3 text-sm">
           <span className="text-muted">Applied</span>
           {undo && (
-            <button type="button" onClick={revert} className="h-9 rounded-full px-3 text-sm text-accent">
+            <Button variant="quiet" size="md" block={false} onClick={onUndo} className="px-3 text-accent">
               Undo
-            </button>
+            </Button>
           )}
         </p>
       )}
       {(!applied || !applied.choices) && (
-        <button type="button" onClick={() => setFolded(true)} className="mt-2 h-9 rounded-full px-3 text-sm text-accent">
+        <Button variant="quiet" size="md" block={false} onClick={() => setFolded(true)} className="mt-2 px-3">
           OK
-        </button>
+        </Button>
       )}
     </section>
   )

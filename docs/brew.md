@@ -52,6 +52,10 @@ The third goal is called **More acidity**, which is the 4:6 method's own wording
 - Assisted tuning (`tuning.md`) keeps using **sour** for the defect, which is fixed with grind, temperature or technique, never with this goal. The internal name for +1 balance in the code is still `brighter`.
 - "Sweetness against acidity" is a simplification: in a cup they are not strict opposites. The method's claim is only that the first pour trades one for the other.
 
+## What Light / Medium / Strong mean
+
+An (i) next to the strength chips opens a sheet saying what the choice changes: the **number of pours**, as in the 4:6 method (the first 40% of the water in two pours, the last 60% split into 2, 3 or 4 equal pours, so 4, 5 or 6 pours in all), with the ratio fixed at 1:15. The counts come from the engine (`laterPoursFor`), so the text cannot drift from the recipe. It says plainly that this is the method's guidance, not something we have measured, and that grind and ratio also change strength.
+
 ## Does the goal change the taste?
 
 Be honest about what the goal chips and slider do. They move one thing: how the first 40% of the water is split between pour 1 and pour 2 (on 300 g: 40 g / 80 g at full sweeter, 60 / 60 balanced, 80 / 40 at full more acidity; the chips are 48 / 72 and 72 / 48). Temperature, grind, ratio, total water and the later pours do not change.
@@ -103,6 +107,10 @@ Your locked recipe for a bean is what the next suggestion starts from: its tempe
 ## Library
 
 The **Library** tab lists the recipes you have locked in, across all beans, newest first: bean, stars, how many times you brewed it (all versions), dose, water and temperature. It differs from the bean page in that a recipe stays here when its bag is empty or gone, and it is where archiving lives. Tap a row to start a brew from it (the same pre-fill as the bean page). **Archive** asks first; it hides the recipe from friends and your lists but keeps your brews (the row is flagged `archived_at`, never deleted). A **Mine / Friends** switch will come with the friends feature.
+
+## The gear line
+
+On the set-up screen your gear is one slim line (**Gear · Kingrinder K7 · CAFEC T-90 · 02**, or "· No filter") with a pencil, because it rarely changes and the gear of your last brew is already chosen. Tapping it opens a **Your gear** sheet: a Grinder list (with the "Rough estimate" note where it applies) and a Filter list (with **No filter**), each with the current choice marked, **Add a grinder** / **Add a filter**, and **Done**. Plain lists in one sheet, no pop-ups inside pop-ups. With no grinder yet, the line is a prompt to add one (the grind needs it to show clicks). The choice still applies to this brew and lives in the page address.
 
 ## Brew starts where you left off
 

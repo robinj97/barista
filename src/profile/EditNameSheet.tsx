@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Sheet } from '../components/Sheet'
 import { useOnOpen } from '../hooks/useOnOpen'
+import { Button } from '../components/Button'
+import { TextField } from '../components/TextField'
 
 interface EditNameSheetProps {
   open: boolean
@@ -33,27 +35,24 @@ export function EditNameSheet({ open, onOpenChange, initialName, onSave }: EditN
       title="Display name"
     >
       <form onSubmit={submit} className="space-y-3 px-3 pb-2">
-        <label className="block">
-          <span className="sr-only">Display name</span>
-          <input
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value)
-              setError(null)
-            }}
-            autoComplete="name"
-            enterKeyHint="done"
-            className="h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-        </label>
+        <TextField
+          aria-label="Display name"
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value)
+            setError(null)
+          }}
+          autoComplete="name"
+          enterKeyHint="done"
+        />
         {error && (
           <p role="alert" className="px-2 text-sm text-accent">
             {error}
           </p>
         )}
-        <button type="submit" className="h-12 w-full rounded-full bg-ink font-medium text-bg active:scale-[0.98]">
+        <Button type="submit">
           Save
-        </button>
+        </Button>
       </form>
     </Sheet>
   )

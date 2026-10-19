@@ -10,6 +10,8 @@ import { useMyBags, useMyDrafts } from '../data/hooks'
 import type { BagStatus } from '../data/types'
 import { InstallPrompt } from '../install/InstallPrompt'
 import { PageHeader } from '../layout/PageHeader'
+import { LoadingNote } from '../components/LoadingNote'
+import { TextField } from '../components/TextField'
 
 type Filter = 'all' | BagStatus | 'finished'
 
@@ -45,9 +47,7 @@ export function BeansPage() {
       <InstallPrompt />
 
       {bags.isPending && (
-        <p role="status" className="mt-10 text-center text-sm text-muted">
-          Loading your beans…
-        </p>
+        <LoadingNote>Loading your beans…</LoadingNote>
       )}
 
       {bags.isError && (
@@ -63,17 +63,16 @@ export function BeansPage() {
 
       {bags.isSuccess && all.length > 0 && (
         <>
-          <label className="mt-5 block">
-            <span className="sr-only">Search your beans</span>
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search name, variety, process or notes"
-              enterKeyHint="search"
-              className="h-11 w-full rounded-full bg-soft px-5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            />
-          </label>
+          <TextField
+            aria-label="Search your beans"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search name, variety, process or notes"
+            enterKeyHint="search"
+            compact
+            className="mt-5"
+          />
 
           <div className="mt-3 flex gap-2" role="group" aria-label="Filter beans">
             {FILTERS.map((item) => (

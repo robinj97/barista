@@ -1,4 +1,5 @@
 import { SIMILAR_FROM, dedupeKey, similarity } from '../beans/dedupe'
+import type { Api } from '../data/api'
 import { GRINDER_SEED } from '../../engine/grinderSeed.ts'
 import { canSuggestFrom, PROMPT_VERSION, SUGGEST_EFFORT, SUGGEST_MODEL, type StoredBrew, type StoredSuggestion } from '../../supabase/functions/suggest-tweak/suggest.ts'
 import {
@@ -6,7 +7,6 @@ import {
   filterMatchKey,
   ScanError,
   SuggestError,
-  type Api,
   type Feature,
   type Bag,
   type Bean,
@@ -401,7 +401,7 @@ export function createMockApi(options: MockOptions = {}): Api {
       lockedBrews.add(input.brewId)
       const next: LockedRecipe = {
         id: input.recipeId,
-        beanId: bag.bean.id,
+        bean: bag.bean,
         method: input.method,
         name: input.name,
         versionId: input.versionId,
@@ -410,7 +410,7 @@ export function createMockApi(options: MockOptions = {}): Api {
         lockedAt: input.result.brewedAt,
         brewCount: 1,
       }
-      const at = recipes.findIndex((r) => r.beanId === next.beanId && r.method === next.method)
+      const at = recipes.findIndex((r) => r.bean.id === next.bean.id && r.method === next.method)
       if (at >= 0) recipes[at] = { ...next, id: recipes[at]!.id, name: recipes[at]!.name, brewCount: recipes[at]!.brewCount + 1 }
       else recipes.push(next)
       return wait(undefined)

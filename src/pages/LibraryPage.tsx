@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { beanCover } from '../beans/cover'
+import { recipeSummary } from '../brew/format'
 import { toSearchParams } from '../brew/params'
 import { FriendRecipes } from '../library/FriendRecipes'
 import { SegmentedControl } from '../components/SegmentedControl'
-import { Sheet } from '../components/Sheet'
+import { ConfirmSheet } from '../components/ConfirmSheet'
 import { useToast } from '../components/toastContext'
-import { useArchiveRecipe, useMyBags, useMyRecipes } from '../data/hooks'
+import { useArchiveRecipe, useMyBags, useMyRecipes, useProfile } from '../data/hooks'
 import type { LockedRecipe } from '../data/types'
 import { PageHeader } from '../layout/PageHeader'
+import { LoadingNote } from '../components/LoadingNote'
 
 const stars = (rating: number | null) => (rating ? '★'.repeat(rating) : null)
 
@@ -17,6 +19,7 @@ export function LibraryPage() {
   const recipes = useMyRecipes()
   const bags = useMyBags()
   const archive = useArchiveRecipe()
+  const unit = useProfile().data?.temp_unit ?? 'c'
   const toast = useToast()
   const [archiving, setArchiving] = useState<LockedRecipe | null>(null)
   const [tab, setTab] = useState<'mine' | 'friends'>('mine')
@@ -51,9 +54,7 @@ export function LibraryPage() {
     return (
       <>
         {header}
-        <p role="status" className="mt-10 text-center text-sm text-muted">
-          Loading…
-        </p>
+        <LoadingNote />
       </>
     )
   }
@@ -76,8 +77,9 @@ export function LibraryPage() {
       {header}
       <ul className="mt-6 space-y-2" aria-label="Your recipes">
         {list.map((recipe) => {
-          const bag = bags.data?.find((b) => b.bean.id === recipe.beanId)
-          const cover = beanCover(recipe.beanId)
+          const { bean } = recipe
+          const bag = bags.data?.find((b) => b.bean.id === bean.id)
+          const cover = beanCover(bean.id)
           const { recipe: numbers } = recipe.snapshot
           const rating = stars(recipe.rating)
           const to = bag ? `/brew/recipe?${toSearchParams({ ...recipe.snapshot.choices, bagId: bag.id }).toString()}` : null
@@ -85,13 +87,13 @@ export function LibraryPage() {
             <>
               <span className={`size-[3.25rem] shrink-0 ${cover.tint} ${cover.pebble}`} aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{bag?.bean.name ?? 'A bean you no longer have'}</span>
+                <span className="block truncate font-medium">{bean.name}</span>
                 <span className="block truncate text-xs text-muted">
                   {rating && <span className="text-accent">{rating} · </span>}
                   {recipe.brewCount} {recipe.brewCount === 1 ? 'brew' : 'brews'}
                 </span>
                 <span className="num mt-0.5 block truncate text-xs text-muted">
-                  {numbers.doseG} g · {numbers.waterG} g · {numbers.tempC}°C
+                  {recipeSummary(numbers, unit)}
                 </span>
               </span>
             </>
@@ -99,13 +101,13 @@ export function LibraryPage() {
           return (
             <li key={recipe.id} className="squircle flex items-center gap-1 rounded-4xl bg-soft py-3 pr-3 pl-3">
               {to ? (
-                <Link to={to} aria-label={`Brew ${bag?.bean.name ?? 'this recipe'} again`} className="flex min-w-0 flex-1 items-center gap-4">
+                <Link to={to} aria-label={`Brew ${bean.name} again`} className="flex min-w-0 flex-1 items-center gap-4">
                   {body}
                 </Link>
               ) : (
                 <div className="flex min-w-0 flex-1 items-center gap-4">{body}</div>
               )}
-              <button type="button" onClick={() => setArchiving(recipe)} aria-label={`Archive the recipe for ${bag?.bean.name ?? 'this bean'}`} className="h-10 rounded-full px-3 text-sm text-muted">
+              <button type="button" onClick={() => setArchiving(recipe)} aria-label={`Archive the recipe for ${bean.name}`} className="h-10 rounded-full px-3 text-sm text-muted">
                 Archive
               </button>
             </li>
@@ -113,27 +115,19 @@ export function LibraryPage() {
         })}
       </ul>
 
-      <Sheet open={archiving !== null} onOpenChange={(open) => !open && setArchiving(null)} title="Archive this recipe?">
-        <div className="px-3 pb-3">
-          <p className="px-1 text-sm text-muted">
-            Friends will no longer see it and it leaves your lists. Your brews are kept, and you can lock a new recipe for this bean any time.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              const target = archiving
-              setArchiving(null)
-              if (target) archive.mutate(target.id, { onError: () => toast.show("Couldn't archive that. Check your connection and try again.") })
-            }}
-            className="mt-4 h-12 w-full rounded-full bg-ink font-medium text-bg"
-          >
-            Archive
-          </button>
-          <button type="button" onClick={() => setArchiving(null)} className="mt-2 h-11 w-full rounded-full text-sm text-muted">
-            Keep it
-          </button>
-        </div>
-      </Sheet>
+      <ConfirmSheet
+        open={archiving !== null}
+        onOpenChange={(open) => !open && setArchiving(null)}
+        title="Archive this recipe?"
+        confirmLabel="Archive"
+        onConfirm={() => {
+          const target = archiving
+          setArchiving(null)
+          if (target) archive.mutate(target.id, { onError: () => toast.show("Couldn't archive that. Check your connection and try again.") })
+        }}
+      >
+        Friends will no longer see it and it leaves your lists. Your brews are kept, and you can lock a new recipe for this bean any time.
+      </ConfirmSheet>
     </>
   )
 }

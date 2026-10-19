@@ -6,6 +6,8 @@ import type { BeanMatch, NewBean, RoastLevel } from '../data/types'
 import { FLAVOURS, ORIGINS, PROCESSES, VARIETIES, composeProcess, parseProcess } from './lists'
 import { TagInput } from './TagInput'
 import { useDebouncedValue } from './useDebouncedValue'
+import { Button } from '../components/Button'
+import { TextField } from '../components/TextField'
 
 interface NewBeanStepProps {
   /** The details entered earlier, restored when you come back from the next step. */
@@ -21,7 +23,6 @@ interface NewBeanStepProps {
   onPickExisting: (bean: BeanMatch) => void
 }
 
-const field = 'h-12 w-full rounded-full bg-soft px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent'
 const label = 'px-2 text-xs text-muted'
 
 export function NewBeanStep({ draft, initialRoaster, initialName, roasters, fromPhoto = false, onBack, onContinue, onPickExisting }: NewBeanStepProps) {
@@ -83,21 +84,33 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, from
       )}
 
       <div className="space-y-3">
-        <label className="block">
-          <span className={label}>Roaster</span>
-          <input value={roaster} onChange={(e) => { setRoaster(e.target.value); setErrors((p) => ({ ...p, roaster: undefined })) }} className={`${field} mt-1`} aria-invalid={!!errors.roaster} autoComplete="off" list="roasters" autoFocus={!initialRoaster} />
-          <datalist id="roasters">
-            {roasters.map((known) => (
-              <option key={known} value={known} />
-            ))}
-          </datalist>
-          {errors.roaster && <span role="alert" className="mt-1 block px-2 text-sm text-accent">{errors.roaster}</span>}
-        </label>
-        <label className="block">
-          <span className={label}>Name</span>
-          <input value={name} onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: undefined })) }} className={`${field} mt-1`} aria-invalid={!!errors.name} autoFocus={!!initialRoaster && !initialName} />
-          {errors.name && <span role="alert" className="mt-1 block px-2 text-sm text-accent">{errors.name}</span>}
-        </label>
+        <TextField
+          label="Roaster"
+          value={roaster}
+          onChange={(e) => {
+            setRoaster(e.target.value)
+            setErrors((p) => ({ ...p, roaster: undefined }))
+          }}
+          error={errors.roaster}
+          autoComplete="off"
+          list="roasters"
+          autoFocus={!initialRoaster}
+        />
+        <datalist id="roasters">
+          {roasters.map((known) => (
+            <option key={known} value={known} />
+          ))}
+        </datalist>
+        <TextField
+          label="Name"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value)
+            setErrors((p) => ({ ...p, name: undefined }))
+          }}
+          error={errors.name}
+          autoFocus={!!initialRoaster && !initialName}
+        />
       </div>
 
       {nearby.length > 0 && (
@@ -116,30 +129,21 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, from
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <label className="block">
-          <span className={label}>Origin</span>
-          <input value={origin} onChange={(e) => setOrigin(e.target.value)} list="origins" className={`${field} mt-1`} />
-          <datalist id="origins">
-            {ORIGINS.map((country) => (
-              <option key={country} value={country} />
-            ))}
-          </datalist>
-        </label>
-        <label className="block">
-          <span className={label}>Region</span>
-          <input value={region} onChange={(e) => setRegion(e.target.value)} className={`${field} mt-1`} />
-        </label>
-      </div>
-
-      <label className="block">
-        <span className={label}>Variety</span>
-        <input value={variety} onChange={(e) => setVariety(e.target.value)} list="varieties" placeholder="e.g. Geisha, Bourbon" className={`${field} mt-1`} />
-        <datalist id="varieties">
-          {VARIETIES.map((name) => (
-            <option key={name} value={name} />
+        <TextField label="Origin" value={origin} onChange={(e) => setOrigin(e.target.value)} list="origins" />
+        <datalist id="origins">
+          {ORIGINS.map((country) => (
+            <option key={country} value={country} />
           ))}
         </datalist>
-      </label>
+        <TextField label="Region" value={region} onChange={(e) => setRegion(e.target.value)} />
+      </div>
+
+      <TextField label="Variety" value={variety} onChange={(e) => setVariety(e.target.value)} list="varieties" placeholder="e.g. Geisha, Bourbon" />
+      <datalist id="varieties">
+        {VARIETIES.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
 
       <div>
         <p className={label}>Process</p>
@@ -147,12 +151,12 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, from
           <MultiChipGroup label="Process" options={PROCESSES.map((p) => ({ value: p, label: p }))} value={process.chips} onChange={(chips) => setProcess((p) => ({ ...p, chips }))} />
         </div>
         <p className="mt-1 px-2 text-xs text-muted">Pick more than one when it applies, like Anaerobic and Washed.</p>
-        <input
+        <TextField
           value={process.other}
           onChange={(e) => setProcess((p) => ({ ...p, other: e.target.value }))}
           aria-label="Other process"
           placeholder="Something else, e.g. Carbonic maceration"
-          className={`${field} mt-2`}
+          className="mt-2"
           maxLength={60}
         />
       </div>
@@ -174,21 +178,24 @@ export function NewBeanStep({ draft, initialRoaster, initialName, roasters, from
       <details className="rounded-3xl bg-soft px-4 py-2">
         <summary className="flex min-h-10 cursor-pointer items-center text-sm text-muted">More details</summary>
         <div className="space-y-3 pt-2 pb-2">
-          <label className="block">
-            <span className={label}>Altitude (m)</span>
-            <input value={altitude} onChange={(e) => { setAltitude(e.target.value); setErrors((p) => ({ ...p, altitude: undefined })) }} inputMode="numeric" className={`${field} mt-1 bg-bg`} />
-            {errors.altitude && <span role="alert" className="mt-1 block px-2 text-sm text-accent">{errors.altitude}</span>}
-          </label>
-          <label className="block">
-            <span className={label}>Producer</span>
-            <input value={producer} onChange={(e) => setProducer(e.target.value)} className={`${field} mt-1 bg-bg`} />
-          </label>
+          <TextField
+            label="Altitude (m)"
+            value={altitude}
+            onChange={(e) => {
+              setAltitude(e.target.value)
+              setErrors((p) => ({ ...p, altitude: undefined }))
+            }}
+            inputMode="numeric"
+            error={errors.altitude}
+            tone="bg"
+          />
+          <TextField label="Producer" value={producer} onChange={(e) => setProducer(e.target.value)} tone="bg" />
         </div>
       </details>
 
-      <button type="submit" className="h-12 w-full rounded-full bg-ink font-medium text-bg active:scale-[0.98]">
+      <Button type="submit">
         Continue
-      </button>
+      </Button>
     </form>
   )
 }

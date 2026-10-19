@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { formatTemp } from '../../engine/units.ts'
 import { formatDMY, toISODate } from '../beans/dates'
 import { grindText } from '../brew/feedback'
+import { recipeSummary } from '../brew/format'
 import { toSearchParams } from '../brew/params'
 import { Avatar } from '../components/Avatar'
 import { useFriendRecipes, useFriends, useMyBags, useMyGrinders, useProfile } from '../data/hooks'
 import type { Bag, FriendRecipe } from '../data/types'
+import { FriendRecipeSheet } from './FriendRecipeSheet'
+import { LoadingNote } from '../components/LoadingNote'
 
 /** Their numbers as the starting edits for your own brew. Their gear and goal choices are theirs; yours are used. */
 function startFrom(recipe: FriendRecipe, bag: Bag) {
@@ -19,8 +22,9 @@ function startFrom(recipe: FriendRecipe, bag: Bag) {
   }).toString()
 }
 
-/** Recipes your friends have locked. Tap one for a bean you have to brew from their numbers. */
+/** Recipes your friends have locked. Tap one to see it in full, and to brew from it if you have the bean. */
 export function FriendRecipes() {
+  const [open, setOpen] = useState<FriendRecipe | null>(null)
   const recipes = useFriendRecipes()
   const friends = useFriends()
   const bags = useMyBags()
@@ -29,9 +33,7 @@ export function FriendRecipes() {
 
   if (recipes.isPending || bags.isPending) {
     return (
-      <p role="status" className="mt-10 text-center text-sm text-muted">
-        Loading…
-      </p>
+      <LoadingNote />
     )
   }
 
@@ -51,9 +53,11 @@ export function FriendRecipes() {
   }
 
   const unit = profile.data?.temp_unit ?? 'c'
+  const openBag = open ? bags.data?.find((b) => b.bean.id === open.bean.id) : undefined
   const grinder = grinders.data?.[0]
 
   return (
+    <>
     <ul className="mt-6 space-y-2" aria-label="Friends' recipes">
       {list.map((recipe) => {
         const { recipe: numbers } = recipe.snapshot
@@ -67,24 +71,33 @@ export function FriendRecipes() {
                 {recipe.friend.name} · {formatDMY(toISODate(new Date(recipe.lockedAt)))}
               </span>
               <span className="num mt-0.5 block truncate text-xs text-muted">
-                {numbers.doseG} g · {numbers.waterG} g · {formatTemp(numbers.tempC, unit)} · {grindText(numbers.grindUm, grinder)}
+                {recipeSummary(numbers, unit, grindText(numbers.grindUm, grinder))}
               </span>
               {!bag && <span className="mt-0.5 block text-xs text-accent">Add this bean to brew it</span>}
             </span>
           </>
         )
         return (
-          <li key={recipe.id} className="squircle rounded-4xl bg-soft py-3 pr-4 pl-3">
-            {bag ? (
-              <Link to={`/brew/recipe?${startFrom(recipe, bag)}`} aria-label={`Brew ${recipe.bean.name} from ${recipe.friend.name}'s recipe`} className="flex items-center gap-4">
-                {body}
-              </Link>
-            ) : (
-              <div className="flex items-center gap-4">{body}</div>
-            )}
+          <li key={recipe.id} className="squircle rounded-4xl bg-soft">
+            <button
+              type="button"
+              onClick={() => setOpen(recipe)}
+              aria-label={`${recipe.bean.name} from ${recipe.friend.name}: see the recipe`}
+              className="flex w-full items-center gap-4 py-3 pr-4 pl-3 text-left"
+            >
+              {body}
+            </button>
           </li>
         )
       })}
     </ul>
+      <FriendRecipeSheet
+        recipe={open}
+        onClose={() => setOpen(null)}
+        unit={unit}
+        grinder={grinder}
+        brewTo={open && openBag ? `/brew/recipe?${startFrom(open, openBag)}` : null}
+      />
+    </>
   )
 }

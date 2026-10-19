@@ -106,8 +106,9 @@ describe('Brew starts where you left off', () => {
       },
     })
     const gear = await screen.findByRole('region', { name: 'Your gear' })
-    expect(await within(gear).findByRole('button', { name: /Grinder/ })).toHaveTextContent('K7')
-    expect(within(gear).getByRole('button', { name: /Filter/ })).toHaveTextContent('V60')
+    const line = await within(gear).findByRole('button', { name: /Edit your gear/ })
+    expect(line).toHaveTextContent('Kingrinder K7')
+    expect(line).toHaveTextContent('V60')
   })
 
   it('saves the gear you brewed with, so the next brew starts on it', async () => {
@@ -170,5 +171,19 @@ describe('The iPhone install prompt', () => {
     await screen.findByRole('heading', { name: 'Beans' })
     expect(screen.queryByRole('region', { name: 'Install Barista' })).not.toBeInTheDocument()
     Object.defineProperty(navigator, 'standalone', { value: undefined, configurable: true })
+  })
+})
+
+describe('A bag change that fails', () => {
+  it('puts the bag back the way it was instead of leaving a change that never saved', async () => {
+    const user = userEvent.setup()
+    const { api } = renderApp('/beans/bag-b-geisha', { mock: { bags: [geisha] } })
+    vi.spyOn(api, 'updateBag').mockRejectedValue(new Error('refused'))
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+    const left = await screen.findByLabelText('Left in the bag (g)')
+    await user.clear(left)
+    await user.type(left, '10')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(within(screen.getByRole('region', { name: 'Your bag' })).getByText('250 g')).toBeInTheDocument())
   })
 })

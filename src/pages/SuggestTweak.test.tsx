@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { StoredSuggestion } from '../../supabase/functions/suggest-tweak/suggest.ts'
@@ -27,18 +27,22 @@ const saved: StoredSuggestion = {
 const mock = (over: MockOptions = {}): MockOptions => ({ bags: [geisha], drafts: [draft()], ...over })
 
 const lastBrewCard = async () => screen.findByRole('region', { name: 'Last brew' })
+/** Lets the features query finish, so a missing button really means it isn't offered. */
+const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 20)))
 const grind = () => within(screen.getByRole('region', { name: 'Grind' })).getByText(/µm/).parentElement!.textContent
 
 describe('Suggest a tweak', () => {
   it('is only offered to people with the feature', async () => {
     renderApp(at, { mock: mock({ features: [] }) })
     await lastBrewCard()
+    await settle()
     expect(screen.queryByRole('button', { name: /suggest a tweak/i })).not.toBeInTheDocument()
   })
 
   it('is not offered when the last brew kept no numbers', async () => {
     renderApp(at, { mock: mock({ drafts: [draft({ lastBrew: { ...lastBrew, recipe: undefined } })] }) })
     await lastBrewCard()
+    await settle()
     expect(screen.queryByRole('button', { name: /suggest a tweak/i })).not.toBeInTheDocument()
   })
 
@@ -47,7 +51,7 @@ describe('Suggest a tweak', () => {
     renderApp(at, { mock: mock() })
     const card = await lastBrewCard()
     expect(within(card).queryByRole('region', { name: 'Suggestion' })).not.toBeInTheDocument()
-    await user.click(within(card).getByRole('button', { name: /suggest a tweak/i }))
+    await user.click(await within(card).findByRole('button', { name: /suggest a tweak/i }))
 
     const suggestion = await within(card).findByRole('region', { name: 'Suggestion' })
     // Starts from what was brewed (800 µm), not from the engine's 820 µm on screen, and says nothing about an edit.
@@ -76,7 +80,7 @@ describe('Suggest a tweak', () => {
   it('offers a new suggestion when the saved one is for an older brew', async () => {
     renderApp(at, { mock: mock({ drafts: [draft({ suggestion: { ...saved, forBrewedAt: '2026-10-15T08:00:00Z' } })] }) })
     const card = await lastBrewCard()
-    expect(within(card).getByRole('button', { name: /suggest a tweak/i })).toBeInTheDocument()
+    expect(await within(card).findByRole('button', { name: /suggest a tweak/i })).toBeInTheDocument()
   })
 
   it('folds away with Not now and opens again without asking', async () => {
@@ -100,7 +104,7 @@ describe('Suggest a tweak', () => {
     const user = userEvent.setup()
     renderApp(at, { mock: mock({ suggest: new SuggestError('limit') }) })
     const card = await lastBrewCard()
-    await user.click(within(card).getByRole('button', { name: /suggest a tweak/i }))
+    await user.click(await within(card).findByRole('button', { name: /suggest a tweak/i }))
     expect(await within(card).findByText("That's all your suggestions for today. More tomorrow.")).toBeInTheDocument()
     expect(within(card).queryByRole('button', { name: /try again/i })).not.toBeInTheDocument()
   })
@@ -109,7 +113,7 @@ describe('Suggest a tweak', () => {
     const user = userEvent.setup()
     renderApp(at, { mock: mock({ isOffline: () => true }) })
     const card = await lastBrewCard()
-    await user.click(within(card).getByRole('button', { name: /suggest a tweak/i }))
+    await user.click(await within(card).findByRole('button', { name: /suggest a tweak/i }))
     expect(await within(card).findByText("You're offline. Suggestions need a connection.")).toBeInTheDocument()
     expect(within(card).getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
@@ -118,7 +122,7 @@ describe('Suggest a tweak', () => {
     const user = userEvent.setup()
     renderApp(at, { mock: mock({ suggest: new SuggestError('failed') }) })
     const card = await lastBrewCard()
-    await user.click(within(card).getByRole('button', { name: /suggest a tweak/i }))
+    await user.click(await within(card).findByRole('button', { name: /suggest a tweak/i }))
     await user.click(await within(card).findByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(within(card).queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument())
     expect(within(card).getByText("Couldn't get a suggestion just now.")).toBeInTheDocument()

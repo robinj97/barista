@@ -4,12 +4,13 @@ import { describe, expect, it } from 'vitest'
 import type { BrewChoices } from '../brew/params'
 import { DEFAULT_CHOICES } from '../brew/params'
 import type { LockedRecipe } from '../data/types'
+import { SEED_BEANS } from '../dev/mockApi'
 import { makeBag, renderApp } from '../test/renderApp'
 
 const geisha = makeBag('b-geisha')
 const choices: BrewChoices = { ...DEFAULT_CHOICES, bagId: geisha.id }
 const recipe: LockedRecipe = {
-  id: 'r1', beanId: 'b-geisha', method: 'v60', name: 'V60', versionId: 'v1',
+  id: 'r1', bean: SEED_BEANS.find((b) => b.id === 'b-geisha')!, method: 'v60', name: 'V60', versionId: 'v1',
   snapshot: { choices, recipe: { doseG: 20, waterG: 300, ratio: 15, tempC: 91, grindUm: 700, targetTimeS: 180, pours: [{ atS: 0, toG: 300 }] } },
   rating: 4, lockedAt: '2026-10-10T10:00:00Z', brewCount: 3,
 }
@@ -62,5 +63,13 @@ describe('Starting from a locked recipe', () => {
     renderApp('/brew/recipe?bag=bag-b-geisha&balance=0&strength=medium&cups=2', { mock })
     expect(await screen.findByRole('button', { name: /Based on your own recipe/ })).toBeInTheDocument()
     expect(within(screen.getByLabelText('Recipe')).getByText('Water temp').nextSibling).toHaveTextContent('91°C')
+  })
+})
+
+describe('Library: temperature unit', () => {
+  it('shows recipes in your unit, not always Celsius', async () => {
+    renderApp('/library', { mock: { ...mock, profile: { temp_unit: 'f' } } })
+    const list = await screen.findByRole('list', { name: 'Your recipes' })
+    expect(within(list).getByRole('listitem')).toHaveTextContent('196°F')
   })
 })
