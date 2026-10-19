@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import type { ProfileApi } from '../api'
-import type { Profile } from '../types'
+import type { Feature, Profile } from '../types'
 import { fail } from './shared'
 
 export const profileApi: ProfileApi = {
@@ -16,4 +16,9 @@ export const profileApi: ProfileApi = {
     return data as Profile
   },
 
+  async listMyFeatures() {
+    const { data, error } = await supabase.from('feature_access').select('feature')
+    fail(error)
+    return data.map((row) => row.feature as Feature)
+  },
 }

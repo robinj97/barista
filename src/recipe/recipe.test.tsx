@@ -18,7 +18,8 @@ const grinderOf = (id: string): MyGrinder => ({ grinder: GRINDER_SEED.find((g) =
 
 function model(choices: Partial<BrewChoices> = {}, grinder?: MyGrinder, context?: Parameters<typeof buildSuggestInput>[4]): RecipeModel {
   const merged = { ...DEFAULT_CHOICES, bagId: bag.id, ...choices }
-  return buildRecipeModel({ bag, choices: merged, out: suggest(buildSuggestInput(bag, merged, null, '2026-10-17', context)), unit: 'c', grinder, filter: null, apply: vi.fn() })
+  const recipeFor = (next: BrewChoices) => suggest(buildSuggestInput(bag, next, null, '2026-10-17', context))
+  return buildRecipeModel({ bag, choices: merged, out: recipeFor(merged), unit: 'c', grinder, filter: null, apply: vi.fn(), recompute: (next) => recipeFor(next).recipe })
 }
 
 describe('buildRecipeModel', () => {

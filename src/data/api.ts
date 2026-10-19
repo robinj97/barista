@@ -5,12 +5,14 @@ import type {
   BeanMatch,
   CatalogueGrinder,
   Draft,
+  Feature,
   FilterRow,
   Friend,
   FriendRecipe,
   InviterPreview,
   LockedRecipe,
   LockRecipeInput,
+  Method,
   MyFilter,
   MyGrinder,
   NewFilter,
@@ -21,6 +23,7 @@ import type {
   ScannedBag,
   SimilarBean,
 } from './types'
+import type { StoredSuggestion } from '../../supabase/functions/suggest-tweak/suggest.ts'
 
 /**
  * What the app needs from the backend, in areas that each stand on their own. The real and the fake
@@ -31,6 +34,8 @@ import type {
 export interface ProfileApi {
   getProfile(userId: string): Promise<Profile>
   updateProfile(userId: string, patch: ProfilePatch): Promise<Profile>
+  /** Features turned on for you (docs/suggest-tweak.md 1.1). */
+  listMyFeatures(): Promise<Feature[]>
 }
 
 /** Grinders and filters: the shared catalogues and the person's own lists. */
@@ -83,6 +88,13 @@ export interface RecipesApi {
   listMyDrafts(): Promise<Draft[]>
   /** Creates or overwrites the working recipe. Leaving `lastBrew` out keeps the stored one. */
   saveDraft(input: SaveDraftInput): Promise<void>
+  /**
+   * Asks Claude what to change next time, from the draft's last brew. Returns the saved answer when
+   * there already is one for that brew. Throws `SuggestError` when it can't.
+   */
+  suggestTweak(beanId: string, brewedAt: string): Promise<{ suggestion: StoredSuggestion; cached: boolean }>
+  /** Marks the draft's suggestion as applied (a time) or not (null). Best effort: it's for measurement. */
+  setSuggestionApplied(beanId: string, method: Method, appliedAt: string | null): Promise<void>
   /** The recipes you have locked in, with their current locked version. */
   listMyRecipes(): Promise<LockedRecipe[]>
   /** Locks a brew in as your recipe. Idempotent for the same `brewId`. */

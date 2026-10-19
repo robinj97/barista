@@ -3,6 +3,7 @@ import type { TempUnit } from '../../engine/units.ts'
 import type { Pour } from '../../engine/types.ts'
 import type { BrewChoices } from '../brew/params'
 import type { Database } from '../lib/database.types'
+import type { Direction, StoredSuggestion } from '../../supabase/functions/suggest-tweak/suggest.ts'
 
 export type Method = 'v60' | 'aeropress' | 'espresso'
 export const METHODS: Method[] = ['v60', 'aeropress', 'espresso']
@@ -138,6 +139,8 @@ export interface BrewResult {
   recipe?: RecipeNumbers
   /** What was different from the brew before it. */
   changes?: Change[]
+  /** Whether the "Suggest a tweak" answer for the brew before this one was applied, for measuring whether suggestions help. */
+  followed?: { directions: Direction[]; applied: boolean }
 }
 
 /** The tastes of a brew, including ones saved before more than one could be picked. */
@@ -164,6 +167,8 @@ export interface Draft {
   method: Method
   choices: BrewChoices
   lastBrew: BrewResult | null
+  /** The last "Suggest a tweak" answer for this draft; see `currentSuggestion` for whether it's for `lastBrew`. */
+  suggestion?: StoredSuggestion | null
   updatedAt: string
 }
 
@@ -230,6 +235,16 @@ export class ScanError extends Error {
   readonly reason: 'unreadable' | 'busy' | 'limit' | 'failed'
   constructor(reason: ScanError['reason']) {
     super(`scan_${reason}`)
+    this.reason = reason
+  }
+}
+
+export type Feature = 'suggest_tweak'
+
+export class SuggestError extends Error {
+  readonly reason: 'offline' | 'limit' | 'stale' | 'not_eligible' | 'not_enabled' | 'failed'
+  constructor(reason: SuggestError['reason']) {
+    super(`suggest_${reason}`)
     this.reason = reason
   }
 }

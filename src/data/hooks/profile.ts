@@ -23,3 +23,9 @@ export function useUpdateProfile() {
   })
 }
 
+/** Features turned on for you. While loading, or if it fails, nothing extra is shown. */
+export function useMyFeatures() {
+  const api = useProfileApi()
+  const userId = useUserId()
+  return useQuery({ queryKey: keys.features(userId), queryFn: () => api.listMyFeatures(), staleTime: 10 * 60 * 1000 })
+}

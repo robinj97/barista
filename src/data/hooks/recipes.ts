@@ -1,7 +1,8 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useRecipesApi } from '../ApiContext'
-import { draftKey, saveOrQueue, type SaveOutcome } from '../outbox'
-import type { Draft, LockedRecipe, LockRecipeInput, SaveDraftInput } from '../types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { StoredSuggestion } from '../../../supabase/functions/suggest-tweak/suggest.ts'
+import { useApi, useRecipesApi } from '../ApiContext'
+import { draftKey, flushOutbox, saveOrQueue, type SaveOutcome } from '../outbox'
+import { SuggestError, type Draft, type LockedRecipe, type LockRecipeInput, type Method, type SaveDraftInput } from '../types'
 import { keys } from './keys'
 import { useInvalidate, useOptimisticMutation } from './mutations'
 
@@ -40,7 +41,7 @@ export function useSaveDraft() {
       const old = drafts.find(same)
       return [
         ...drafts.filter((d) => !same(d)),
-        { beanId: input.beanId, method: input.method, choices: input.choices, lastBrew: input.lastBrew ?? old?.lastBrew ?? null, updatedAt: new Date().toISOString() },
+        { beanId: input.beanId, method: input.method, choices: input.choices, lastBrew: input.lastBrew ?? old?.lastBrew ?? null, suggestion: old?.suggestion ?? null, updatedAt: new Date().toISOString() },
       ]
     },
     invalidate: (outcome) => (outcome === 'queued' ? [] : [keys.drafts]),
@@ -59,3 +60,44 @@ export function useLockRecipe() {
     },
   })
 }
+
+const withSuggestion = (beanId: string, method: Method, change: (old: StoredSuggestion | null | undefined) => StoredSuggestion | null) => (drafts: Draft[] = []) =>
+  drafts.map((d) => (d.beanId === beanId && d.method === method ? { ...d, suggestion: change(d.suggestion) } : d))
+
+/**
+ * Asks for a suggestion for the draft's last brew. If the server hasn't got that brew yet (it was
+ * logged offline), the waiting writes are sent first and it asks once more.
+ */
+export function useSuggestTweak() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ beanId, brewedAt }: { beanId: string; brewedAt: string }) => {
+      try {
+        return await api.suggestTweak(beanId, brewedAt)
+      } catch (error) {
+        if (!(error instanceof SuggestError) || error.reason !== 'stale') throw error
+        await flushOutbox(api)
+        return api.suggestTweak(beanId, brewedAt)
+      }
+    },
+    onSuccess: ({ suggestion }, { beanId }) => {
+      client.setQueryData<Draft[]>(keys.drafts, withSuggestion(beanId, 'v60', () => suggestion))
+    },
+  })
+}
+
+/** Records Apply (a time) or Undo (null) on the suggestion. Best effort: a failed save is ignored. */
+export function useSetSuggestionApplied() {
+  const api = useRecipesApi()
+  return useOptimisticMutation<{ beanId: string; appliedAt: string | null }, Draft[]>({
+    queryKey: keys.drafts,
+    mutationFn: ({ beanId, appliedAt }) => api.setSuggestionApplied(beanId, 'v60', appliedAt).catch(() => {}),
+    apply: (drafts, { beanId, appliedAt }) => withSuggestion(beanId, 'v60', (old) => (old ? { ...old, appliedAt } : null))(drafts),
+    invalidate: () => [keys.drafts],
+  })
+}
+
+/** When a suggestion is applied: now. Kept out of components so rendering stays pure. */
+export const appliedNow = () => new Date().toISOString()
+

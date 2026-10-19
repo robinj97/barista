@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { TempUnit } from '../../engine/units.ts'
 import { formatDMY, toISODate } from '../beans/dates'
 import type { BrewResult, MyGrinder } from '../data/types'
@@ -8,10 +9,12 @@ interface LastBrewCardProps {
   brew: BrewResult
   unit: TempUnit
   grinder: MyGrinder | undefined
+  /** Shown at the bottom of the card: "Suggest a tweak". */
+  children?: ReactNode
 }
 
 /** A reminder at the top of the recipe: how the last brew of this bean went and what you wanted to change. */
-export function LastBrewCard({ brew, unit, grinder }: LastBrewCardProps) {
+export function LastBrewCard({ brew, unit, grinder, children }: LastBrewCardProps) {
   const { tasted, wanted, note } = lastBrewLines(brew)
   if (!tasted && !wanted && !note) return null
   const { recipe } = brew
@@ -39,6 +42,7 @@ export function LastBrewCard({ brew, unit, grinder }: LastBrewCardProps) {
       {brew.changes && brew.changes.length > 0 && (
         <p className="mt-1 text-xs text-muted">Changed from the brew before: {brew.changes.map((c) => describeChange(c, unit)).join(' · ')}</p>
       )}
+      {children}
     </section>
   )
 }

@@ -7,6 +7,7 @@ import { buildSuggestInput, clock } from '../brew/buildInput'
 import { diffRecipes, toggleExclusive } from '../brew/feedback'
 import { parseChoices } from '../brew/params'
 import { clearSession, readSession } from '../brew/session'
+import { currentSuggestion } from '../brew/suggestTweak'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
 import { MultiChipGroup } from '../components/MultiChipGroup'
@@ -99,7 +100,9 @@ export function LogPage() {
   // The numbers that were brewed. Older sessions did not keep them, so work them out again.
   const brewed = session.recipe ?? suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, session.asOf)).recipe
   const recipe: RecipeNumbers = { doseG: brewed.doseG, waterG: brewed.waterG, ratio: brewed.ratio, tempC: brewed.tempC, grindUm: brewed.grindUm, targetTimeS: brewed.targetTimeS, pours: brewed.pours }
-  const previous = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')?.lastBrew ?? null
+  const previousDraft = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')
+  const previous = previousDraft?.lastBrew ?? null
+  const asked = currentSuggestion(previousDraft)
   const yieldG = Number(yieldText)
   const yieldOk = yieldText.trim() === '' || (Number.isFinite(yieldG) && yieldG > 0)
   const canSave = !saving && yieldOk && tastes.length > 0 && (!lock || rating > 0)
@@ -110,6 +113,7 @@ export function LogPage() {
     firstPourG: recipe.pours[0]?.toG ?? 0,
     recipe,
     changes: previous?.recipe ? diffRecipes(previous.recipe, recipe) : undefined,
+    followed: asked?.kind === 'change' ? { directions: asked.changes.map((c) => c.direction), applied: asked.appliedAt !== null } : undefined,
   }
 
   /** `skip` records the brew itself (time, numbers) and nothing about taste, and lets you on. */

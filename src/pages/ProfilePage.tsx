@@ -14,6 +14,7 @@ import {
   useGrinderCatalogue,
   useMyFilters,
   useMyGrinders,
+  useMyFeatures,
   useProfile,
   useRemoveFilter,
   useRemoveGrinder,
@@ -57,6 +58,7 @@ function ErrorNote({ show }: { show: boolean }) {
 export function ProfilePage() {
   const { session, signOut } = useAuth()
   const profile = useProfile()
+  const features = useMyFeatures()
   const update = useUpdateProfile()
   const [sounds, setSounds] = useState(soundsOn)
 
@@ -245,6 +247,12 @@ export function ProfilePage() {
           </button>
         </div>
       </Card>
+
+      {features.data?.includes('suggest_tweak') && (
+        <p className="mt-6 px-2 text-xs text-muted">
+          Suggest a tweak sends your last brew and its note to Anthropic's Claude to work out a suggestion. Nothing else about you is sent.
+        </p>
+      )}
 
       <button
         type="button"

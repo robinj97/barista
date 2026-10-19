@@ -7,7 +7,9 @@ import { LastBrewCard } from '../brew/LastBrewCard'
 import { PourRing } from '../components/PourRing'
 import { Button } from '../components/Button'
 import { SegmentedControl } from '../components/SegmentedControl'
-import { useMyDrafts, useSaveDraft } from '../data/hooks'
+import { SuggestCard } from '../brew/SuggestCard'
+import { canSuggest } from '../brew/suggestTweak'
+import { useMyDrafts, useMyFeatures, useSaveDraft } from '../data/hooks'
 import { WhySheet } from '../brew/WhySheet'
 import { ConfidencePill } from './ConfidencePill'
 import { RecipeEditSheets, type EditField } from './EditSheets'
@@ -35,6 +37,7 @@ export function RecipeScreen({ model, today, back }: RecipeScreenProps) {
   const run = useBrewRun(model, today)
   const saveDraft = useSaveDraft()
   const drafts = useMyDrafts()
+  const features = useMyFeatures()
   const [view, setView] = useState<View>(run.brewing ? 'pours' : 'recipe')
   const [editing, setEditing] = useState<EditField | null>(null)
   const [why, setWhy] = useState(false)
@@ -45,7 +48,9 @@ export function RecipeScreen({ model, today, back }: RecipeScreenProps) {
   }, [view])
 
   const goal = goalOf(choices.balance)
-  const lastBrew = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')?.lastBrew
+  const draft = drafts.data?.find((d) => d.beanId === bag.bean.id && d.method === 'v60')
+  const lastBrew = draft?.lastBrew
+  const offerSuggestion = features.data?.includes('suggest_tweak') === true && canSuggest(draft)
 
   const startBrewing = () => {
     // Your working recipe for this bean is overwritten with what you are about to brew, with the
@@ -69,7 +74,11 @@ export function RecipeScreen({ model, today, back }: RecipeScreenProps) {
 
       {!run.brewing && <ConfidencePill out={out} onOpen={() => setWhy(true)} />}
 
-      {view === 'recipe' && !run.brewing && lastBrew && <LastBrewCard brew={lastBrew} unit={unit} grinder={grinder} />}
+      {view === 'recipe' && !run.brewing && lastBrew && (
+        <LastBrewCard brew={lastBrew} unit={unit} grinder={grinder}>
+          {offerSuggestion && draft && <SuggestCard model={model} draft={draft} />}
+        </LastBrewCard>
+      )}
 
       {/* The ring is only on the Recipe view: on the Pours view the space is for the pours and the buttons. */}
       {view === 'recipe' && !run.brewing && (

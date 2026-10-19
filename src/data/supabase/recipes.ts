@@ -1,20 +1,23 @@
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/database.types'
 import type { BrewChoices } from '../../brew/params'
 import type { RecipesApi } from '../api'
-import type { BrewResult, Draft, LockedRecipe, Method } from '../types'
+import type { StoredSuggestion } from '../../../supabase/functions/suggest-tweak/suggest.ts'
+import { SuggestError, type BrewResult, type Draft, type LockedRecipe, type Method } from '../types'
 import { loadLockedRows } from './lockedRows'
 import { fail } from './shared'
 
 export const recipesApi: RecipesApi = {
   async listMyDrafts(): Promise<Draft[]> {
-    const { data, error } = await supabase.from('recipe_drafts').select('bean_id, method, choices, last_brew, updated_at')
+    const { data, error } = await supabase.from('recipe_drafts').select('bean_id, method, choices, last_brew, suggestion, updated_at')
     fail(error)
     return data.map((row) => ({
       beanId: row.bean_id,
       method: row.method as Method,
       choices: row.choices as unknown as BrewChoices,
       lastBrew: row.last_brew as unknown as BrewResult | null,
+      suggestion: row.suggestion as unknown as StoredSuggestion | null,
       updatedAt: row.updated_at,
     }))
   },
@@ -29,6 +32,31 @@ export const recipesApi: RecipesApi = {
     }
     const { error } = await supabase.from('recipe_drafts').upsert(row, { onConflict: 'user_id,bean_id,method' })
     fail(error)
+  },
+
+  async suggestTweak(beanId, brewedAt) {
+    const { data, error } = await supabase.functions.invoke<{ suggestion: StoredSuggestion; cached: boolean }>('suggest-tweak', {
+      body: { beanId, method: 'v60', brewedAt },
+    })
+    if (error) {
+      // No response at all: the connection dropped.
+      if (!(error instanceof FunctionsHttpError)) throw new SuggestError('offline')
+      const code = await (error.context as Response).json().then((body: { error?: string }) => body?.error, () => undefined)
+      if (code === 'daily_limit') throw new SuggestError('limit')
+      if (code === 'stale' || code === 'not_eligible' || code === 'not_enabled') throw new SuggestError(code)
+      throw new SuggestError('failed')
+    }
+    if (!data?.suggestion) throw new SuggestError('failed')
+    return data
+  },
+
+  async setSuggestionApplied(beanId, method, appliedAt) {
+    const { data, error } = await supabase.from('recipe_drafts').select('suggestion').eq('bean_id', beanId).eq('method', method).maybeSingle()
+    fail(error)
+    if (!data?.suggestion) return
+    const suggestion = { ...(data.suggestion as Record<string, Json>), appliedAt }
+    const { error: updateError } = await supabase.from('recipe_drafts').update({ suggestion }).eq('bean_id', beanId).eq('method', method)
+    fail(updateError)
   },
 
   async listMyRecipes(): Promise<LockedRecipe[]> {

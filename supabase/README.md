@@ -5,10 +5,11 @@
 
 ## Checks after a schema change
 
-1. Run `tests/rls.test.sql`, `tests/profile.test.sql`, `tests/beans.test.sql` and `tests/scan.test.sql`.
+1. Run `tests/rls.test.sql`, `tests/profile.test.sql`, `tests/beans.test.sql`, `tests/scan.test.sql` and `tests/suggest.test.sql`.
 2. Run the Supabase security and performance advisors. Expected leftovers:
    - `create_invite` and `accept_invite` are callable by signed-in users on purpose.
    - `claim_scan` is too: calling it directly only uses up your own daily scans.
+   - So are `claim_suggestion` and `has_feature`: they only count or read your own rows.
    - Leaked-password protection does not apply because sign-in is Google only.
    - Unused-index notices on an empty database.
 3. Regenerate `src/lib/database.types.ts` (Supabase generate-types) after every schema change.
@@ -31,3 +32,18 @@ supabase functions deploy scan-bag --project-ref rjzewbeodonqxxltsbrf
 ```
 
 To compare low and medium effort on your own photos, see the header of `scripts/scan-eval.ts` (`bun run scan-eval <folder>`).
+
+### `suggest-tweak`
+
+"Suggest a tweak" on the Recipe screen: reads the draft's last brew and suggests one or two changes with Claude Haiku 5.5 at medium effort (see `docs/suggest-tweak.md`). The prompt, schema and guardrails live in `functions/suggest-tweak/suggest.ts`, shared with `scripts/suggest-eval.ts`; the steps are in `handler.ts`, tested in `handler.test.ts`.
+
+- Signed-in users with the `suggest_tweak` feature only. Grant it per person in SQL:
+  `insert into public.feature_access (user_id, feature) values ('<profile id>', 'suggest_tweak');`
+- 20 suggestions per person per day (UTC), counted by `claim_suggestion`; a saved suggestion for the same brew is returned without counting.
+- Uses the same `ANTHROPIC_API_KEY` secret as `scan-bag`. Each suggestion costs roughly $0.0005.
+- Each call writes one JSON log line (`"event":"suggest"`) with the outcome, changes, time and token counts, never the note.
+
+```bash
+supabase functions deploy suggest-tweak --project-ref rjzewbeodonqxxltsbrf
+```
+

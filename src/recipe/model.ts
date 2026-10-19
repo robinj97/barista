@@ -3,7 +3,7 @@ import type { SuggestOutput } from '../../engine/types.ts'
 import type { TempUnit } from '../../engine/units.ts'
 import { recipeText } from '../brew/format'
 import type { BrewChoices, RecipeEdits } from '../brew/params'
-import type { Bag, MyFilter, MyGrinder } from '../data/types'
+import type { Bag, MyFilter, MyGrinder, RecipeNumbers } from '../data/types'
 
 /**
  * Everything the recipe screen's parts need to know about the recipe on screen, worked out once:
@@ -30,6 +30,8 @@ export interface RecipeModel {
   has: (...keys: (keyof RecipeEdits)[]) => boolean
   /** Whether the engine used a value you set, for the dot on a card. */
   isOverridden: (key: SuggestOutput['overridden'][number]) => boolean
+  /** The recipe the engine would make from other choices, for working out a change before it's applied. */
+  recompute: (next: BrewChoices) => RecipeNumbers
 }
 
 interface ModelInput {
@@ -40,9 +42,10 @@ interface ModelInput {
   grinder: MyGrinder | undefined
   filter: MyFilter | null
   apply: (next: BrewChoices) => void
+  recompute: (next: BrewChoices) => RecipeNumbers
 }
 
-export function buildRecipeModel({ bag, choices, out, unit, grinder, filter, apply }: ModelInput): RecipeModel {
+export function buildRecipeModel({ bag, choices, out, unit, grinder, filter, apply, recompute }: ModelInput): RecipeModel {
   const { recipe } = out
   return {
     bag,
@@ -58,5 +61,6 @@ export function buildRecipeModel({ bag, choices, out, unit, grinder, filter, app
     shown: { ratio: recipe.waterG / recipe.doseG, waterG: recipe.waterG },
     has: (...keys) => keys.some((key) => key in choices.edits),
     isOverridden: (key) => out.overridden.includes(key),
+    recompute,
   }
 }

@@ -1,6 +1,7 @@
 /** Every query key in one place, so a screen that changes something can name exactly what it made stale. */
 export const keys = {
   profile: (userId: string) => ['profile', userId] as const,
+  features: (userId: string) => ['features', userId] as const,
   grinders: {
     catalogue: ['grinders', 'catalogue'] as const,
     mine: (userId: string) => ['grinders', 'mine', userId] as const,

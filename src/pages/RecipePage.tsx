@@ -45,10 +45,12 @@ export function RecipePage() {
     )
   }
 
+  const recipeFor = (next: BrewChoices) => suggest(buildSuggestInput(bag, next, selection.filter?.filter ?? null, today, priors.context))
   const model = buildRecipeModel({
     bag,
     choices,
-    out: suggest(buildSuggestInput(bag, choices, selection.filter?.filter ?? null, today, priors.context)),
+    out: recipeFor(choices),
+    recompute: (next) => recipeFor(next).recipe,
     unit: selection.profile.data?.temp_unit ?? 'c',
     grinder: selection.grinder,
     filter: selection.filter,
