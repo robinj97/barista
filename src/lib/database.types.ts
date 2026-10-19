@@ -145,6 +145,24 @@ export type Database = {
           },
         ]
       }
+      feature_access: {
+        Row: {
+          feature: string
+          granted_at: string
+          user_id: string
+        }
+        Insert: {
+          feature: string
+          granted_at?: string
+          user_id: string
+        }
+        Update: {
+          feature?: string
+          granted_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       filters: {
         Row: {
           bleached: boolean | null
@@ -397,6 +415,7 @@ export type Database = {
           bean_id: string
           choices: Json
           last_brew: Json | null
+          suggestion: Json | null
           method: string
           updated_at: string
           user_id: string
@@ -405,6 +424,7 @@ export type Database = {
           bean_id: string
           choices: Json
           last_brew?: Json | null
+          suggestion?: Json | null
           method: string
           updated_at?: string
           user_id?: string
@@ -413,6 +433,7 @@ export type Database = {
           bean_id?: string
           choices?: Json
           last_brew?: Json | null
+          suggestion?: Json | null
           method?: string
           updated_at?: string
           user_id?: string
@@ -496,6 +517,24 @@ export type Database = {
         Update: {
           day?: string
           scans?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      suggest_usage: {
+        Row: {
+          day: string
+          suggestions: number
+          user_id: string
+        }
+        Insert: {
+          day: string
+          suggestions?: number
+          user_id: string
+        }
+        Update: {
+          day?: string
+          suggestions?: number
           user_id?: string
         }
         Relationships: []
@@ -683,7 +722,9 @@ export type Database = {
       }
       add_my_filter: { Args: { target: string }; Returns: undefined }
       claim_scan: { Args: never; Returns: number }
+      claim_suggestion: { Args: never; Returns: number }
       create_invite: { Args: never; Returns: string }
+      has_feature: { Args: { name: string }; Returns: boolean }
       remove_my_filter: { Args: { target: string }; Returns: undefined }
       similar_beans: {
         Args: { p_name: string; p_roaster: string }

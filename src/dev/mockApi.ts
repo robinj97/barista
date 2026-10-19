@@ -1,10 +1,13 @@
 import { SIMILAR_FROM, dedupeKey, similarity } from '../beans/dedupe'
 import { GRINDER_SEED } from '../../engine/grinderSeed.ts'
+import { canSuggestFrom, PROMPT_VERSION, SUGGEST_EFFORT, SUGGEST_MODEL, type StoredBrew, type StoredSuggestion } from '../../supabase/functions/suggest-tweak/suggest.ts'
 import {
   byBrandModel,
   filterMatchKey,
   ScanError,
+  SuggestError,
   type Api,
+  type Feature,
   type Bag,
   type Bean,
   type Draft,
@@ -74,6 +77,21 @@ export interface MockOptions {
   recipes?: LockedRecipe[]
   /** What a bag photo scan returns, or the error it fails with. Defaults to a readable new bean. */
   scan?: ScannedBag | ScanError
+  /** Features turned on. Defaults to every feature, so the dev preview shows them. */
+  features?: Feature[]
+  /** What "Suggest a tweak" answers (without the bookkeeping fields), or the error it fails with. */
+  suggest?: Pick<StoredSuggestion, 'kind' | 'changes' | 'test' | 'reason' | 'quote' | 'lookFor' | 'plan'> | SuggestError
+}
+
+/** The dev preview's answer to "Suggest a tweak". */
+export const MOCK_SUGGESTION: Pick<StoredSuggestion, 'kind' | 'changes' | 'test' | 'reason' | 'quote' | 'lookFor' | 'plan'> = {
+  kind: 'change',
+  changes: [{ direction: 'finer', amount: 30 }],
+  test: false,
+  reason: "A weak, flat cup usually means the coffee isn't extracting enough, so a finer grind should help. Your plan to go finer fits that.",
+  quote: null,
+  lookFor: 'A fuller, sweeter cup, and a drawdown close to the target. Time it this round.',
+  plan: 'agrees',
 }
 
 /** A label the dev preview "reads" from any photo: a bean that is not in the seed catalogue. */
@@ -327,8 +345,42 @@ export function createMockApi(options: MockOptions = {}): Api {
         method: input.method,
         choices: input.choices,
         lastBrew: input.lastBrew ?? existing?.lastBrew ?? null,
+        suggestion: existing?.suggestion ?? null,
         updatedAt: new Date().toISOString(),
       })
+      return wait(undefined)
+    },
+
+    listMyFeatures: () => wait(options.features ?? ['suggest_tweak']),
+
+    async suggestTweak(beanId, brewedAt) {
+      if (options.isOffline?.()) throw new SuggestError('offline')
+      if (!(options.features ?? ['suggest_tweak']).includes('suggest_tweak')) throw new SuggestError('not_enabled')
+      const draft = drafts.get(`${beanId}:v60`)
+      if (!draft || !canSuggestFrom(draft.lastBrew as StoredBrew | null)) throw new SuggestError('not_eligible')
+      if (draft.lastBrew!.brewedAt !== brewedAt) throw new SuggestError('stale')
+      if (draft.suggestion?.forBrewedAt === brewedAt) return wait({ suggestion: draft.suggestion, cached: true })
+      const answer = options.suggest ?? MOCK_SUGGESTION
+      if (answer instanceof SuggestError) {
+        await wait(undefined)
+        throw answer
+      }
+      const suggestion: StoredSuggestion = {
+        ...answer,
+        forBrewedAt: brewedAt,
+        model: SUGGEST_MODEL,
+        effort: SUGGEST_EFFORT,
+        promptVersion: PROMPT_VERSION,
+        createdAt: new Date().toISOString(),
+        appliedAt: null,
+      }
+      drafts.set(`${beanId}:v60`, { ...draft, suggestion })
+      return wait({ suggestion, cached: false })
+    },
+
+    async setSuggestionApplied(beanId, method, appliedAt) {
+      const draft = drafts.get(`${beanId}:${method}`)
+      if (draft?.suggestion) drafts.set(`${beanId}:${method}`, { ...draft, suggestion: { ...draft.suggestion, appliedAt } })
       return wait(undefined)
     },
 

@@ -6,7 +6,8 @@ import { uniqueRoasters } from '../beans/roasters'
 import { useToast } from '../components/toastContext'
 import { useApi } from './ApiContext'
 import { bagKey, draftKey, enqueue, flushOutbox, isNetworkError } from './outbox'
-import type { AddBagInput, Bag, BagPatch, Draft, LockedRecipe, LockRecipeInput, NewFilter, Profile, ProfilePatch, SaveDraftInput } from './types'
+import { SuggestError, type AddBagInput, type Bag, type BagPatch, type Draft, type LockedRecipe, type LockRecipeInput, type Method, type NewFilter, type Profile, type ProfilePatch, type SaveDraftInput } from './types'
+import type { StoredSuggestion } from '../../supabase/functions/suggest-tweak/suggest.ts'
 
 export const keys = {
   profile: (userId: string) => ['profile', userId] as const,
@@ -259,6 +260,56 @@ export function useMyDrafts() {
   return useQuery({ queryKey: draftsKey, queryFn: () => api.listMyDrafts() })
 }
 
+/** Features turned on for you. While loading, or if it fails, nothing extra is shown. */
+export function useMyFeatures() {
+  const api = useApi()
+  return useQuery({ queryKey: ['features'], queryFn: () => api.listMyFeatures(), staleTime: 10 * 60 * 1000 })
+}
+
+const withSuggestion = (beanId: string, method: Method, change: (old: StoredSuggestion | null | undefined) => StoredSuggestion | null) => (drafts: Draft[] = []) =>
+  drafts.map((d) => (d.beanId === beanId && d.method === method ? { ...d, suggestion: change(d.suggestion) } : d))
+
+/**
+ * Asks for a suggestion for the draft's last brew. If the server hasn't got that brew yet (it was
+ * logged offline), the waiting writes are sent first and it asks once more.
+ */
+export function useSuggestTweak() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ beanId, brewedAt }: { beanId: string; brewedAt: string }) => {
+      try {
+        return await api.suggestTweak(beanId, brewedAt)
+      } catch (error) {
+        if (!(error instanceof SuggestError) || error.reason !== 'stale') throw error
+        await flushOutbox(api)
+        return api.suggestTweak(beanId, brewedAt)
+      }
+    },
+    onSuccess: ({ suggestion }, { beanId }) => {
+      client.setQueryData<Draft[]>(draftsKey, withSuggestion(beanId, 'v60', () => suggestion))
+    },
+  })
+}
+
+/** Records Apply (now) or Undo on the suggestion. Best effort: a failure is ignored. */
+export function useSetSuggestionApplied() {
+  const api = useApi()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ beanId, appliedAt }: { beanId: string; appliedAt: string | null }) => api.setSuggestionApplied(beanId, 'v60', appliedAt).catch(() => {}),
+    onMutate: async ({ beanId, appliedAt }) => {
+      // A refetch already on its way would bring back the old value over this one.
+      await client.cancelQueries({ queryKey: draftsKey })
+      client.setQueryData<Draft[]>(draftsKey, withSuggestion(beanId, 'v60', (old) => (old ? { ...old, appliedAt } : null)))
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: draftsKey }),
+  })
+}
+
+/** When a suggestion is applied: now. Kept out of components so rendering stays pure. */
+export const appliedNow = () => new Date().toISOString()
+
 export function useMyRecipes() {
   const api = useApi()
   return useQuery({ queryKey: recipesKey, queryFn: () => api.listMyRecipes() })
@@ -307,7 +358,7 @@ export function useSaveDraft() {
       client.setQueryData<Draft[]>(draftsKey, (drafts = []) => {
         const rest = drafts.filter((d) => !(d.beanId === input.beanId && d.method === input.method))
         const old = drafts.find((d) => d.beanId === input.beanId && d.method === input.method)
-        return [...rest, { beanId: input.beanId, method: input.method, choices: input.choices, lastBrew: input.lastBrew ?? old?.lastBrew ?? null, updatedAt: new Date().toISOString() }]
+        return [...rest, { beanId: input.beanId, method: input.method, choices: input.choices, lastBrew: input.lastBrew ?? old?.lastBrew ?? null, suggestion: old?.suggestion ?? null, updatedAt: new Date().toISOString() }]
       })
     },
     onSettled: (outcome) => {
