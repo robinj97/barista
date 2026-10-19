@@ -10,14 +10,16 @@ import { fail } from './shared'
 
 export const recipesApi: RecipesApi = {
   async listMyDrafts(): Promise<Draft[]> {
-    const { data, error } = await supabase.from('recipe_drafts').select('bean_id, method, choices, last_brew, suggestion, updated_at')
+    // Every column, not a list: a database without the newer `suggestion` column still loads drafts
+    // (it's just absent), so the app doesn't depend on the migration landing first.
+    const { data, error } = await supabase.from('recipe_drafts').select('*')
     fail(error)
     return data.map((row) => ({
       beanId: row.bean_id,
       method: row.method as Method,
       choices: row.choices as unknown as BrewChoices,
       lastBrew: row.last_brew as unknown as BrewResult | null,
-      suggestion: row.suggestion as unknown as StoredSuggestion | null,
+      suggestion: (row.suggestion ?? null) as unknown as StoredSuggestion | null,
       updatedAt: row.updated_at,
     }))
   },

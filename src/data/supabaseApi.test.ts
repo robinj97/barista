@@ -18,14 +18,28 @@ const tables: Record<string, Row[]> = {
     { id: 'bean-2', roaster: 'Taith', name: 'Lychee peach', origin: null, region: null, producer: null, variety: null, process: null, altitude_m: null, roast_level: null, roaster_notes: [] },
   ],
   profiles: [{ id: 'friend', display_name: 'Mario', avatar_url: null }],
+  // As in a database where the suggest-tweak migration hasn't run yet: no `suggestion` column.
+  recipe_drafts: [
+    {
+      user_id: 'me', bean_id: 'bean-1', method: 'v60', choices: { cups: 2 }, updated_at: '2026-10-19T08:00:00Z',
+      last_brew: { brewedAt: '2026-10-19T08:00:00Z', notes: 'Need to go finer next time.' },
+    },
+  ],
 }
 
 const deleted: { table: string; filters: Record<string, unknown> }[] = []
 
 function query(table: string) {
   let rows = [...(tables[table] ?? [])]
+  let missing: string | null = null
   const builder = {
-    select: () => builder,
+    // Like the real database: asking for a column the table doesn't have is an error.
+    select: (columns = '*') => {
+      const known = rows[0] ? Object.keys(rows[0]) : null
+      const plain = columns.split(',').map((c) => c.trim()).filter((c) => c && c !== '*' && /^[a-z_]+$/.test(c))
+      missing = known ? (plain.find((c) => !known.includes(c)) ?? null) : null
+      return builder
+    },
     eq: (column: string, value: unknown) => ((rows = rows.filter((r) => r[column] === value)), builder),
     neq: (column: string, value: unknown) => ((rows = rows.filter((r) => r[column] !== value)), builder),
     is: (column: string, value: unknown) => ((rows = rows.filter((r) => r[column] === value)), builder),
@@ -39,7 +53,8 @@ function query(table: string) {
       }
       return del
     },
-    then: (resolve: (value: { data: Row[]; error: null }) => unknown) => resolve({ data: rows, error: null }),
+    then: (resolve: (value: { data: Row[] | null; error: { message: string } | null }) => unknown) =>
+      resolve(missing ? { data: null, error: { message: `column ${table}.${missing} does not exist` } } : { data: rows, error: null }),
   }
   return builder
 }
@@ -82,3 +97,13 @@ describe('removeFriend', () => {
     ])
   })
 })
+
+describe('listMyDrafts', () => {
+  it('loads drafts from a database without the suggestion column, with no suggestion', async () => {
+    const drafts = await supabaseApi.listMyDrafts()
+    expect(drafts).toHaveLength(1)
+    expect(drafts[0]).toMatchObject({ beanId: 'bean-1', method: 'v60', suggestion: null })
+    expect(drafts[0]?.lastBrew?.notes).toBe('Need to go finer next time.')
+  })
+})
+

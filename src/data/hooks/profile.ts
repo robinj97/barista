@@ -27,5 +27,5 @@ export function useUpdateProfile() {
 export function useMyFeatures() {
   const api = useProfileApi()
   const userId = useUserId()
-  return useQuery({ queryKey: keys.features(userId), queryFn: () => api.listMyFeatures(), staleTime: 10 * 60 * 1000 })
+  return useQuery({ queryKey: keys.features(userId), queryFn: () => api.listMyFeatures(), staleTime: 10 * 60 * 1000, retry: false })
 }
