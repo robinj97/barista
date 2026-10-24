@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { makeBag, renderApp } from '../test/renderApp'
@@ -422,4 +422,64 @@ describe('Brew: the gear line', () => {
     await user.click(await screen.findByRole('button', { name: 'Add a filter' }))
     expect(await screen.findByLabelText('Search filters')).toBeInTheDocument()
   })
+
+  describe('going back from a dialed-in recipe to change the goal', () => {
+    const dialed = '/brew/recipe?bag=bag-b-geisha&balance=-0.3&strength=medium&cups=2&dose=16.9&water=270&temp=92&grind=711'
+    const link = () => new URL(screen.getByRole('link', { name: 'Suggest a recipe' }).getAttribute('href')!, 'http://x').searchParams
+
+    it('keeps grind, temperature, coffee and water when you make it sweeter', async () => {
+      const user = userEvent.setup()
+      renderApp(dialed, { mock: { bags: [geisha] } })
+      await screen.findByLabelText('Recipe')
+      await user.click(screen.getByRole('link', { name: 'Back to set up' }))
+      await user.click(await screen.findByRole('radio', { name: 'Sweeter' }))
+      const params = link()
+      expect(params.get('balance')).not.toBe('-0.3')
+      expect([params.get('grind'), params.get('temp'), params.get('dose'), params.get('water')]).toEqual(['711', '92', '16.9', '270'])
+    })
+
+    it('makes sweetness count with your own pours, keeping their times and the water', async () => {
+      const user = userEvent.setup()
+      renderApp(`${dialed}&pours=0:54,50:108,95:162,140:216,180:270`, { mock: { bags: [geisha] } })
+      await screen.findByLabelText('Recipe')
+      await user.click(screen.getByRole('link', { name: 'Back to set up' }))
+      await user.click(await screen.findByRole('radio', { name: 'Sweeter' }))
+      const pours = link().get('pours')!.split(',').map((p) => p.split(':').map(Number))
+      expect(pours.map(([atS]) => atS)).toEqual([0, 50, 95, 140, 180])
+      expect(pours.at(-1)![1]).toBe(270)
+      expect(pours[0]![1]).toBeLessThan(54)
+      expect(link().get('grind')).toBe('711')
+    })
+  })
+
+  describe('starting from where you left off on a bean', () => {
+    const working = {
+      beanId: 'b-geisha', method: 'v60' as const, updatedAt: '2026-10-24T08:00:00Z', lastBrew: null,
+      choices: { bagId: 'bag-b-geisha', balance: -0.3, strength: 'medium' as const, grinderId: null, filterId: null, cups: 2, edits: { doseG: 15, ratio: 16, tempC: 92, grindUm: 729 } },
+    }
+    const link = async () => {
+      await waitFor(() => expect(screen.getByRole('link', { name: 'Suggest a recipe' }).getAttribute('href')).toContain('grind='))
+      return new URL(screen.getByRole('link', { name: 'Suggest a recipe' }).getAttribute('href')!, 'http://x').searchParams
+    }
+
+    it('from the bean page, set-up starts from the working recipe, and sweeter keeps its grind and temperature', async () => {
+      const user = userEvent.setup()
+      renderApp('/brew?bag=bag-b-geisha', { mock: { bags: [geisha], drafts: [working] } })
+      expect(Object.fromEntries((await link()).entries())).toMatchObject({ balance: '-0.3', grind: '729', temp: '92', dose: '15', ratio: '16' })
+      await user.click(screen.getByRole('radio', { name: 'Sweeter' }))
+      expect(Object.fromEntries((await link()).entries())).toMatchObject({ balance: '-0.6', grind: '729', temp: '92', dose: '15', ratio: '16' })
+    })
+
+    it('from the Brew tab, the last bean you brewed comes back as you left it', async () => {
+      renderApp('/brew', { mock: { bags: [elto, geisha], drafts: [working] } })
+      expect((await link()).get('grind')).toBe('729')
+    })
+
+    it('keeps a reset: with choices already in the address, nothing is brought back', async () => {
+      renderApp('/brew?bag=bag-b-geisha&balance=0&strength=medium&cups=2', { mock: { bags: [geisha], drafts: [working] } })
+      await screen.findByRole('link', { name: 'Suggest a recipe' })
+      expect(screen.getByRole('link', { name: 'Suggest a recipe' }).getAttribute('href')).not.toContain('grind=')
+    })
+  })
 })
+

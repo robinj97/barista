@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { eyebrow } from '../beans/cardText'
 import { beanCover } from '../beans/cover'
@@ -6,10 +6,11 @@ import { BagPickerSheet } from '../brew/BagPickerSheet'
 import { GearCard } from '../brew/GearCard'
 import { StrengthInfo } from '../brew/StrengthInfo'
 import { GoalSlider } from '../brew/GoalSlider'
+import { resumeChoices, setGoal } from '../brew/edits'
 import { STRENGTHS, parseChoices, toSearchParams, type BrewChoices } from '../brew/params'
 import { useBrewSelection } from '../brew/useBrewSelection'
 import { ChipGroup } from '../components/ChipGroup'
-import { METHOD_LABELS } from '../data/types'
+import { METHOD_LABELS, type Bag } from '../data/types'
 import { PageHeader } from '../layout/PageHeader'
 import { LoadingNote } from '../components/LoadingNote'
 import { SectionHeading } from '../components/SectionHeading'
@@ -22,9 +23,21 @@ export function BrewPage() {
   const [picking, setPicking] = useState(false)
   const { bag, bags } = selection
 
-  const update = (patch: Partial<BrewChoices>) =>
-    // Edits belong to one bean's recipe, so a different bean starts from its own suggestion.
-    setParams(toSearchParams({ ...choices, ...patch, ...(patch.bagId ? { edits: {} } : {}) }), { replace: true })
+  const update = (patch: Partial<BrewChoices>) => setParams(toSearchParams({ ...choices, ...patch }), { replace: true })
+  const working = (beanId: string) => selection.drafts.data?.find((d) => d.beanId === beanId && d.method === 'v60')?.choices
+  // Each bean picks up where you left off with it, so a small change to the goal stays a small change.
+  const pick = (next: Bag) => setParams(toSearchParams(resumeChoices(next.id, working(next.bean.id), choices)), { replace: true })
+
+  // A fresh visit (the Brew tab, "Start dialing in") has no choices in the address yet: bring back the
+  // bean's working recipe. Choices already in the address (after a reset, say) are left alone.
+  const resume = bag && !params.has('balance') && selection.drafts.isSuccess ? working(bag.bean.id) : undefined
+  const resumeSearch = bag && resume ? toSearchParams(resumeChoices(bag.id, resume, choices)).toString() : null
+  useEffect(() => {
+    // Once applied the address has choices, so `resumeSearch` goes back to null and this stops.
+    if (resumeSearch) setParams(resumeSearch, { replace: true })
+  }, [resumeSearch, setParams])
+  // Sweetness and strength keep a dialed-in recipe's grind, temperature and other edits.
+  const updateGoal = (patch: Parameters<typeof setGoal>[1]) => setParams(toSearchParams(setGoal(choices, patch)), { replace: true })
 
   if (bags.isPending || selection.drafts.isPending) {
     return (
@@ -115,14 +128,14 @@ export function BrewPage() {
       <section aria-label="Goal" className="mt-6">
         <SectionHeading>What do you want from this cup?</SectionHeading>
         <div className="mt-2 space-y-2">
-          <GoalSlider balance={choices.balance} onChange={(balance) => update({ balance })} />
+          <GoalSlider balance={choices.balance} onChange={(balance) => updateGoal({ balance })} />
           <div className="flex items-center gap-1">
             <ChipGroup
               label="Strength"
               options={STRENGTHS.map((s) => ({ value: s, label: s[0]!.toUpperCase() + s.slice(1) }))}
               value={choices.strength}
               clearable={false}
-              onChange={(next) => next && update({ strength: next })}
+              onChange={(next) => next && updateGoal({ strength: next })}
             />
             <StrengthInfo />
           </div>
@@ -150,7 +163,7 @@ export function BrewPage() {
         onOpenChange={setPicking}
         bags={selection.active.some((b) => b.id === bag.id) ? selection.active : [bag, ...selection.active]}
         selectedId={bag.id}
-        onPick={(next) => update({ bagId: next.id })}
+        onPick={pick}
       />
     </>
   )
