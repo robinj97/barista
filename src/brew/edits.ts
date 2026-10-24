@@ -1,3 +1,4 @@
+import { buildPours, laterPoursFor } from '../../engine/pours.ts'
 import type { Pour } from '../../engine/types.ts'
 import type { BrewChoices, RecipeEdits } from './params'
 
@@ -61,6 +62,32 @@ export function setGrind(choices: BrewChoices, grindUm: number): BrewChoices {
 
 export function setTime(choices: BrewChoices, targetTimeS: number): BrewChoices {
   return withEdits(choices, { ...choices.edits, targetTimeS })
+}
+
+/**
+ * Sweetness or strength. They only shape the pours, so every other edit (grind, temperature,
+ * coffee, water, time) stays as it is. With your own pours the engine would ignore them, so the
+ * pours are rebuilt for the new goal: same total water, your pour times kept, and when strength
+ * adds a pour it comes one of your last gaps after the previous one.
+ */
+export function setGoal(choices: BrewChoices, patch: Partial<Pick<BrewChoices, 'balance' | 'strength'>>): BrewChoices {
+  const next = { ...choices, ...patch }
+  const custom = choices.edits.pours
+  if (!custom || custom.length < 2) return next
+  const last = custom.at(-1)!
+  const lastGap = last.atS - custom.at(-2)!.atS
+  const grams = buildPours(last.toG, next.balance, laterPoursFor(next.strength)).map((pour) => pour.toG)
+  const pours = grams.map((toG, i) => ({ atS: custom[i]?.atS ?? last.atS + lastGap * (i - custom.length + 1), toG }))
+  return withEdits(next, { ...choices.edits, pours })
+}
+
+/**
+ * The choices for a bean as you left it: its working recipe (goal, size and every edit) on the bag
+ * you picked. With no working recipe it starts from the suggestion, keeping your goal but not edits
+ * that belonged to another bean.
+ */
+export function resumeChoices(bagId: string, working: BrewChoices | undefined, current: BrewChoices): BrewChoices {
+  return working ? { ...working, bagId } : { ...current, bagId, edits: {} }
 }
 
 /** Your own pours decide the water, so a water amount or ratio set earlier is dropped. */

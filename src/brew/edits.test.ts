@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { clearEdits, doseFor, hasEdits, resetEdit, setCups, setDose, setPours, setRatio, setTemp, setWater } from './edits'
+import { suggest } from '../../engine/suggest.ts'
+import { makeBag } from '../test/renderApp'
+import { buildSuggestInput } from './buildInput'
+import { clearEdits, doseFor, hasEdits, resetEdit, resumeChoices, setCups, setDose, setGoal, setPours, setRatio, setTemp, setWater } from './edits'
 import { DEFAULT_CHOICES, type BrewChoices } from './params'
 
 const shown = { ratio: 15, waterG: 300 }
@@ -80,3 +83,62 @@ describe('reset', () => {
     expect(hasEdits(clearEdits(choices))).toBe(false)
   })
 })
+
+describe('sweetness and strength (setGoal)', () => {
+  // Robin's Dukorere draft from prod: grind, temperature, coffee and water set by hand.
+  const dialed: BrewChoices = { ...base, balance: -0.6, strength: 'medium', edits: { doseG: 16.9, tempC: 92, waterG: 270, grindUm: 711 } }
+  const custom = [{ atS: 0, toG: 54 }, { atS: 50, toG: 108 }, { atS: 95, toG: 162 }, { atS: 140, toG: 216 }, { atS: 180, toG: 270 }]
+
+  it('changes only sweetness or strength, and keeps every edit as it was', () => {
+    expect(setGoal(dialed, { balance: -0.9 })).toEqual({ ...dialed, balance: -0.9 })
+    expect(setGoal(dialed, { strength: 'strong' })).toEqual({ ...dialed, strength: 'strong' })
+  })
+
+  it('in the engine, a sweeter balance moves only the pours: grind, temperature, coffee, water and time stay', () => {
+    const bag = makeBag('b-geisha')
+    const recipeFor = (choices: BrewChoices) => suggest(buildSuggestInput(bag, choices, null, '2026-10-24')).recipe
+    const before = recipeFor(dialed)
+    const after = recipeFor(setGoal(dialed, { balance: -0.9 }))
+    for (const key of ['grindUm', 'tempC', 'doseG', 'waterG', 'ratio', 'targetTimeS'] as const) expect(after[key]).toBe(before[key])
+    expect(after.pours[0]!.toG).toBeLessThan(before.pours[0]!.toG)
+    expect(after.pours.map((p) => p.atS)).toEqual(before.pours.map((p) => p.atS))
+  })
+
+  it('with your own pours, makes sweetness count: same water and pour times, a smaller first pour', () => {
+    const next = setGoal({ ...dialed, edits: { ...dialed.edits, pours: custom } }, { balance: -0.9 })
+    const pours = next.edits.pours!
+    expect(pours.map((p) => p.atS)).toEqual(custom.map((p) => p.atS))
+    expect(pours.at(-1)!.toG).toBe(270)
+    expect(pours[0]!.toG).toBeLessThan(custom[0]!.toG)
+    expect(next.edits).toMatchObject({ doseG: 16.9, tempC: 92, grindUm: 711 })
+  })
+
+  it('with your own pours, a strength change adds a pour after your last gap and keeps your earlier times', () => {
+    const next = setGoal({ ...dialed, edits: { ...dialed.edits, pours: custom } }, { strength: 'strong' })
+    const pours = next.edits.pours!
+    expect(pours).toHaveLength(6)
+    expect(pours.slice(0, 5).map((p) => p.atS)).toEqual(custom.map((p) => p.atS))
+    expect(pours[5]!.atS).toBe(220)
+    expect(pours.at(-1)!.toG).toBe(270)
+  })
+
+  it('with your own pours, a lighter cup drops the last pour and keeps the others in place', () => {
+    const pours = setGoal({ ...dialed, edits: { ...dialed.edits, pours: custom } }, { strength: 'light' }).edits.pours!
+    expect(pours.map((p) => p.atS)).toEqual([0, 50, 95, 140])
+    expect(pours.at(-1)!.toG).toBe(270)
+  })
+})
+
+describe('resumeChoices', () => {
+  const draft = { ...base, bagId: 'old-bag', balance: -0.3, strength: 'strong' as const, cups: 1, edits: { grindUm: 729, tempC: 92 } }
+
+  it("starts from the bean's working recipe, on the bag you picked", () => {
+    expect(resumeChoices('b2', draft, base)).toEqual({ ...draft, bagId: 'b2' })
+  })
+
+  it('with no working recipe, starts from the suggestion: your goal stays, edits from another bean go', () => {
+    const current = { ...base, balance: 0.4, edits: { grindUm: 600 } }
+    expect(resumeChoices('b2', undefined, current)).toEqual({ ...current, bagId: 'b2', edits: {} })
+  })
+})
+
